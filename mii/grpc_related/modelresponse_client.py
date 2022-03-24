@@ -24,44 +24,43 @@ import time
 import sys
 import asyncio
 
+
 async def get_response(stub, request):
     response = await stub.StringReply(modelresponse_pb2.RequestString(request=request))
     return response
-
 
 
 async def run(request):
     # NOTE(gRPC Python Team): .close() is possible on a channel and should be
     # used in circumstances in which the with statement does not fit the needs
     # of the code.
-    
+
     channel1 = grpc.aio.insecure_channel('localhost:50050')
     stub1 = modelresponse_pb2_grpc.ModelResponseStub(channel1)
     channel2 = grpc.aio.insecure_channel('localhost:50051')
     stub2 = modelresponse_pb2_grpc.ModelResponseStub(channel2)
 
-    
-    response1 = asyncio.create_task(get_response(stub1,request))
+    response1 = asyncio.create_task(get_response(stub1, request))
     print(f"First Request: {time.ctime()}")
 
     # with grpc.insecure_channel('localhost:500051') as channel:
     #     stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
     #     response1 = stub.StringReply(modelresponse_pb2.RequestString(request=request))
-        
-    response2 = asyncio.create_task(get_response(stub2,request))
+
+    response2 = asyncio.create_task(get_response(stub2, request))
     print(f"Second Request: {time.ctime()}")
-    
+
     await response1
     await response2
 
     # with grpc.insecure_channel('localhost:500052') as channel:
     #     stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
     #     response2 = stub.StringReply(modelresponse_pb2.RequestString(request=request))
-        
+
     print("Greeter client received: " + response1.result().response)
     print("Greeter client received: " + response2.result().response)
     print(f"Result : {time.ctime()}")
-        
+
 
 if __name__ == '__main__':
     logging.basicConfig()

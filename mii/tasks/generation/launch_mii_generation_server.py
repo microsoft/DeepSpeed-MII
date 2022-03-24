@@ -8,5 +8,5 @@ model_name = sys.argv[2]
 model_path = sys.argv[3]
 port = int(sys.argv[4]) + local_rank
 generator = load_generator_models(model_name, model_path)
-print(generator("Test product is ",  do_sample=True, min_length=50))
+print(generator("Test product is ", do_sample=True, min_length=50))
 serve(generator, port)

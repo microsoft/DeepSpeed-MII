@@ -23,7 +23,6 @@ import sys
 
 
 class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
-
     def __init__(self, generator):
         self.generator = generator
 
@@ -32,9 +31,12 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         #response = "Working"
         return modelresponse_pb2.ReplyString(response=f"{response}")
 
+
 def serve(generator, port):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(ModelResponse(generator), server)
+    modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(
+        ModelResponse(generator),
+        server)
     server.add_insecure_port(f'[::]:{port}')
     print(f"About to start server")
     server.start()
@@ -43,6 +45,6 @@ def serve(generator, port):
 
 
 if __name__ == '__main__':
-   logging.basicConfig()
-   print(sys.argv[1])
-   serve(None, sys.argv[1])
+    logging.basicConfig()
+    print(sys.argv[1])
+    serve(None, sys.argv[1])

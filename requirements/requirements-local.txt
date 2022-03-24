@@ -1,6 +1,6 @@
-torch
+asyncio
 git+https://github.com/microsoft/DeepSpeed.git
-transformers
 grpcio
 grpcio-tools
-asyncio
+torch
+transformers
