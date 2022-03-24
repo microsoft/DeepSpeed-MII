@@ -2,6 +2,7 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 
+import os
 import subprocess
 from setuptools import setup, find_packages
 
