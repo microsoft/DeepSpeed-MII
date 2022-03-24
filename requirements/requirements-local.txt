@@ -1,5 +1,5 @@
 asyncio
-git+https://github.com/microsoft/DeepSpeed.git
+deepspeed
 grpcio
 grpcio-tools
 torch

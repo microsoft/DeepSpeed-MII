@@ -1,14 +1,19 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
-from azureml.core import Environment
-from azureml.core.model import InferenceConfig
-from azureml.core.webservice import LocalWebservice
 import urllib.request
-from azureml.core.model import Model
 import os
 import enum
 import mii
+from mii.utils import logger
+
+try:
+    from azureml.core import Environment
+    from azureml.core.model import InferenceConfig
+    from azureml.core.webservice import LocalWebservice
+    from azureml.core.model import Model
+except ImportError:
+    azureml = None
 
 
 #TODO naming..
@@ -43,6 +48,11 @@ def deploy(model_name,
         return _deploy_local(model_name,
                              local_model_path=local_model_path,
                              parallelism_config=parallelism_config)
+
+    if azureml is None:
+        raise RuntimeError(
+            "azureml is not available, please install via 'pip install mii[azure]' to get extra dependencies"
+        )
 
     assert aml_workspace is not None, "Workspace cannot be none for AML deployments"
 
