@@ -1,3 +1,6 @@
+'''
+Copyright 2022 The Microsoft DeepSpeed Team
+'''
 import sys, os
 import argparse
 from mii.models.load_models import load_generator_models

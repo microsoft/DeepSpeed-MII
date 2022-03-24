@@ -1,4 +1,6 @@
-# %%
+'''
+Copyright 2022 The Microsoft DeepSpeed Team
+'''
 from azureml.core import Environment
 from azureml.core.model import InferenceConfig
 from azureml.core.webservice import LocalWebservice
