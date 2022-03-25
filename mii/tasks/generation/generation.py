@@ -9,6 +9,7 @@ import subprocess
 import time
 import grpc
 import mii
+from mii.utils import logger
 
 
 def generation_query_handle(port_number=50050):
@@ -52,36 +53,41 @@ class MIIGenerationServerClient():
             self.asyncio_loop = asyncio.get_event_loop()
             self._initialize_grpc_client()
 
+        self._wait_until_server_is_live()
+
+    def _wait_until_server_is_live(self):
+        sockets_open = False
+        while not sockets_open:
+            sockets_open = self._is_socket_open(self.port_number)
+            time.sleep(5)
+            logger.info("waiting for server to start...")
+        logger.info(f"server has started on {self.port_number}")
+
+    def _is_socket_open(self, port):
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('0.0.0.0', port))
+        sock.close()
+        return result == 0
+
     def _initialize_generator_service(self, model_name, model_path):
 
         if not self.use_grpc_server:
             self.generator = mii.load_generator_models(model_name, model_path)
         else:
-            #TODO path relative to the install
-            # multi_gpu_server_script = os.path.join(os.environ.get('MII_PATH'),"initialize_multi_gpu_server.py")
-            #TODO launch deepspeed from python path for Jeff
             #TODO we need to dump the log from these executions for debugging. Currently these are all lost
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
-            py_bin = sys.executable
-            launch_str = f"{py_bin} -m mii.launch.multi_gpu_server --model {model_name} --model-path {model_path} --port {self.port_number}"
-            cmd = f'{ds_launch_str} {launch_str}'.split(" ")
-            # cmd = ["deepspeed", "--num_gpus", f"{self.num_gpus}", multi_gpu_server_script , model_name, model_path, f"{self.port_number}"]
+            launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
+            server_args_str = f"--model {model_name} --model-path {model_path} --port {self.port_number}"
+            cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             print(cmd)
             process = subprocess.Popen(cmd)
-
-            #TODO wait until the subprocess is ready. Currently just sleeping.. write a file hack
-            #TODO The above subprocess is ready might also be a good point untiil which we dump the stdout from the processes
-            #TODO maybe a heartbeat check
-            print(
-                "Done launching deepspeed, now waiting 15 seconds for the process to be fully initilaized"
-            )
-            time.sleep(15)
-            print("Done waiting")
+            #TODO: do we need to hold onto this process handle for clean-up purposes?
 
     def _initialize_grpc_client(self):
         channels = []
         for i in range(self.num_gpus):
-            channel = grpc.aio.insecure_channel(f'localhost:{self.port_number+ i}')
+            channel = grpc.aio.insecure_channel(f'localhost:{self.port_number + i}')
             stub = mii.grpc_related.proto.modelresponse_pb2_grpc.ModelResponseStub(
                 channel)
             channels.append(channel)
