@@ -1,0 +1,6 @@
+asyncio
+deepspeed
+grpcio
+grpcio-tools
+torch
+transformers
