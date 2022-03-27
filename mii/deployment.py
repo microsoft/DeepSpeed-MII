@@ -6,6 +6,7 @@ import os
 import enum
 import mii
 from mii.utils import logger
+import json
 
 try:
     from azureml.core import Environment
@@ -27,12 +28,51 @@ class DeploymentType(enum.Enum):
 ENV_NAME = "MII-Image-CUDA-11.3-grpc"
 
 
-#TODO support this properly
-def supported_model_list():
-    return ["gpt2"]
+#TODO do this properly
+def check_if_supported(task_name, model_name):
+    assert task_name in ['text-generation', 'sequence-classification', 'question-answer'], "Not a supported task type"
+    supported=False
+    if task_name in ['text-generation']:
+        supported_models = ['gpt2']
+        assert model_name in supported_models, f"{task_name} only supports {supported_models}"
+    elif task_name in ['sequence-classification']:
+        supported_models = 'roberta-large-mnli'
+        assert model_name in supported_models, f"{task_name} only supports {supported_models}"
+    elif task_name in ['question-answering']:
+        supported_models = ['deepset/roberta-large-squad2']
+        assert model_name in supported_models, f"{task_name} only supports {supported_models}"
+    else:
+        assert False, "Does not support model {model_name} for task {task_name}"
 
+#TODO do this properly
+def create_score_file(task_name, model_name, parallelism_config):
+    config_dict = {}
+    config_dict['task_name'] = task_name
+    config_dict['model_name'] = model_name
+    config_dict['parallelism_config'] = parallelism_config
+    config_to_append = json.dumps(config_dict)
+    import subprocess
+    subprocess.run(['pwd'])
+    
+    #open text file in read mode
+    #TODO how to locate the absolute path of this file
+    source_file_template = open("../mii/models/generic_model/score.py", "r")
+    
+    #read whole file to a string
+    source_in_str = source_file_template.read()
+    
+    #close file
+    source_file_template.close()
+    
+    source_with_config = source_in_str + "\n" + "configs=" + config_to_append + "\n"
 
-def deploy(model_name,
+    #TODO should we write this file
+    f = open("score.py", "w+")
+    f.write(source_with_config)
+    f.close()
+
+def deploy(task_name,
+           model_name,
            deployment_type,
            local_model_path=None,
            aml_model_tag=None,
@@ -40,10 +80,10 @@ def deploy(model_name,
            aml_workspace=None,
            aks_target=None,
            aks_deploy_config=None,
-           parallelism_config=None):
+           parallelism_config={}):
 
-    assert model_name in supported_model_list(), f"Model {model_name} is not supported"
-
+    check_if_supported(task_name, model_name)
+    create_score_file(task_name, model_name, parallelism_config)
     if deployment_type == DeploymentType.LOCAL:
         return _deploy_local(model_name,
                              local_model_path=local_model_path,
@@ -155,4 +195,4 @@ def _deploy_aml_local(model_name,
 
 def _deploy_local(model_name, local_model_path=None, parallelism_config=None):
     mii.set_model_path(local_model_path)
-    mii.import_score_file(model_name).init()
+    mii.import_score_file().init()

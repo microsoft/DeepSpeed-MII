@@ -30,10 +30,18 @@ def set_model_path(model_path):
     os.environ['MII_MODEL_DIR'] = model_path
 
 
-def import_score_file(model_name):
+#def import_score_file(task_name, model_name):
+def import_score_file():
+
     #TODO: dynamically create score file for model in ~/.cache/mii path
-    assert model_name == 'gpt2', "only gpt2 supported right now"
-    import mii.models.gpt2.score as score
+    
+    #import mii.models.generic_model.score as score
+    import score
+
+    #TODO: this should be done as part of dynamic score file creation in ~/.cache/mii_path
+    #score.model_name = model_name
+    #score.task = task_name
+
     # spec=importlib.util.spec_from_file_location('score', f'models/{model_name}/score.py')
     # score = importlib.util.module_from_spec(spec)
     # spec.loader.exec_module(score)
@@ -47,7 +55,7 @@ def import_score_file(model_name):
 '''
 
 
-def setup_generation_task():
+def setup_task():
     return get_model_path(), not is_aml(), is_aml()
 
 

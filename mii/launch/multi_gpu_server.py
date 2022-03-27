@@ -3,12 +3,13 @@ Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import sys, os
 import argparse
-from mii.models.load_models import load_generator_models
+from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--task", type=str, help="task name")
     parser.add_argument("-m", "--model", type=str, help="model name")
     parser.add_argument("-d", "--model-path", type=str, help="path to model")
     parser.add_argument(
@@ -21,9 +22,9 @@ def main():
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     print(local_rank)
     port = args.port + local_rank
-    generator = load_generator_models(args.model, args.model_path)
-    print(generator("Test product is ", do_sample=True, min_length=50))
-    serve(generator, port)
+    inference_pipeline = load_models(args.task, args.model, args.model_path)
+    #print(inference("Test product is ", do_sample=True, min_length=50))
+    serve(inference_pipeline, port)
 
 
 if __name__ == "__main__":
