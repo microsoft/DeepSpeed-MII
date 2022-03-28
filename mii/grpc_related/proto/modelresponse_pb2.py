@@ -11,41 +11,55 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x13modelresponse.proto\x12\rmodelresponse\" \n\rRequestString\x12\x0f\n\x07request\x18\x01 \x01(\t\"\x1f\n\x0bReplyString\x12\x10\n\x08response\x18\x01 \x01(\t2Z\n\rModelResponse\x12I\n\x0bStringReply\x12\x1c.modelresponse.RequestString\x1a\x1a.modelresponse.ReplyString\"\x00\x62\x06proto3'
+    b'\n\x13modelresponse.proto\x12\rmodelresponse\"&\n\x13SingleStringRequest\x12\x0f\n\x07request\x18\x01 \x01(\t\"%\n\x11SingleStringReply\x12\x10\n\x08response\x18\x01 \x01(\t\".\n\tQARequest\x12\x10\n\x08question\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontext\x18\x02 \x01(\t2\xa0\x02\n\rModelResponse\x12X\n\x0eGeneratorReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12]\n\x13\x43lassificationReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12V\n\x16QuestionAndAnswerReply\x12\x18.modelresponse.QARequest\x1a .modelresponse.SingleStringReply\"\x00\x62\x06proto3'
 )
 
-_REQUESTSTRING = DESCRIPTOR.message_types_by_name['RequestString']
-_REPLYSTRING = DESCRIPTOR.message_types_by_name['ReplyString']
-RequestString = _reflection.GeneratedProtocolMessageType(
-    'RequestString',
+_SINGLESTRINGREQUEST = DESCRIPTOR.message_types_by_name['SingleStringRequest']
+_SINGLESTRINGREPLY = DESCRIPTOR.message_types_by_name['SingleStringReply']
+_QAREQUEST = DESCRIPTOR.message_types_by_name['QARequest']
+SingleStringRequest = _reflection.GeneratedProtocolMessageType(
+    'SingleStringRequest',
     (_message.Message,
      ),
     {
-        'DESCRIPTOR': _REQUESTSTRING,
+        'DESCRIPTOR': _SINGLESTRINGREQUEST,
         '__module__': 'modelresponse_pb2'
-        # @@protoc_insertion_point(class_scope:modelresponse.RequestString)
+        # @@protoc_insertion_point(class_scope:modelresponse.SingleStringRequest)
     })
-_sym_db.RegisterMessage(RequestString)
+_sym_db.RegisterMessage(SingleStringRequest)
 
-ReplyString = _reflection.GeneratedProtocolMessageType(
-    'ReplyString',
+SingleStringReply = _reflection.GeneratedProtocolMessageType(
+    'SingleStringReply',
     (_message.Message,
      ),
     {
-        'DESCRIPTOR': _REPLYSTRING,
+        'DESCRIPTOR': _SINGLESTRINGREPLY,
         '__module__': 'modelresponse_pb2'
-        # @@protoc_insertion_point(class_scope:modelresponse.ReplyString)
+        # @@protoc_insertion_point(class_scope:modelresponse.SingleStringReply)
     })
-_sym_db.RegisterMessage(ReplyString)
+_sym_db.RegisterMessage(SingleStringReply)
+
+QARequest = _reflection.GeneratedProtocolMessageType(
+    'QARequest',
+    (_message.Message,
+     ),
+    {
+        'DESCRIPTOR': _QAREQUEST,
+        '__module__': 'modelresponse_pb2'
+        # @@protoc_insertion_point(class_scope:modelresponse.QARequest)
+    })
+_sym_db.RegisterMessage(QARequest)
 
 _MODELRESPONSE = DESCRIPTOR.services_by_name['ModelResponse']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
     DESCRIPTOR._options = None
-    _REQUESTSTRING._serialized_start = 38
-    _REQUESTSTRING._serialized_end = 70
-    _REPLYSTRING._serialized_start = 72
-    _REPLYSTRING._serialized_end = 103
-    _MODELRESPONSE._serialized_start = 105
-    _MODELRESPONSE._serialized_end = 195
+    _SINGLESTRINGREQUEST._serialized_start = 38
+    _SINGLESTRINGREQUEST._serialized_end = 76
+    _SINGLESTRINGREPLY._serialized_start = 78
+    _SINGLESTRINGREPLY._serialized_end = 115
+    _QAREQUEST._serialized_start = 117
+    _QAREQUEST._serialized_end = 163
+    _MODELRESPONSE._serialized_start = 166
+    _MODELRESPONSE._serialized_end = 454
 # @@protoc_insertion_point(module_scope)

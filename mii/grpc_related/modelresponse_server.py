@@ -11,19 +11,29 @@ import sys
 
 
 class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
-    def __init__(self, generator):
-        self.generator = generator
+    def __init__(self, inference_pipeline):
+        self.inference_pipeline = inference_pipeline
 
-    def StringReply(self, request, context):
-        response = self.generator(request.request, do_sample=True, min_length=50)
-        #response = "Working"
-        return modelresponse_pb2.ReplyString(response=f"{response}")
+    def GeneratorReply(self, request, context):
+        response = self.inference_pipeline(request.request,
+                                           do_sample=True,
+                                           min_length=50)
+        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+
+    def ClassificationReply(self, request, context):
+        response = self.inference_pipeline(request.request, return_all_scores=True)
+        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+
+    def QuestionAndAnswerReply(self, request, context):
+        response = self.inference_pipeline(question=request.question,
+                                           context=request.context)
+        return modelresponse_pb2.SingleStringReply(response=f"{response}")
 
 
-def serve(generator, port):
+def serve(inference_pipeline, port):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(
-        ModelResponse(generator),
+        ModelResponse(inference_pipeline),
         server)
     server.add_insecure_port(f'[::]:{port}')
     print(f"About to start server")

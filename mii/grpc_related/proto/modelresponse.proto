@@ -24,17 +24,22 @@ package modelresponse;
 // The greeting service definition.
 service ModelResponse {
   // Sends a greeting
-  rpc StringReply (RequestString) returns (ReplyString) {}
-
-
+  rpc GeneratorReply (SingleStringRequest) returns (SingleStringReply) {}
+  rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
+  rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
 }
 
 // The request message containing the user's name.
-message RequestString {
+message SingleStringRequest {
   string request = 1;
 }
 
 // The response message containing the greetings
-message ReplyString {
+message SingleStringReply {
   string response = 1;
+}
+
+message QARequest {
+  string question = 1;
+  string context = 2;
 }
