@@ -13,13 +13,13 @@ from mii.utils import logger
 
 
 def mii_query_handle(task, port_number=50050):
-    return MIIServerClient( task,
-                            "na",
-                            "na",
-                            initialize_service=False,
-                            initialize_grpc_client=True,
-                            use_grpc_server=True,
-                            port_number=port_number)
+    return MIIServerClient(task,
+                           "na",
+                           "na",
+                           initialize_service=False,
+                           initialize_grpc_client=True,
+                           use_grpc_server=True,
+                           port_number=port_number)
 
 
 class MIIServerClient():
@@ -102,8 +102,9 @@ class MIIServerClient():
         responses = []
         for i in range(self.num_gpus):
             responses.append(
-                self.asyncio_loop.create_task(self._request_async_response(i,
-                                                                     request_string)))
+                self.asyncio_loop.create_task(
+                    self._request_async_response(i,
+                                                 request_string)))
 
         await responses[0]
 
@@ -115,25 +116,26 @@ class MIIServerClient():
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
         elif self.task_name in ['text-classification']:
             response = await self.stubs[stub_id].EntailmentReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))        
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
         elif self.task_name in ['question-answering']:
             response = await self.stubs[stub_id].QuestionAndAnswerReply(
-                mii.modelresponse_pb2.QARequest(question=request_dict['question'], context=request_dict['context']))
+                mii.modelresponse_pb2.QARequest(question=request_dict['question'],
+                                                context=request_dict['context']))
         else:
             assert False, "unknown task"
         return response
 
     def _request_response(self, request_dict):
         if self.task.GENERATION:
-            response = self.model(request_dict['query'],do_sample=True, min_length=50)
+            response = self.model(request_dict['query'], do_sample=True, min_length=50)
         elif self.task.CLASSIFICATION:
-            response = self.model(request_dict['query'],return_all_scores=True)
+            response = self.model(request_dict['query'], return_all_scores=True)
         elif self.task.QA:
-            response = self.model(question=request_dict['query'],context=request_dict['context'])
+            response = self.model(question=request_dict['query'],
+                                  context=request_dict['context'])
         else:
             assert False, "unknown task"
         return response
-        
 
     def query(self, request_dict):
         if not self.use_grpc_server:

@@ -15,7 +15,9 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         self.inference_pipeline = inference_pipeline
 
     def GeneratorReply(self, request, context):
-        response = self.inference_pipeline(request.request, do_sample=True, min_length=50)
+        response = self.inference_pipeline(request.request,
+                                           do_sample=True,
+                                           min_length=50)
         return modelresponse_pb2.SingleStringReply(response=f"{response}")
 
     def ClassificationReply(self, request, context):
@@ -23,8 +25,10 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         return modelresponse_pb2.SingleStringReply(response=f"{response}")
 
     def QuestionAndAnswerReply(self, request, context):
-        response = self.inference_pipeline(question=request.question, context=request.context)
+        response = self.inference_pipeline(question=request.question,
+                                           context=request.context)
         return modelresponse_pb2.SingleStringReply(response=f"{response}")
+
 
 def serve(inference_pipeline, port):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

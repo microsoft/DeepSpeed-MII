@@ -34,7 +34,7 @@ def set_model_path(model_path):
 def import_score_file():
 
     #TODO: dynamically create score file for model in ~/.cache/mii path
-    
+
     #import mii.models.generic_model.score as score
     import score
 

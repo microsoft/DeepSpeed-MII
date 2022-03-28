@@ -31,7 +31,7 @@ ENV_NAME = "MII-Image-CUDA-11.3-grpc"
 #TODO do this properly
 def check_if_supported(task_name, model_name):
     assert task_name in ['text-generation', 'sequence-classification', 'question-answer'], "Not a supported task type"
-    supported=False
+    supported = False
     if task_name in ['text-generation']:
         supported_models = ['gpt2']
         assert model_name in supported_models, f"{task_name} only supports {supported_models}"
@@ -44,6 +44,7 @@ def check_if_supported(task_name, model_name):
     else:
         assert False, "Does not support model {model_name} for task {task_name}"
 
+
 #TODO do this properly
 def create_score_file(task_name, model_name, parallelism_config):
     config_dict = {}
@@ -53,23 +54,24 @@ def create_score_file(task_name, model_name, parallelism_config):
     config_to_append = json.dumps(config_dict)
     import subprocess
     subprocess.run(['pwd'])
-    
+
     #open text file in read mode
     #TODO how to locate the absolute path of this file
     source_file_template = open("../mii/models/generic_model/score.py", "r")
-    
+
     #read whole file to a string
     source_in_str = source_file_template.read()
-    
+
     #close file
     source_file_template.close()
-    
+
     source_with_config = source_in_str + "\n" + "configs=" + config_to_append + "\n"
 
     #TODO should we write this file
     f = open("score.py", "w+")
     f.write(source_with_config)
     f.close()
+
 
 def deploy(task_name,
            model_name,

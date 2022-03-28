@@ -4,8 +4,8 @@ Copyright 2022 The Microsoft DeepSpeed Team
 import os
 import mii
 
-
 model = None
+
 
 def init():
 
@@ -27,13 +27,12 @@ def init():
 
     assert model_name is not None, "The model name should be set before calling init"
     assert task is not None, "The task name should be set before calling init"
-    
-    model = mii.MIIServerClient(
-        task,
-        model_name,
-        model_path,
-        use_grpc_server=use_grpc_server,
-        initialize_grpc_client=initialize_grpc_client)
+
+    model = mii.MIIServerClient(task,
+                                model_name,
+                                model_path,
+                                use_grpc_server=use_grpc_server,
+                                initialize_grpc_client=initialize_grpc_client)
 
 
 def run(request):

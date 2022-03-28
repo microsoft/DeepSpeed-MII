@@ -15,9 +15,9 @@ def load_models(task, name, model_path):
     inference_pipeline = pipeline(task, model=name, device=local_rank)
 
     inference_pipeline.model = deepspeed.init_inference(inference_pipeline.model,
-                                               mp_size=world_size,
-                                               dtype=torch.float,
-                                               replace_with_kernel_inject=True,
-                                               replace_method='auto')
+                                                        mp_size=world_size,
+                                                        dtype=torch.float,
+                                                        replace_with_kernel_inject=True,
+                                                        replace_method='auto')
 
     return inference_pipeline
