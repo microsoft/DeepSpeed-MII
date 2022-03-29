@@ -2,6 +2,7 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import os
+import json
 import mii
 
 model = None
@@ -39,3 +40,6 @@ def run(request):
     global model
     request_dict = json.loads(request)
     return model.query(request_dict)
+
+
+### Auto-generated config will be appended below at run-time
