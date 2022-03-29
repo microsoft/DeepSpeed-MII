@@ -2,11 +2,8 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import asyncio
-from sqlite3 import NotSupportedError
-from xml.dom import NotSupportedErr
 import torch
 import sys
-import os
 import subprocess
 import time
 import grpc
