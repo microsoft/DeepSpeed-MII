@@ -6,6 +6,8 @@ import os
 import logging
 import importlib
 
+from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT
+
 
 def get_model_path():
     aml_model_dir = os.getenv('AZUREML_MODEL_DIR')
@@ -30,21 +32,20 @@ def set_model_path(model_path):
     os.environ['MII_MODEL_DIR'] = model_path
 
 
-#def import_score_file(task_name, model_name):
+def mii_cache_path():
+    cache_path = os.environ.get(MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT)
+    if not os.path.isdir(cache_path):
+        os.makedirs(cache_path)
+    return cache_path
+
+
 def import_score_file():
-
-    #TODO: dynamically create score file for model in ~/.cache/mii path
-
-    #import mii.models.generic_model.score as score
-    import score
-
-    #TODO: this should be done as part of dynamic score file creation in ~/.cache/mii_path
-    #score.model_name = model_name
-    #score.task = task_name
-
-    # spec=importlib.util.spec_from_file_location('score', f'models/{model_name}/score.py')
-    # score = importlib.util.module_from_spec(spec)
-    # spec.loader.exec_module(score)
+    spec = importlib.util.spec_from_file_location(
+        'score',
+        os.path.join(mii_cache_path(),
+                     "score.py"))
+    score = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(score)
     return score
 
 

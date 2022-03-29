@@ -1,12 +1,12 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
-import urllib.request
 import os
-import enum
-import mii
-from mii.utils import logger
 import json
+
+import mii
+from mii.constants import DeploymentType
+from mii.utils import logger, mii_cache_path
 
 try:
     from azureml.core import Environment
@@ -16,21 +16,12 @@ try:
 except ImportError:
     azureml = None
 
-
-#TODO naming..
-class DeploymentType(enum.Enum):
-    LOCAL = 1
-    #expose GPUs
-    LOCAL_AML = 2
-    AML_ON_AKS = 3
-
-
 ENV_NAME = "MII-Image-CUDA-11.3-grpc"
 
 
 #TODO do this properly
 def check_if_supported(task_name, model_name):
-    assert task_name in ['text-generation', 'sequence-classification', 'question-answer'], "Not a supported task type"
+    assert task_name in ['text-generation', 'sequence-classification', 'question-answering'], "Not a supported task type"
     supported = False
     if task_name in ['text-generation']:
         supported_models = ['gpt2']
@@ -45,32 +36,27 @@ def check_if_supported(task_name, model_name):
         assert False, "Does not support model {model_name} for task {task_name}"
 
 
-#TODO do this properly
 def create_score_file(task_name, model_name, parallelism_config):
     config_dict = {}
     config_dict['task_name'] = task_name
     config_dict['model_name'] = model_name
     config_dict['parallelism_config'] = parallelism_config
-    config_to_append = json.dumps(config_dict)
-    import subprocess
-    subprocess.run(['pwd'])
 
-    #open text file in read mode
-    #TODO how to locate the absolute path of this file
-    source_file_template = open("../mii/models/generic_model/score.py", "r")
+    if len(mii.__path__) > 1:
+        logger.warning(
+            f"Detected mii path as multiple sources: {mii.__path__}, might cause unknown behavior"
+        )
 
-    #read whole file to a string
-    source_in_str = source_file_template.read()
+    with open(os.path.join(mii.__path__[0], "models/generic_model/score.py"), "r") as fd:
+        score_src = fd.read()
 
-    #close file
-    source_file_template.close()
+    # update score file w. global config dict
+    source_with_config = f"{score_src}\n"
+    source_with_config += f"configs = {json.dumps(config_dict)}"
 
-    source_with_config = source_in_str + "\n" + "configs=" + config_to_append + "\n"
-
-    #TODO should we write this file
-    f = open("score.py", "w+")
-    f.write(source_with_config)
-    f.close()
+    with open(os.path.join(mii_cache_path(), "score.py"), "w") as fd:
+        fd.write(source_with_config)
+        fd.write("\n")
 
 
 def deploy(task_name,

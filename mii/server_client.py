@@ -2,6 +2,8 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import asyncio
+from sqlite3 import NotSupportedError
+from xml.dom import NotSupportedErr
 import torch
 import sys
 import os
@@ -50,20 +52,22 @@ class MIIServerClient():
             self.model = None
 
         if self.initialize_service:
-            self._initialize_service(model_name, model_path)
+            self.process = self._initialize_service(model_name, model_path)
+            self._wait_until_server_is_live()
 
         if self.initialize_grpc_client and self.use_grpc_server:
             self.stubs = []
             self.asyncio_loop = asyncio.get_event_loop()
             self._initialize_grpc_client()
 
-        self._wait_until_server_is_live()
-
     def _wait_until_server_is_live(self):
         sockets_open = False
         while not sockets_open:
             sockets_open = self._is_socket_open(self.port_number)
-            time.sleep(5)
+            process_alive = self._is_server_process_alive()
+            if not process_alive:
+                raise RuntimeError("server crashed for some reason, unable to proceed")
+            time.sleep(4)
             logger.info("waiting for server to start...")
         logger.info(f"server has started on {self.port_number}")
 
@@ -74,11 +78,28 @@ class MIIServerClient():
         sock.close()
         return result == 0
 
-    def _initialize_service(self, model_name, model_path):
+    def _is_server_process_alive(self):
+        if self.process is None:
+            return True
+        try:
+            self.process.wait(1)
+        except subprocess.TimeoutExpired as err:
+            # timeout means we're still running and all (probably) okay
+            is_alive = True
+        else:
+            # no exception case
+            is_alive = False
+        return is_alive
 
+    def _initialize_service(self, model_name, model_path):
+        process = None
         if not self.use_grpc_server:
             self.model = mii.load_model(model_name, model_path)
         else:
+            if self._is_socket_open(self.port_number):
+                raise RuntimeError(
+                    f"Server is already running on port {self.port_number}, please shutdown to use different port."
+                )
             #TODO we need to dump the log from these executions for debugging. Currently these are all lost
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
@@ -87,6 +108,7 @@ class MIIServerClient():
             print(cmd)
             process = subprocess.Popen(cmd)
             #TODO: do we need to hold onto this process handle for clean-up purposes?
+        return process
 
     def _initialize_grpc_client(self):
         channels = []
@@ -134,7 +156,7 @@ class MIIServerClient():
             response = self.model(question=request_dict['query'],
                                   context=request_dict['context'])
         else:
-            assert False, "unknown task"
+            raise NotSupportedError(f"task is not supported: {self.task}")
         return response
 
     def query(self, request_dict):
