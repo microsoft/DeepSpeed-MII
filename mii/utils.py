@@ -73,7 +73,6 @@ with open('{key_path}', 'w') as fd:
 subprocess.run(['chmod', '600', '{key_path}'])
 env = os.environ.copy()
 env["GIT_SSH_COMMAND"]="ssh -i {key_path} -o StrictHostKeyChecking=no"
-subprocess.run(["git", "clone", "git@github.com:samyam/MII.git"], env=env)
 install_cmd = "-m pip install git+ssh://git@github.com/microsoft/DeepSpeed-MII.git@{debug_branch}"
 subprocess.run([sys.executable] + install_cmd.split(" "), env=env)
 """
