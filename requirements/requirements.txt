@@ -1,0 +1,5 @@
+asyncio
+grpcio
+grpcio-tools
+torch
+transformers

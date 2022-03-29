@@ -5,9 +5,17 @@ import enum
 class DeploymentType(enum.Enum):
     LOCAL = 1
     #expose GPUs
-    LOCAL_AML = 2
+    AML_LOCAL = 2
     AML_ON_AKS = 3
 
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"
+
+MII_DEBUG_MODE = "MII_DEBUG_MODE"
+MII_DEBUG_MODE_DEFAULT = "0"
+
+MII_DEBUG_DEPLOY_KEY = "MII_DEBUG_DEPLOY_KEY"
+
+MII_DEBUG_BRANCH = "MII_DEBUG_BRANCH"
+MII_DEBUG_BRANCH_DEFAULT = "main"
