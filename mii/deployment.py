@@ -5,8 +5,9 @@ import os
 import json
 
 import mii
+from mii import utils
 from mii.constants import DeploymentType
-from mii.utils import logger, mii_cache_path
+from mii.utils import logger
 
 try:
     from azureml.core import Environment
@@ -14,7 +15,9 @@ try:
     from azureml.core.webservice import LocalWebservice
     from azureml.core.model import Model
 except ImportError:
-    azureml = None
+    azureml_available = False
+else:
+    azureml_available = True
 
 ENV_NAME = "MII-Image-CUDA-11.3-grpc"
 
@@ -51,10 +54,11 @@ def create_score_file(task_name, model_name, parallelism_config):
         score_src = fd.read()
 
     # update score file w. global config dict
-    source_with_config = f"{score_src}\n"
+    source_with_config = utils.debug_score_preamble()
+    source_with_config += f"{score_src}\n"
     source_with_config += f"configs = {json.dumps(config_dict)}"
 
-    with open(os.path.join(mii_cache_path(), "score.py"), "w") as fd:
+    with open(utils.generated_score_path(), "w") as fd:
         fd.write(source_with_config)
         fd.write("\n")
 
@@ -72,19 +76,21 @@ def deploy(task_name,
 
     check_if_supported(task_name, model_name)
     create_score_file(task_name, model_name, parallelism_config)
+
     if deployment_type == DeploymentType.LOCAL:
         return _deploy_local(model_name,
                              local_model_path=local_model_path,
                              parallelism_config=parallelism_config)
 
-    if azureml is None:
+    if not azureml_available:
         raise RuntimeError(
             "azureml is not available, please install via 'pip install mii[azure]' to get extra dependencies"
         )
 
     assert aml_workspace is not None, "Workspace cannot be none for AML deployments"
+    assert aml_deployment_name is not None, "Must provide aml_deployment_name for AML deployments"
 
-    if deployment_type == DeploymentType.LOCAL_AML:
+    if deployment_type == DeploymentType.AML_LOCAL:
         return _deploy_aml_local(model_name,
                                  aml_workspace,
                                  aml_deployment_name,
@@ -160,10 +166,7 @@ def _deploy_aml_local(model_name,
 
     inference_config = InferenceConfig(environment=Environment.get(aml_workspace,
                                                                    name=ENV_NAME),
-                                       entry_script=os.path.join(
-                                           "models",
-                                           model_name,
-                                           "score.py"))
+                                       entry_script=utils.generated_score_path())
 
     deployment_config = LocalWebservice.deploy_configuration(port=6789)
 

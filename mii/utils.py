@@ -6,7 +6,8 @@ import os
 import logging
 import importlib
 
-from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT
+from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
+    MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT
 
 
 def get_model_path():
@@ -49,11 +50,36 @@ def import_score_file():
     return score
 
 
-'''returns i) model path
-          ii) enables grpc_server if runninng locally, else sets it to False
-         iii) disables grpc_client if running locally as this would be done by client
-            on a different process else sets it to tru
-'''
+def generated_score_path():
+    return os.path.join(mii_cache_path(), "score.py")
+
+
+def debug_score_preamble():
+    preamble = ""
+    debug_mode_enabled = int(os.environ.get(MII_DEBUG_MODE, MII_DEBUG_MODE_DEFAULT))
+    if not debug_mode_enabled:
+        return preamble
+
+    deploy_key = os.environ.get(MII_DEBUG_DEPLOY_KEY)
+    debug_branch = os.environ.get(MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT)
+    key_path = "/tmp/mii_deploy_key"
+
+    preamble = f"""
+import subprocess, os, sys
+deploy_key = '''{deploy_key}'''
+with open('{key_path}', 'w') as fd:
+    fd.write(deploy_key)
+    fd.write("\\n")
+subprocess.run(['chmod', '600', '{key_path}'])
+env = os.environ.copy()
+env["GIT_SSH_COMMAND"]="ssh -i {key_path} -o StrictHostKeyChecking=no"
+subprocess.run(["git", "clone", "git@github.com:samyam/MII.git"], env=env)
+install_cmd = "-m pip install git+ssh://git@github.com/microsoft/DeepSpeed-MII.git@{debug_branch}"
+subprocess.run([sys.executable] + install_cmd.split(" "), env=env)
+import mii
+print("installed mii path:", mii.__path__)
+"""
+    return preamble
 
 
 def setup_task():
