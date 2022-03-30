@@ -22,26 +22,9 @@ else:
 ENV_NAME = "MII-Image-CUDA-11.3-grpc"
 
 
-#TODO do this properly
-def check_if_supported(task_name, model_name):
-    assert task_name in ['text-generation', 'sequence-classification', 'question-answering'], "Not a supported task type"
-    supported = False
-    if task_name in ['text-generation']:
-        supported_models = ['gpt2']
-        assert model_name in supported_models, f"{task_name} only supports {supported_models}"
-    elif task_name in ['sequence-classification']:
-        supported_models = 'roberta-large-mnli'
-        assert model_name in supported_models, f"{task_name} only supports {supported_models}"
-    elif task_name in ['question-answering']:
-        supported_models = ['deepset/roberta-large-squad2']
-        assert model_name in supported_models, f"{task_name} only supports {supported_models}"
-    else:
-        assert False, "Does not support model {model_name} for task {task_name}"
-
-
-def create_score_file(task_name, model_name, parallelism_config):
+def create_score_file(task, model_name, parallelism_config):
     config_dict = {}
-    config_dict['task_name'] = task_name
+    config_dict['task_name'] = mii.get_task_name(task)
     config_dict['model_name'] = model_name
     config_dict['parallelism_config'] = parallelism_config
 
@@ -74,8 +57,9 @@ def deploy(task_name,
            aks_deploy_config=None,
            parallelism_config={}):
 
-    check_if_supported(task_name, model_name)
-    create_score_file(task_name, model_name, parallelism_config)
+    task = mii.get_task(task_name)
+    mii.check_if_task_and_model_is_supported(task, model_name)
+    create_score_file(task, model_name, parallelism_config)
 
     if deployment_type == DeploymentType.LOCAL:
         return _deploy_local(model_name,

@@ -7,7 +7,56 @@ import logging
 import importlib
 
 from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
-    MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT
+    MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
+    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME
+
+from mii.constants import Tasks
+
+def get_task_name(task):
+    if task == Tasks.QUESTION_ANSWERING:
+        return QUESTION_ANSWERING_NAME
+
+    if task == Tasks.TEXT_GENERATION:
+        return TEXT_GENERATION_NAME
+
+    if task == Tasks.TEXT_CLASSIFICATION:
+        return TEXT_CLASSIFICATION_NAME
+
+    assert False, f"Unknown Task {task}"
+
+def get_task(task_name):
+    if task_name == QUESTION_ANSWERING_NAME:
+        return Tasks.QUESTION_ANSWERING
+
+    if task_name == TEXT_GENERATION_NAME:
+        return Tasks.TEXT_GENERATION
+
+    if task_name == TEXT_CLASSIFICATION_NAME:
+        return Tasks.TEXT_CLASSIFICATION
+
+    assert False, f"Unknown Task {task_name}"
+
+
+#TODO read this from a file containing list of files supported for each task 
+def _get_supported_models_name(task):
+    if task==Tasks.TEXT_GENERATION:
+        supported_models = ['gpt2']
+
+    elif task == Tasks.TEXT_CLASSIFICATION:
+        supported_models = 'roberta-large-mnli'
+
+    elif task == Tasks.QUESTION_ANSWERING:
+        supported_models = ['deepset/roberta-large-squad2']
+    else:
+        assert False, f"{task} is not supported"
+
+    return supported_models
+
+
+def check_if_task_and_model_is_supported(task, model_name):
+    supported = False
+    supported_models = _get_supported_models_name(task)
+    assert model_name in supported_models, f"{task} only supports {supported_models}"
 
 
 def get_model_path():
@@ -75,6 +124,7 @@ env = os.environ.copy()
 env["GIT_SSH_COMMAND"]="ssh -i {key_path} -o StrictHostKeyChecking=no"
 install_cmd = "-m pip install git+ssh://git@github.com/microsoft/DeepSpeed-MII.git@{debug_branch}"
 subprocess.run([sys.executable] + install_cmd.split(" "), env=env)
+
 """
     return preamble
 
