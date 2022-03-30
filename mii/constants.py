@@ -9,6 +9,16 @@ class DeploymentType(enum.Enum):
     AML_ON_AKS = 3
 
 
+class Tasks(enum.Enum):
+    TEXT_GENERATION = 1
+    TEXT_CLASSIFICATION = 2
+    QUESTION_ANSWERING = 3
+
+
+TEXT_GENERATION_NAME = 'text-generation'
+TEXT_CLASSIFICATION_NAME = 'text-classification'
+QUESTION_ANSWERING_NAME = 'question-answering'
+
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"
 

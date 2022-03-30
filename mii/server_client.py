@@ -32,7 +32,7 @@ class MIIServerClient():
                  use_grpc_server=False,
                  port_number=50050):
 
-        self.task_name = task_name
+        self.task = mii.get_task(task_name)
         self.num_gpus = torch.cuda.device_count()
         assert self.num_gpus > 0, "No GPU detected"
 
@@ -100,7 +100,7 @@ class MIIServerClient():
             #TODO we need to dump the log from these executions for debugging. Currently these are all lost
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
-            server_args_str = f"--task {self.task_name} --model {model_name} --model-path {model_path} --port {self.port_number}"
+            server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             print(cmd)
             process = subprocess.Popen(cmd)
@@ -130,13 +130,15 @@ class MIIServerClient():
         return responses[0]
 
     async def _request_async_response(self, stub_id, request_dict):
-        if self.task_name in ['text-generation']:
+        if self.task == mii.Tasks.TEXT_GENERATION:
             response = await self.stubs[stub_id].GeneratorReply(
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
-        elif self.task_name in ['text-classification']:
+
+        elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
             response = await self.stubs[stub_id].EntailmentReply(
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
-        elif self.task_name in ['question-answering']:
+
+        elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = await self.stubs[stub_id].QuestionAndAnswerReply(
                 mii.modelresponse_pb2.QARequest(question=request_dict['question'],
                                                 context=request_dict['context']))
@@ -145,11 +147,13 @@ class MIIServerClient():
         return response
 
     def _request_response(self, request_dict):
-        if self.task.GENERATION:
+        if self.task == mii.Tasks.TEXT_GENERATION:
             response = self.model(request_dict['query'], do_sample=True, min_length=50)
-        elif self.task.CLASSIFICATION:
+
+        elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
             response = self.model(request_dict['query'], return_all_scores=True)
-        elif self.task.QA:
+
+        elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = self.model(question=request_dict['query'],
                                   context=request_dict['context'])
         else:
