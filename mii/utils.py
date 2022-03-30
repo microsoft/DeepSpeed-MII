@@ -12,6 +12,7 @@ from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE
 
 from mii.constants import Tasks
 
+
 def get_task_name(task):
     if task == Tasks.QUESTION_ANSWERING:
         return QUESTION_ANSWERING_NAME
@@ -23,6 +24,7 @@ def get_task_name(task):
         return TEXT_CLASSIFICATION_NAME
 
     assert False, f"Unknown Task {task}"
+
 
 def get_task(task_name):
     if task_name == QUESTION_ANSWERING_NAME:
@@ -37,9 +39,9 @@ def get_task(task_name):
     assert False, f"Unknown Task {task_name}"
 
 
-#TODO read this from a file containing list of files supported for each task 
+#TODO read this from a file containing list of files supported for each task
 def _get_supported_models_name(task):
-    if task==Tasks.TEXT_GENERATION:
+    if task == Tasks.TEXT_GENERATION:
         supported_models = ['gpt2']
 
     elif task == Tasks.TEXT_CLASSIFICATION:

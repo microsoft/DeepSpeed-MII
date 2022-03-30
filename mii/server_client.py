@@ -150,10 +150,10 @@ class MIIServerClient():
         if self.task == mii.Tasks.TEXT_GENERATION:
             response = self.model(request_dict['query'], do_sample=True, min_length=50)
 
-        elif self.task ==  mii.Tasks.TEXT_CLASSIFICATION:
+        elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
             response = self.model(request_dict['query'], return_all_scores=True)
 
-        elif self.task ==  mii.Tasks.QUESTION_ANSWERING:
+        elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = self.model(question=request_dict['query'],
                                   context=request_dict['context'])
         else:
