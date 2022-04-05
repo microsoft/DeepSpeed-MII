@@ -147,6 +147,7 @@ class MIIServerClient():
         return response
 
     def _request_response(self, request_dict):
+        start = time.time()
         if self.task == mii.Tasks.TEXT_GENERATION:
             response = self.model(request_dict['query'], do_sample=True, min_length=50)
 
@@ -158,9 +159,11 @@ class MIIServerClient():
                                   context=request_dict['context'])
         else:
             raise NotSupportedError(f"task is not supported: {self.task}")
-        return response
+        end = time.time()
+        return response + f"\n Model Execution Time: {end-start} seconds"
 
     def query(self, request_dict):
+        
         if not self.use_grpc_server:
             response = self._request_response(request_dict)
             generated_string = f"{response}"
@@ -169,4 +172,5 @@ class MIIServerClient():
             response = self.asyncio_loop.run_until_complete(
                 self._query_in_tensor_parallel(request_dict))
             generated_string = response.result().response
+
         return generated_string

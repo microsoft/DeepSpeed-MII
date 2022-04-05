@@ -8,17 +8,19 @@ import grpc
 from .proto import modelresponse_pb2
 from .proto import modelresponse_pb2_grpc
 import sys
-
+import time
 
 class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
     def __init__(self, inference_pipeline):
         self.inference_pipeline = inference_pipeline
 
     def GeneratorReply(self, request, context):
+        start = time.time()
         response = self.inference_pipeline(request.request,
                                            do_sample=True,
                                            min_length=50)
-        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+        end = time.time()
+        return modelresponse_pb2.SingleStringReply(response=f"{response} \n Model Execution Time: {end-start} seconds")
 
     def ClassificationReply(self, request, context):
         response = self.inference_pipeline(request.request, return_all_scores=True)

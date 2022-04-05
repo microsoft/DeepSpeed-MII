@@ -4,6 +4,7 @@ Copyright 2022 The Microsoft DeepSpeed Team
 import os
 import json
 import mii
+import time
 
 model = None
 
@@ -37,9 +38,13 @@ def init():
 
 
 def run(request):
+    start = time.time()
     global model
     request_dict = json.loads(request)
-    return model.query(request_dict)
-
+    
+    response = model.query(request_dict)
+    end = time.time()
+    response += f"\n Query Run Time: {end-start} secs"
+    return response
 
 ### Auto-generated config will be appended below at run-time
