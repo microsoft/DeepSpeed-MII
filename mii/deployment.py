@@ -46,30 +46,42 @@ def create_score_file(task, model_name, parallelism_config):
         fd.write(source_with_config)
         fd.write("\n")
 
-#Fetch the specified model if it exists. If the model does not exist and its the default supported model type, create the model and register it
-def _get_aml_model(task_name, model_name, aml_model_tags, aml_workspace, local_model_path=None, force_register=False):
 
-    models = Model.list(workspace=aml_workspace, 
-                        name=model_name, 
-                        tags=[[str(key),str(value)] for key,value in aml_model_tags.items()])
+#Fetch the specified model if it exists. If the model does not exist and its the default supported model type, create the model and register it
+def _get_aml_model(task_name,
+                   model_name,
+                   aml_model_tags,
+                   aml_workspace,
+                   local_model_path=None,
+                   force_register=False):
+
+    models = Model.list(workspace=aml_workspace,
+                        name=model_name,
+                        tags=[[str(key),
+                               str(value)] for key,
+                              value in aml_model_tags.items()])
 
     if len(models) == 0 or force_register:
 
         if len(models) > 0:
-            logger.warning(f"{model_name} with {aml_model_tags} is already registered, but registering a new version due to force_register: {force_register}")
-        
-        model_path = download_model_and_get_path(task_name, model_name) if local_model_path is None else local_model_path
-        
-        logger.info(f"Registering {model_name} with tag {aml_model_tags} from path {model_path}")
-        return Model.register(workspace = aml_workspace, 
-                    model_path = model_path, 
-                    model_name = model_name, 
-                    tags = aml_model_tags)
+            logger.warning(
+                f"{model_name} with {aml_model_tags} is already registered, but registering a new version due to force_register: {force_register}"
+            )
+
+        model_path = download_model_and_get_path(
+            task_name,
+            model_name) if local_model_path is None else local_model_path
+
+        logger.info(
+            f"Registering {model_name} with tag {aml_model_tags} from path {model_path}")
+        return Model.register(workspace=aml_workspace,
+                              model_path=model_path,
+                              model_name=model_name,
+                              tags=aml_model_tags)
 
     else:
-        return Model(workspace=aml_workspace,
-                     name=model_name,
-                     tags=aml_model_tags)
+        return Model(workspace=aml_workspace, name=model_name, tags=aml_model_tags)
+
 
 def _get_inference_config(aml_workspace):
     global ENV_NAME
@@ -78,7 +90,6 @@ def _get_inference_config(aml_workspace):
                                                                    name=ENV_NAME),
                                        entry_script=utils.generated_score_path())
     return inference_config
-    
 
 
 def deploy(task_name,
@@ -111,13 +122,16 @@ def deploy(task_name,
     assert aml_deployment_name is not None, "Must provide aml_deployment_name for AML deployments"
 
     #either return a previously registered model, or register a new model
-    model = _get_aml_model(task_name, model_name, aml_model_tags, aml_workspace, 
-                            local_model_path=local_model_path, 
-                            force_register = force_register_model)
+    model = _get_aml_model(task_name,
+                           model_name,
+                           aml_model_tags,
+                           aml_workspace,
+                           local_model_path=local_model_path,
+                           force_register=force_register_model)
 
     logger.info(f"Deploying model {model}")
 
-    #return 
+    #return
     inference_config = _get_inference_config(aml_workspace)
 
     if deployment_type == DeploymentType.AML_LOCAL:
@@ -136,7 +150,6 @@ def deploy(task_name,
                               aks_deploy_config,
                               aml_deployment_name,
                               parallelism_config=parallelism_config)
-
 
 
 def _deploy_aml_on_aks(model,
@@ -167,7 +180,6 @@ def _deploy_aml_local(model,
                       aml_workspace,
                       aml_deployment_name,
                       parallelism_config=None):
-
 
     deployment_config = LocalWebservice.deploy_configuration(port=6789)
 

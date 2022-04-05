@@ -10,7 +10,7 @@ ws = Workspace(workspace_name=os.environ["AZ_WORKSPACE"],
 
 mii.deploy(task_name="text-generation",
            model_name="gpt2",
-           aml_model_tags={'my_tag':'first_deployment'},
+           aml_model_tags={'my_tag': 'first_deployment'},
            deployment_type=mii.DeploymentType.AML_LOCAL,
            aml_workspace=ws,
            aml_deployment_name="my-gpt2-service",
