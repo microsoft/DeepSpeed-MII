@@ -1,8 +1,5 @@
 from ctypes import wstring_at
 import os
-
-from azureml.core import Workspace
-
 import mii
 from mii.utils import mii_cache_path
 
@@ -25,9 +22,6 @@ def _download_hf_model_to_path(task, model_name, model_path):
 '''generic method that will allow downloading all models that we support.
 Currently only supports HF models, but will be extended to support model checkpoints
 from other sources'''
-
-
-def download_model_and_get_path(task, model_name):
 
     model_path = os.path.join(mii_cache_path(), model_name)
     if not os.path.isdir(model_path):
