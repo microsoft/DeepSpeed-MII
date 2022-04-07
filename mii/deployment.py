@@ -7,7 +7,8 @@ import json
 import mii
 from mii import utils
 from mii.constants import DeploymentType
-from mii.utils import logger
+from mii.utils import logger, log_levels
+from mii.models.utils import download_model_and_get_path
 
 try:
     from azureml.core import Environment
@@ -46,11 +47,57 @@ def create_score_file(task, model_name, parallelism_config):
         fd.write("\n")
 
 
+#Fetch the specified model if it exists. If the model does not exist and its the default supported model type, create the model and register it
+def _get_aml_model(task_name,
+                   model_name,
+                   aml_model_tags,
+                   aml_workspace,
+                   local_model_path=None,
+                   force_register=False):
+
+    models = Model.list(workspace=aml_workspace,
+                        name=model_name,
+                        tags=[[str(key),
+                               str(value)] for key,
+                              value in aml_model_tags.items()])
+
+    if len(models) == 0 or force_register:
+
+        if len(models) > 0:
+            logger.warning(
+                f"{model_name} with {aml_model_tags} is already registered, but registering a new version due to force_register: {force_register}"
+            )
+
+        model_path = download_model_and_get_path(
+            task_name,
+            model_name) if local_model_path is None else local_model_path
+
+        logger.info(
+            f"Registering {model_name} with tag {aml_model_tags} from path {model_path}")
+        return Model.register(workspace=aml_workspace,
+                              model_path=model_path,
+                              model_name=model_name,
+                              tags=aml_model_tags)
+
+    else:
+        return Model(workspace=aml_workspace, name=model_name, tags=aml_model_tags)
+
+
+def _get_inference_config(aml_workspace):
+    global ENV_NAME
+
+    inference_config = InferenceConfig(environment=Environment.get(aml_workspace,
+                                                                   name=ENV_NAME),
+                                       entry_script=utils.generated_score_path())
+    return inference_config
+
+
 def deploy(task_name,
            model_name,
            deployment_type,
            local_model_path=None,
-           aml_model_tag=None,
+           aml_model_tags=None,
+           force_register_model=False,
            aml_deployment_name=None,
            aml_workspace=None,
            aks_target=None,
@@ -74,56 +121,44 @@ def deploy(task_name,
     assert aml_workspace is not None, "Workspace cannot be none for AML deployments"
     assert aml_deployment_name is not None, "Must provide aml_deployment_name for AML deployments"
 
+    #either return a previously registered model, or register a new model
+    model = _get_aml_model(task_name,
+                           model_name,
+                           aml_model_tags,
+                           aml_workspace,
+                           local_model_path=local_model_path,
+                           force_register=force_register_model)
+
+    logger.info(f"Deploying model {model}")
+
+    #return
+    inference_config = _get_inference_config(aml_workspace)
+
     if deployment_type == DeploymentType.AML_LOCAL:
-        return _deploy_aml_local(model_name,
+        return _deploy_aml_local(model,
+                                 inference_config,
                                  aml_workspace,
                                  aml_deployment_name,
-                                 aml_model_tag=aml_model_tag,
                                  parallelism_config=parallelism_config)
 
     assert aks_target is not None and aks_deploy_config is not None and aml_deployment_name is not None, "aks_target and aks_deployment_config must be provided for AML_ON_AKS deployment"
 
-    return _deploy_aml_on_aks(model_name,
+    return _deploy_aml_on_aks(model,
+                              inference_config,
                               aml_workspace,
                               aks_target,
                               aks_deploy_config,
                               aml_deployment_name,
-                              aml_model_tag=aml_model_tag,
                               parallelism_config=parallelism_config)
 
 
-#TODO support this properly
-#Fetch the specified model if it exists. If the model does not exist and its the default supported model type, create the model and register it
-def _get_aml_model(model_name, aml_model_tag, aml_workspace):
-    if model_name in aml_workspace.models.keys():
-        return Model(workspace=aml_workspace,
-                     name=model_name,
-                     id=f"{model_name}:1",
-                     version=1,
-                     tags={},
-                     properties={})
-    else:
-        assert False, "Model not found"
-
-
-def _deploy_aml_on_aks(model_name,
+def _deploy_aml_on_aks(model,
+                       inference_config,
                        aml_workspace,
                        aks_target,
                        aks_deploy_config,
                        aml_deployment_name,
-                       aml_model_tag=None,
                        parallelism_config=None):
-    global ENV_NAME
-    model = _get_aml_model(model_name, aml_model_tag, aml_workspace)
-
-    inference_config = InferenceConfig(
-        environment=Environment.get(aml_workspace,
-                                    name=ENV_NAME),
-        #TODO make this more robust.
-        #Use relative path from where we are running or an absolute path
-        entry_script=os.path.join("models",
-                                  model_name,
-                                  "score.py"))
 
     service = Model.deploy(
         aml_workspace,
@@ -140,17 +175,11 @@ def _deploy_aml_on_aks(model_name,
     return service
 
 
-def _deploy_aml_local(model_name,
+def _deploy_aml_local(model,
+                      inference_config,
                       aml_workspace,
                       aml_deployment_name,
-                      aml_model_tag=None,
                       parallelism_config=None):
-    global ENV_NAME
-    model = _get_aml_model(model_name, aml_model_tag, aml_workspace)
-
-    inference_config = InferenceConfig(environment=Environment.get(aml_workspace,
-                                                                   name=ENV_NAME),
-                                       entry_script=utils.generated_score_path())
 
     deployment_config = LocalWebservice.deploy_configuration(port=6789)
 
