@@ -163,7 +163,7 @@ class MIIServerClient():
         return response + f"\n Model Execution Time: {end-start} seconds"
 
     def query(self, request_dict):
-        
+
         if not self.use_grpc_server:
             response = self._request_response(request_dict)
             generated_string = f"{response}"

@@ -23,6 +23,9 @@ def _download_hf_model_to_path(task, model_name, model_path):
 Currently only supports HF models, but will be extended to support model checkpoints
 from other sources'''
 
+
+def download_model_and_get_path(task, model_name):
+
     model_path = os.path.join(mii_cache_path(), model_name)
     if not os.path.isdir(model_path):
         os.makedirs(model_path)

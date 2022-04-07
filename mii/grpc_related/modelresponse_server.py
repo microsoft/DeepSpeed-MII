@@ -10,6 +10,7 @@ from .proto import modelresponse_pb2_grpc
 import sys
 import time
 
+
 class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
     def __init__(self, inference_pipeline):
         self.inference_pipeline = inference_pipeline
@@ -20,7 +21,8 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
                                            do_sample=True,
                                            min_length=50)
         end = time.time()
-        return modelresponse_pb2.SingleStringReply(response=f"{response} \n Model Execution Time: {end-start} seconds")
+        return modelresponse_pb2.SingleStringReply(
+            response=f"{response} \n Model Execution Time: {end-start} seconds")
 
     def ClassificationReply(self, request, context):
         response = self.inference_pipeline(request.request, return_all_scores=True)
