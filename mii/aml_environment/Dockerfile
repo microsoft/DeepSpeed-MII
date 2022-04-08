@@ -62,7 +62,7 @@ RUN apt-get update && \
     pciutils \
     libnuma-dev \
     ibutils \
-    ibverbs-utils \ 
+    ibverbs-utils \
     rdmacm-utils \
     infiniband-diags \
     perftest \
@@ -128,8 +128,8 @@ RUN mkdir /tmp/openmpi && \
     make -j $(nproc) all && \
     make install && \
     ldconfig && \
-    rm -rf /tmp/openmpi	
-	
+    rm -rf /tmp/openmpi
+
 # Msodbcsql17 installation
 RUN apt-get update && \
     apt-get install -y curl && \

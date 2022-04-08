@@ -74,7 +74,8 @@ def _get_aml_model(task_name,
             model_name) if local_model_path is None else local_model_path
 
         logger.info(
-            f"Registering {model_name} model with tag {aml_model_tags} from path {model_path}")
+            f"Registering {model_name} model with tag {aml_model_tags} from path {model_path}"
+        )
         return Model.register(workspace=aml_workspace,
                               model_path=model_path,
                               model_name=model_name,
@@ -82,7 +83,8 @@ def _get_aml_model(task_name,
 
     else:
         logger.info(
-            f"Pre-registered model {model_name} with tag {aml_model_tags} found. Returning existing model.")
+            f"Pre-registered model {model_name} with tag {aml_model_tags} found. Returning existing model."
+        )
         return Model(workspace=aml_workspace, name=model_name, tags=aml_model_tags)
 
 
@@ -93,20 +95,24 @@ def _get_inference_config(aml_workspace):
     if ENV_NAME in Environment.list(aml_workspace).keys():
         logger.info(
             f"Pre-registered Environment: {ENV_NAME} found. Fetching this environment.")
-        
-        environment=Environment.get(aml_workspace, name=ENV_NAME)
+
+        environment = Environment.get(aml_workspace, name=ENV_NAME)
     else:
         logger.info(
-            f"Environment: {ENV_NAME} has not been registered. Creating image and registering it to your aml workspace.")
-        
-        env = Environment.from_dockerfile(name = ENV_NAME, 
-                                          dockerfile=os.path.join(mii.__path__[0],"aml_environment/Dockerfile"), 
-                                          pip_requirements=os.path.join(mii.__path__[0],'aml_environment/requirements.txt'))
+            f"Environment: {ENV_NAME} has not been registered. Creating image and registering it to your aml workspace."
+        )
+
+        env = Environment.from_dockerfile(
+            name=ENV_NAME,
+            dockerfile=os.path.join(mii.__path__[0],
+                                    "aml_environment/Dockerfile"),
+            pip_requirements=os.path.join(mii.__path__[0],
+                                          'aml_environment/requirements.txt'))
         env.register(aml_workspace)
 
     inference_config = InferenceConfig(environment=Environment.get(aml_workspace,
-                                                                  name=ENV_NAME),
-                                        entry_script=utils.generated_score_path())
+                                                                   name=ENV_NAME),
+                                       entry_script=utils.generated_score_path())
     return inference_config
 
 

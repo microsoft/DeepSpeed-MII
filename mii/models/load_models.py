@@ -15,10 +15,11 @@ def load_models(task_name, model_name, model_path, ds_optimize):
     inference_pipeline = pipeline(task_name, model=model_name, device=local_rank)
 
     if ds_optimize:
-        inference_pipeline.model = deepspeed.init_inference(inference_pipeline.model,
-                                                            mp_size=world_size,
-                                                            dtype=torch.float,
-                                                            replace_with_kernel_inject=True,
-                                                            replace_method='auto')
+        inference_pipeline.model = deepspeed.init_inference(
+            inference_pipeline.model,
+            mp_size=world_size,
+            dtype=torch.float,
+            replace_with_kernel_inject=True,
+            replace_method='auto')
 
     return inference_pipeline
