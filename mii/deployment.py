@@ -125,6 +125,9 @@ def deploy(task_name,
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)
+
+    logger.info(f"*************DeepSpeed Optimizations: {enable_deepspeed}*************")
+
     create_score_file(task, model_name, enable_deepspeed, parallelism_config)
 
     if deployment_type == DeploymentType.LOCAL:
