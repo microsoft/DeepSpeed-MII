@@ -29,7 +29,7 @@ def create_score_file(deployment_name, task, model_name, ds_optimize, mii_config
     config_dict[mii.constants.MODEL_NAME_KEY] = model_name
     config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
     config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs
-    
+
     if len(mii.__path__) > 1:
         logger.warning(
             f"Detected mii path as multiple sources: {mii.__path__}, might cause unknown behavior"
@@ -110,9 +110,10 @@ def _get_inference_config(aml_workspace, deployment_name):
                                           'aml_environment/requirements.txt'))
         env.register(aml_workspace)
 
-    inference_config = InferenceConfig(environment=Environment.get(aml_workspace,
-                                                                   name=ENV_NAME),
-                                       entry_script=utils.generated_score_path(deployment_name))
+    inference_config = InferenceConfig(
+        environment=Environment.get(aml_workspace,
+                                    name=ENV_NAME),
+        entry_script=utils.generated_score_path(deployment_name))
     return inference_config
 
 
@@ -129,7 +130,6 @@ def deploy(task_name,
            force_register_model=False,
            mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
 
-
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)
     mii.utils.validate_mii_configs(mii_configs)
@@ -139,8 +139,7 @@ def deploy(task_name,
     create_score_file(deployment_name, task, model_name, enable_deepspeed, mii_configs)
 
     if deployment_type == DeploymentType.LOCAL:
-        return _deploy_local(deployment_name,
-                             local_model_path=local_model_path)
+        return _deploy_local(deployment_name, local_model_path=local_model_path)
 
     if not azureml_available:
         raise RuntimeError(
@@ -148,7 +147,6 @@ def deploy(task_name,
         )
 
     assert aml_workspace is not None, "Workspace cannot be none for AML deployments"
-    
 
     #either return a previously registered model, or register a new model
     model = _get_aml_model(task_name,

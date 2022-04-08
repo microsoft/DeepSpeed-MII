@@ -8,6 +8,7 @@ class DeploymentType(enum.Enum):
     AML_LOCAL = 2
     AML_ON_AKS = 3
 
+
 TENSOR_PARALLEL_KEY = 'tensor_parallel'
 PORT_NUMBER_KEY = 'port_number'
 
@@ -25,7 +26,6 @@ TEXT_GENERATION_NAME = 'text-generation'
 TEXT_CLASSIFICATION_NAME = 'text-classification'
 QUESTION_ANSWERING_NAME = 'question-answering'
 
-
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
 
@@ -41,5 +41,3 @@ MII_DEBUG_DEPLOY_KEY = "MII_DEBUG_DEPLOY_KEY"
 
 MII_DEBUG_BRANCH = "MII_DEBUG_BRANCH"
 MII_DEBUG_BRANCH_DEFAULT = "main"
-
-

@@ -12,8 +12,10 @@ from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE
 
 from mii.constants import Tasks
 
+
 def validate_mii_configs(mii_configs):
     assert TENSOR_PARALLEL_KEY in mii_configs and PORT_NUMBER_KEY in mii_configs, "Missing configs {TENSOR_PARALLEL_KEY} and {PORT_NUMBER_KEY}"
+
 
 def get_task_name(task):
     if task == Tasks.QUESTION_ANSWERING:
@@ -92,10 +94,12 @@ def mii_cache_path():
         os.makedirs(cache_path)
     return cache_path
 
+
 def import_score_file(deployment_name):
     spec = importlib.util.spec_from_file_location(
         'score',
-        os.path.join(mii_cache_path(),deployment_name,
+        os.path.join(mii_cache_path(),
+                     deployment_name,
                      "score.py"))
     score = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(score)
@@ -107,6 +111,7 @@ def generated_score_path(deployment_name):
     if not os.path.isdir(score_path):
         os.makedirs(score_path)
     return os.path.join(score_path, "score.py")
+
 
 def debug_score_preamble():
     preamble = ""

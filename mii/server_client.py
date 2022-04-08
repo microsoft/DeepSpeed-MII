@@ -20,12 +20,13 @@ def mii_query_handle(deployment_name):
     assert task is not None, "The task name should be set before calling init"
 
     return mii.MIIServerClient(task,
-                                "na",
-                                "na",
-                                mii_configs = configs[mii.constants.MII_CONFIGS_KEY],     
-                                initialize_service=False,
-                                initialize_grpc_client=True,
-                                use_grpc_server=True)
+                               "na",
+                               "na",
+                               mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
+                               initialize_service=False,
+                               initialize_grpc_client=True,
+                               use_grpc_server=True)
+
 
 class MIIServerClient():
     '''Initialize the model, setup the server and client for the model under model_path'''
@@ -65,9 +66,7 @@ class MIIServerClient():
             self.asyncio_loop = asyncio.get_event_loop()
             self._initialize_grpc_client()
 
-    
     def _get_num_gpus(self, mii_configs):
-        
         def get_tensor_parallel_gpus(mii_configs):
             TP_KEY = mii.constants.TENSOR_PARALLEL_KEY
             assert TP_KEY in mii_configs, "Must have tensor parallelism key in parallelism config"
@@ -75,7 +74,7 @@ class MIIServerClient():
 
             assert torch.cuda.device_count() >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
             return num_gpus
-        
+
         # Only Tensor Parallelism supported for now
         return get_tensor_parallel_gpus(mii_configs)
 

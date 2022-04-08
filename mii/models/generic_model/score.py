@@ -33,8 +33,8 @@ def init():
     model = mii.MIIServerClient(task,
                                 model_name,
                                 model_path,
-                                ds_optimize = configs[mii.constants.ENABLE_DEEPSPEED_KEY],
-                                mii_configs = configs[mii.constants.MII_CONFIGS_KEY],
+                                ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
+                                mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
                                 use_grpc_server=use_grpc_server,
                                 initialize_grpc_client=initialize_grpc_client)
 
