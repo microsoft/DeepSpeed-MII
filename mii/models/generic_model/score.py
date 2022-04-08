@@ -13,7 +13,7 @@ def init():
 
     #TODO set the parallelism degree somehow. On the azure kubernetes server we can set the gpu core
     #but how do we do this in local deployment?
-    os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
+    #os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
     '''
         model_path: either MII_PATH or AML_MODEL_DIR depending on if its running with AML or not
         use_grpc_server: True if not running on AML.
@@ -24,9 +24,8 @@ def init():
     #if running in aml environment
     global model, configs
 
-    model_name = configs['model_name']
-    task = configs['task_name']
-    ds_optimize = configs['ds_optimize']
+    model_name = configs[mii.constants.MODEL_NAME_KEY]
+    task = configs[mii.constants.TASK_NAME_KEY]
 
     assert model_name is not None, "The model name should be set before calling init"
     assert task is not None, "The task name should be set before calling init"
@@ -34,7 +33,8 @@ def init():
     model = mii.MIIServerClient(task,
                                 model_name,
                                 model_path,
-                                ds_optimize=ds_optimize,
+                                ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
+                                mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
                                 use_grpc_server=use_grpc_server,
                                 initialize_grpc_client=initialize_grpc_client)
 

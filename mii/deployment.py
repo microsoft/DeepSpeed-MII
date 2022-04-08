@@ -23,12 +23,12 @@ else:
 ENV_NAME = "MII-Image"
 
 
-def create_score_file(task, model_name, ds_optimize, parallelism_config):
+def create_score_file(deployment_name, task, model_name, ds_optimize, mii_configs):
     config_dict = {}
-    config_dict['task_name'] = mii.get_task_name(task)
-    config_dict['model_name'] = model_name
-    config_dict['ds_optimize'] = ds_optimize
-    config_dict['parallelism_config'] = parallelism_config
+    config_dict[mii.constants.TASK_NAME_KEY] = mii.get_task_name(task)
+    config_dict[mii.constants.MODEL_NAME_KEY] = model_name
+    config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
+    config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs
 
     if len(mii.__path__) > 1:
         logger.warning(
@@ -43,7 +43,7 @@ def create_score_file(task, model_name, ds_optimize, parallelism_config):
     source_with_config += f"{score_src}\n"
     source_with_config += f"configs = {pprint.pformat(config_dict,indent=4)}"
 
-    with open(utils.generated_score_path(), "w") as fd:
+    with open(utils.generated_score_path(deployment_name), "w") as fd:
         fd.write(source_with_config)
         fd.write("\n")
 
@@ -88,7 +88,7 @@ def _get_aml_model(task_name,
         return Model(workspace=aml_workspace, name=model_name, tags=aml_model_tags)
 
 
-def _get_inference_config(aml_workspace):
+def _get_inference_config(aml_workspace, deployment_name):
     global ENV_NAME
 
     environment = None
@@ -110,36 +110,36 @@ def _get_inference_config(aml_workspace):
                                           'aml_environment/requirements.txt'))
         env.register(aml_workspace)
 
-    inference_config = InferenceConfig(environment=Environment.get(aml_workspace,
-                                                                   name=ENV_NAME),
-                                       entry_script=utils.generated_score_path())
+    inference_config = InferenceConfig(
+        environment=Environment.get(aml_workspace,
+                                    name=ENV_NAME),
+        entry_script=utils.generated_score_path(deployment_name))
     return inference_config
 
 
 def deploy(task_name,
            model_name,
            deployment_type,
+           deployment_name,
            local_model_path=None,
            aml_model_tags=None,
-           force_register_model=False,
-           aml_deployment_name=None,
            aml_workspace=None,
            aks_target=None,
            aks_deploy_config=None,
            enable_deepspeed=True,
-           parallelism_config={}):
+           force_register_model=False,
+           mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)
+    mii.utils.validate_mii_configs(mii_configs)
 
     logger.info(f"*************DeepSpeed Optimizations: {enable_deepspeed}*************")
 
-    create_score_file(task, model_name, enable_deepspeed, parallelism_config)
+    create_score_file(deployment_name, task, model_name, enable_deepspeed, mii_configs)
 
     if deployment_type == DeploymentType.LOCAL:
-        return _deploy_local(model_name,
-                             local_model_path=local_model_path,
-                             parallelism_config=parallelism_config)
+        return _deploy_local(deployment_name, local_model_path=local_model_path)
 
     if not azureml_available:
         raise RuntimeError(
@@ -147,7 +147,6 @@ def deploy(task_name,
         )
 
     assert aml_workspace is not None, "Workspace cannot be none for AML deployments"
-    assert aml_deployment_name is not None, "Must provide aml_deployment_name for AML deployments"
 
     #either return a previously registered model, or register a new model
     model = _get_aml_model(task_name,
@@ -160,24 +159,24 @@ def deploy(task_name,
     logger.info(f"Deploying model {model}")
 
     #return
-    inference_config = _get_inference_config(aml_workspace)
+    inference_config = _get_inference_config(aml_workspace, deployment_name)
 
     if deployment_type == DeploymentType.AML_LOCAL:
         return _deploy_aml_local(model,
                                  inference_config,
                                  aml_workspace,
-                                 aml_deployment_name,
-                                 parallelism_config=parallelism_config)
+                                 deployment_name,
+                                 mii_configs=mii_configs)
 
-    assert aks_target is not None and aks_deploy_config is not None and aml_deployment_name is not None, "aks_target and aks_deployment_config must be provided for AML_ON_AKS deployment"
+    assert aks_target is not None and aks_deploy_config is not None and deployment_name is not None, "aks_target and aks_deployment_config must be provided for AML_ON_AKS deployment"
 
     return _deploy_aml_on_aks(model,
                               inference_config,
                               aml_workspace,
                               aks_target,
                               aks_deploy_config,
-                              aml_deployment_name,
-                              parallelism_config=parallelism_config)
+                              deployment_name,
+                              mii_configs=mii_configs)
 
 
 def _deploy_aml_on_aks(model,
@@ -186,7 +185,7 @@ def _deploy_aml_on_aks(model,
                        aks_target,
                        aks_deploy_config,
                        aml_deployment_name,
-                       parallelism_config=None):
+                       mii_configs=None):
 
     service = Model.deploy(
         aml_workspace,
@@ -207,7 +206,7 @@ def _deploy_aml_local(model,
                       inference_config,
                       aml_workspace,
                       aml_deployment_name,
-                      parallelism_config=None):
+                      mii_configs=None):
 
     deployment_config = LocalWebservice.deploy_configuration(port=6789)
 
@@ -225,6 +224,6 @@ def _deploy_aml_local(model,
     return service
 
 
-def _deploy_local(model_name, local_model_path=None, parallelism_config=None):
+def _deploy_local(deployment_name, local_model_path=None):
     mii.set_model_path(local_model_path)
-    mii.import_score_file().init()
+    mii.import_score_file(deployment_name).init()

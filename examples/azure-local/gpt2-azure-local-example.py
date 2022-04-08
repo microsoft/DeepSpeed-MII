@@ -8,12 +8,15 @@ ws = Workspace(workspace_name=os.environ["AZ_WORKSPACE"],
                subscription_id=os.environ["AZ_SUB_ID"],
                resource_group=os.environ["AZ_RESOURCE_GROUP"])
 
+mii_configs = mii.constants.MII_CONFIGS_DEFAULT
+mii_configs[mii.constants.TENSOR_PARALLEL_KEY] = 2
+
 mii.deploy(task_name="text-generation",
            model_name="gpt2",
            aml_model_tags={'my_tag': 'first_deployment'},
            deployment_type=mii.DeploymentType.AML_LOCAL,
            aml_workspace=ws,
-           aml_deployment_name="my-gpt2-service",
+           deployment_name="my-gpt2-service",
            local_model_path=None,
            force_register_model=False,
-           enable_deepspeed=False)
+           mii_configs=mii_configs)

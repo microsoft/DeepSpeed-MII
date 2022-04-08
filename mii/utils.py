@@ -8,9 +8,13 @@ import importlib
 
 from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
     MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
-    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME
+    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TENSOR_PARALLEL_KEY, PORT_NUMBER_KEY
 
 from mii.constants import Tasks
+
+
+def validate_mii_configs(mii_configs):
+    assert TENSOR_PARALLEL_KEY in mii_configs and PORT_NUMBER_KEY in mii_configs, "Missing configs {TENSOR_PARALLEL_KEY} and {PORT_NUMBER_KEY}"
 
 
 def get_task_name(task):
@@ -91,18 +95,22 @@ def mii_cache_path():
     return cache_path
 
 
-def import_score_file():
+def import_score_file(deployment_name):
     spec = importlib.util.spec_from_file_location(
         'score',
         os.path.join(mii_cache_path(),
+                     deployment_name,
                      "score.py"))
     score = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(score)
     return score
 
 
-def generated_score_path():
-    return os.path.join(mii_cache_path(), "score.py")
+def generated_score_path(deployment_name):
+    score_path = os.path.join(mii_cache_path(), deployment_name)
+    if not os.path.isdir(score_path):
+        os.makedirs(score_path)
+    return os.path.join(score_path, "score.py")
 
 
 def debug_score_preamble():
