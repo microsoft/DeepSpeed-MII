@@ -102,8 +102,8 @@ class MIIServerClient():
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
-            optimization = "--ds-optimize" if ds_optimize else ""
-            cmd = f'{ds_launch_str} {launch_str} {server_args_str} {optimization}'.split(" ")
+            server_args_str += " --ds-optimize" if ds_optimize else ""
+            cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             print(cmd)
             process = subprocess.Popen(cmd)
             #TODO: do we need to hold onto this process handle for clean-up purposes?

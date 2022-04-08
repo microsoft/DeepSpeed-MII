@@ -82,7 +82,7 @@ def _get_aml_model(task_name,
 
     else:
         logger.info(
-            f"Pre-registered {model_name} with tag {aml_model_tags} found. Returning existing model.")
+            f"Pre-registered model {model_name} with tag {aml_model_tags} found. Returning existing model.")
         return Model(workspace=aml_workspace, name=model_name, tags=aml_model_tags)
 
 
