@@ -11,15 +11,21 @@ import mii
 from mii.utils import logger
 
 
-def mii_query_handle(task, port_number=50050):
-    return MIIServerClient(task,
-                           "na",
-                           "na",
-                           initialize_service=False,
-                           initialize_grpc_client=True,
-                           use_grpc_server=True,
-                           port_number=port_number)
+def mii_query_handle(deployment_name):
 
+    configs = mii.utils.import_score_file(deployment_name).configs
+
+    task = configs[mii.constants.TASK_NAME_KEY]
+
+    assert task is not None, "The task name should be set before calling init"
+
+    return mii.MIIServerClient(task,
+                                "na",
+                                "na",
+                                mii_configs = configs[mii.constants.MII_CONFIGS_KEY],     
+                                initialize_service=False,
+                                initialize_grpc_client=True,
+                                use_grpc_server=True)
 
 class MIIServerClient():
     '''Initialize the model, setup the server and client for the model under model_path'''
@@ -28,15 +34,14 @@ class MIIServerClient():
                  model_name,
                  model_path,
                  ds_optimize=True,
-                 parallelism_config=None,
+                 mii_configs=mii.constants.MII_CONFIGS_DEFAULT,
                  initialize_service=True,
                  initialize_grpc_client=True,
-                 use_grpc_server=False,
-                 port_number=50050):
+                 use_grpc_server=False):
 
         self.task = mii.get_task(task_name)
 
-        self.num_gpus = self._get_num_gpus(parallelism_config)
+        self.num_gpus = self._get_num_gpus(mii_configs)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
 
         # This is true in two cases
@@ -46,7 +51,7 @@ class MIIServerClient():
         self.initialize_service = initialize_service
         self.initialize_grpc_client = initialize_grpc_client
 
-        self.port_number = port_number
+        self.port_number = mii_configs[mii.constants.PORT_NUMBER_KEY]
 
         if initialize_service and not self.use_grpc_server:
             self.model = None
@@ -61,20 +66,18 @@ class MIIServerClient():
             self._initialize_grpc_client()
 
     
-    def _get_num_gpus(self, parallelism_config=None):
-        assert parallelism_config is not None, "Parallelism Configuration cannot be None. If it was not passed by the user, it should have been set by MII."
+    def _get_num_gpus(self, mii_configs):
         
-       
-        def get_tensor_parallel_gpus(parallelism_config):
-            TP_KEY = mii.constants.Parallelism.Tensor
-            assert TP_KEY in parallelism_config, "Must have tensor parallelism key in parallelism config"
-            num_gpus = parallelism_config[TP_KEY]
+        def get_tensor_parallel_gpus(mii_configs):
+            TP_KEY = mii.constants.TENSOR_PARALLEL_KEY
+            assert TP_KEY in mii_configs, "Must have tensor parallelism key in parallelism config"
+            num_gpus = mii_configs[TP_KEY]
 
             assert torch.cuda.device_count() >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
             return num_gpus
         
         # Only Tensor Parallelism supported for now
-        return get_tensor_parallel_gpus(parallelism_config)
+        return get_tensor_parallel_gpus(mii_configs)
 
     def _wait_until_server_is_live(self):
         sockets_open = False

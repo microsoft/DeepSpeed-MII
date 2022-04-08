@@ -8,13 +8,11 @@ class DeploymentType(enum.Enum):
     AML_LOCAL = 2
     AML_ON_AKS = 3
 
+TENSOR_PARALLEL_KEY = 'tensor_parallel'
+PORT_NUMBER_KEY = 'port_number'
 
-class Parallelism(enum.Enum):
-    Tensor = 1
-    Pipeline = 2
-    Expert =3
-
-MII_PARALLELISM_DEFAULT = {Parallelism.Tensor: 1, Parallelism.Pipeline: 1, Parallelism.Expert: 1}
+MII_CONFIGS_KEY = 'mii_configs'
+MII_CONFIGS_DEFAULT = {TENSOR_PARALLEL_KEY: 1, PORT_NUMBER_KEY: 50050}
 
 
 class Tasks(enum.Enum):
@@ -30,7 +28,7 @@ QUESTION_ANSWERING_NAME = 'question-answering'
 
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
-PARALLELISM_KEY = 'parallelism'
+
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
