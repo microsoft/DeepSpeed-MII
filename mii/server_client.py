@@ -27,6 +27,7 @@ class MIIServerClient():
                  task_name,
                  model_name,
                  model_path,
+                 ds_optimize=True,
                  initialize_service=True,
                  initialize_grpc_client=True,
                  use_grpc_server=False,
@@ -49,7 +50,7 @@ class MIIServerClient():
             self.model = None
 
         if self.initialize_service:
-            self.process = self._initialize_service(model_name, model_path)
+            self.process = self._initialize_service(model_name, model_path, ds_optimize)
             self._wait_until_server_is_live()
 
         if self.initialize_grpc_client and self.use_grpc_server:
@@ -88,7 +89,7 @@ class MIIServerClient():
             is_alive = False
         return is_alive
 
-    def _initialize_service(self, model_name, model_path):
+    def _initialize_service(self, model_name, model_path, ds_optimize):
         process = None
         if not self.use_grpc_server:
             self.model = mii.load_model(model_name, model_path)
@@ -101,7 +102,8 @@ class MIIServerClient():
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
-            cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
+            optimization = "--ds-optimize" if ds_optimize else ""
+            cmd = f'{ds_launch_str} {launch_str} {server_args_str} {optimization}'.split(" ")
             print(cmd)
             process = subprocess.Popen(cmd)
             #TODO: do we need to hold onto this process handle for clean-up purposes?

@@ -9,7 +9,7 @@ from mii import utils
 from mii.constants import DeploymentType
 from mii.utils import logger, log_levels
 from mii.models.utils import download_model_and_get_path
-
+import pprint
 try:
     from azureml.core import Environment
     from azureml.core.model import InferenceConfig
@@ -20,13 +20,14 @@ except ImportError:
 else:
     azureml_available = True
 
-ENV_NAME = "MII-Image-CUDA-11.3-grpc"
+ENV_NAME = "MII-Image"
 
 
-def create_score_file(task, model_name, parallelism_config):
+def create_score_file(task, model_name, ds_optimize, parallelism_config):
     config_dict = {}
     config_dict['task_name'] = mii.get_task_name(task)
     config_dict['model_name'] = model_name
+    config_dict['ds_optimize'] = ds_optimize
     config_dict['parallelism_config'] = parallelism_config
 
     if len(mii.__path__) > 1:
@@ -40,7 +41,7 @@ def create_score_file(task, model_name, parallelism_config):
     # update score file w. global config dict
     source_with_config = utils.debug_score_preamble()
     source_with_config += f"{score_src}\n"
-    source_with_config += f"configs = {json.dumps(config_dict)}"
+    source_with_config += f"configs = {pprint.pformat(config_dict,indent=4)}"
 
     with open(utils.generated_score_path(), "w") as fd:
         fd.write(source_with_config)
@@ -73,22 +74,39 @@ def _get_aml_model(task_name,
             model_name) if local_model_path is None else local_model_path
 
         logger.info(
-            f"Registering {model_name} with tag {aml_model_tags} from path {model_path}")
+            f"Registering {model_name} model with tag {aml_model_tags} from path {model_path}")
         return Model.register(workspace=aml_workspace,
                               model_path=model_path,
                               model_name=model_name,
                               tags=aml_model_tags)
 
     else:
+        logger.info(
+            f"Pre-registered {model_name} with tag {aml_model_tags} found. Returning existing model.")
         return Model(workspace=aml_workspace, name=model_name, tags=aml_model_tags)
 
 
 def _get_inference_config(aml_workspace):
     global ENV_NAME
 
+    environment = None
+    if ENV_NAME in Environment.list(aml_workspace).keys():
+        logger.info(
+            f"Pre-registered Environment: {ENV_NAME} found. Fetching this environment.")
+        
+        environment=Environment.get(aml_workspace, name=ENV_NAME)
+    else:
+        logger.info(
+            f"Environment: {ENV_NAME} has not been registered. Creating image and registering it to your aml workspace.")
+        
+        env = Environment.from_dockerfile(name = ENV_NAME, 
+                                          dockerfile=os.path.join(mii.__path__[0],"aml_environment/Dockerfile"), 
+                                          pip_requirements=os.path.join(mii.__path__[0],'aml_environment/requirements.txt'))
+        env.register(aml_workspace)
+
     inference_config = InferenceConfig(environment=Environment.get(aml_workspace,
-                                                                   name=ENV_NAME),
-                                       entry_script=utils.generated_score_path())
+                                                                  name=ENV_NAME),
+                                        entry_script=utils.generated_score_path())
     return inference_config
 
 
@@ -102,11 +120,12 @@ def deploy(task_name,
            aml_workspace=None,
            aks_target=None,
            aks_deploy_config=None,
+           enable_deepspeed=True,
            parallelism_config={}):
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)
-    create_score_file(task, model_name, parallelism_config)
+    create_score_file(task, model_name, enable_deepspeed, parallelism_config)
 
     if deployment_type == DeploymentType.LOCAL:
         return _deploy_local(model_name,

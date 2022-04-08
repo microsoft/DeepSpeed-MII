@@ -15,4 +15,5 @@ mii.deploy(task_name="text-generation",
            aml_workspace=ws,
            aml_deployment_name="my-gpt2-service",
            local_model_path=None,
-           force_register_model=False)
+           force_register_model=False,
+           enable_deepspeed=False)
