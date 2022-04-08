@@ -6,7 +6,7 @@ import json
 
 import mii
 from mii import utils
-from mii.constants import DeploymentType
+from mii.constants import DeploymentType, MII_PARALLELISM_DEFAULT
 from mii.utils import logger, log_levels
 from mii.models.utils import download_model_and_get_path
 import pprint
@@ -25,10 +25,10 @@ ENV_NAME = "MII-Image"
 
 def create_score_file(task, model_name, ds_optimize, parallelism_config):
     config_dict = {}
-    config_dict['task_name'] = mii.get_task_name(task)
-    config_dict['model_name'] = model_name
-    config_dict['ds_optimize'] = ds_optimize
-    config_dict['parallelism_config'] = parallelism_config
+    config_dict[mii.constants.TASK_NAME_KEY] = mii.get_task_name(task)
+    config_dict[mii.constants.MODEL_NAME_KEY] = model_name
+    config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
+    config_dict[mii.constants.PARALLELISM_KEY] = parallelism_config
 
     if len(mii.__path__) > 1:
         logger.warning(
@@ -127,7 +127,7 @@ def deploy(task_name,
            aks_target=None,
            aks_deploy_config=None,
            enable_deepspeed=True,
-           parallelism_config={}):
+           parallelism_config=MII_PARALLELISM_DEFAULT):
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)

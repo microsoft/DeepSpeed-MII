@@ -28,14 +28,16 @@ class MIIServerClient():
                  model_name,
                  model_path,
                  ds_optimize=True,
+                 parallelism_config=None,
                  initialize_service=True,
                  initialize_grpc_client=True,
                  use_grpc_server=False,
                  port_number=50050):
 
         self.task = mii.get_task(task_name)
-        self.num_gpus = torch.cuda.device_count()
-        assert self.num_gpus > 0, "No GPU detected"
+
+        self.num_gpus = self._get_num_gpus(parallelism_config)
+        assert self.num_gpus > 0, "GPU count must be greater than 0"
 
         # This is true in two cases
         # i) If its multi-GPU
@@ -57,6 +59,22 @@ class MIIServerClient():
             self.stubs = []
             self.asyncio_loop = asyncio.get_event_loop()
             self._initialize_grpc_client()
+
+    
+    def _get_num_gpus(self, parallelism_config=None):
+        assert parallelism_config is not None, "Parallelism Configuration cannot be None. If it was not passed by the user, it should have been set by MII."
+        
+       
+        def get_tensor_parallel_gpus(parallelism_config):
+            TP_KEY = mii.constants.Parallelism.Tensor
+            assert TP_KEY in parallelism_config, "Must have tensor parallelism key in parallelism config"
+            num_gpus = parallelism_config[TP_KEY]
+
+            assert torch.cuda.device_count() >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+            return num_gpus
+        
+        # Only Tensor Parallelism supported for now
+        return get_tensor_parallel_gpus(parallelism_config)
 
     def _wait_until_server_is_live(self):
         sockets_open = False
@@ -98,7 +116,7 @@ class MIIServerClient():
                 raise RuntimeError(
                     f"Server is already running on port {self.port_number}, please shutdown to use different port."
                 )
-            #TODO we need to dump the log from these executions for debugging. Currently these are all lost
+
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
