@@ -12,6 +12,10 @@ def main():
     parser.add_argument("-t", "--task-name", type=str, help="task name")
     parser.add_argument("-m", "--model", type=str, help="model name")
     parser.add_argument("-d", "--model-path", type=str, help="path to model")
+    parser.add_argument("-o",
+                        "--ds-optimize",
+                        action='store_true',
+                        help="Enable DeepSpeed")
     parser.add_argument(
         "-p",
         "--port",
@@ -22,7 +26,10 @@ def main():
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     print(local_rank)
     port = args.port + local_rank
-    inference_pipeline = load_models(args.task_name, args.model, args.model_path)
+    inference_pipeline = load_models(args.task_name,
+                                     args.model,
+                                     args.model_path,
+                                     args.ds_optimize)
     #print(inference("Test product is ", do_sample=True, min_length=50))
     serve(inference_pipeline, port)
 

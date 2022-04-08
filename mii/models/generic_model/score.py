@@ -26,6 +26,7 @@ def init():
 
     model_name = configs['model_name']
     task = configs['task_name']
+    ds_optimize = configs['ds_optimize']
 
     assert model_name is not None, "The model name should be set before calling init"
     assert task is not None, "The task name should be set before calling init"
@@ -33,6 +34,7 @@ def init():
     model = mii.MIIServerClient(task,
                                 model_name,
                                 model_path,
+                                ds_optimize=ds_optimize,
                                 use_grpc_server=use_grpc_server,
                                 initialize_grpc_client=initialize_grpc_client)
 
