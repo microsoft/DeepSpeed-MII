@@ -59,7 +59,8 @@ class MIIServerClient():
 
         if self.initialize_service:
             self.process = self._initialize_service(model_name, model_path, ds_optimize)
-            self._wait_until_server_is_live()
+            if self.use_grpc_server:
+                self._wait_until_server_is_live()
 
         if self.initialize_grpc_client and self.use_grpc_server:
             self.stubs = []
