@@ -183,7 +183,7 @@ class MIIServerClient():
         else:
             raise NotSupportedError(f"task is not supported: {self.task}")
         end = time.time()
-        return response + f"\n Model Execution Time: {end-start} seconds"
+        return f"{response}" + f"\n Model Execution Time: {end-start} seconds"
 
     def query(self, request_dict):
 
