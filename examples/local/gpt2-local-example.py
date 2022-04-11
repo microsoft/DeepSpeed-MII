@@ -6,4 +6,5 @@ mii.deploy('text-generation',
            "gpt2",
            mii.DeploymentType.LOCAL,
            deployment_name="gpt2_deployment",
-           local_model_path=".cache/models/gpt2")
+           local_model_path=".cache/models/gpt2",
+           mii_configs=mii_configs)
