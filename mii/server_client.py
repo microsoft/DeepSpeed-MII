@@ -59,7 +59,8 @@ class MIIServerClient():
 
         if self.initialize_service:
             self.process = self._initialize_service(model_name, model_path, ds_optimize)
-            self._wait_until_server_is_live()
+            if self.use_grpc_server:
+                self._wait_until_server_is_live()
 
         if self.initialize_grpc_client and self.use_grpc_server:
             self.stubs = []
@@ -112,7 +113,10 @@ class MIIServerClient():
     def _initialize_service(self, model_name, model_path, ds_optimize):
         process = None
         if not self.use_grpc_server:
-            self.model = mii.load_models(mii.get_task_name(self.task), model_name, model_path, ds_optimize)
+            self.model = mii.load_models(mii.get_task_name(self.task),
+                                         model_name,
+                                         model_path,
+                                         ds_optimize)
         else:
             if self._is_socket_open(self.port_number):
                 raise RuntimeError(
@@ -182,7 +186,7 @@ class MIIServerClient():
         else:
             raise NotSupportedError(f"task is not supported: {self.task}")
         end = time.time()
-        return response + f"\n Model Execution Time: {end-start} seconds"
+        return f"{response}" + f"\n Model Execution Time: {end-start} seconds"
 
     def query(self, request_dict):
 
