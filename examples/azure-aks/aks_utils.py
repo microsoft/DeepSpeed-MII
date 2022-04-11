@@ -10,9 +10,10 @@ def get_aks_target(aks_name, aml_workspace, aks_provision_config=None):
         mii.utils.logger.info('Found existing compute target')
 
     except ComputeTargetException:
-        mii.utils.logger.warn("Cannot find the AKS cluster. Attempting to create one.")
+        mii.utils.logger.warn(
+            "Cannot find the --AKS-- cluster. Attempting to create one.")
 
-        # Provision AKS cluster with GPU machine
+        # Provision --AKS-- cluster with GPU machine
         if aks_provision_config is None:
             mii.utils.logger.warn(
                 f"aks_provision_config is {aks_provision_config}, attempting to use a default settings "
@@ -27,6 +28,6 @@ def get_aks_target(aks_name, aml_workspace, aks_provision_config=None):
                                           name=aks_name,
                                           provisioning_configuration=prov_config)
         aks_target.wait_for_completion(show_output=True)
-        mii.utils.logger.info(f"AKS cluster {aks_name} successfully created")
+        mii.utils.logger.info(f"--AKS-- cluster {aks_name} successfully created")
 
     return aks_target

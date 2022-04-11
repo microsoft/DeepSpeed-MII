@@ -10,7 +10,7 @@ ws = Workspace(workspace_name=os.environ["AZ_WORKSPACE"],
                subscription_id=os.environ["AZ_SUB_ID"],
                resource_group=os.environ["AZ_RESOURCE_GROUP"])
 
-#aks deployment config. Use your own
+#--AKS-- deployment config. Use your own
 gpu_aks_config = AksWebservice.deploy_configuration(autoscale_enabled=False,
                                                     num_replicas=1,
                                                     cpu_cores=2,
