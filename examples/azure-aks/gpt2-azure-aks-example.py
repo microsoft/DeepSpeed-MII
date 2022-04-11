@@ -22,6 +22,6 @@ mii.deploy(task_name="text-generation",
            deployment_name="my-gpt2-service",
            aml_workspace=ws,
            aml_model_tags={'my_tag': 'first_deployment'},
-           aks_target=aks_utils.get_aks_target("V100-node",ws),
+           aks_target=aks_utils.get_aks_target("V100-node",
+                                               ws),
            aks_deploy_config=gpu_aks_config)
-
