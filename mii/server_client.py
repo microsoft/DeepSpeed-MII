@@ -161,7 +161,7 @@ class MIIServerClient():
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
 
         elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
-            response = await self.stubs[stub_id].EntailmentReply(
+            response = await self.stubs[stub_id].ClassificationReply(
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
 
         elif self.task == mii.Tasks.QUESTION_ANSWERING:
