@@ -27,6 +27,9 @@ service ModelResponse {
   rpc GeneratorReply (SingleStringRequest) returns (SingleStringReply) {}
   rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
   rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
+  rpc FillMaskReply(SingleStringRequest) returns (SingleStringReply) {}
+  rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
+  rpc ConversationalReply(Conversation) returns (Conversation) {}
 }
 
 // The request message containing the user's name.
@@ -42,4 +45,11 @@ message SingleStringReply {
 message QARequest {
   string question = 1;
   string context = 2;
+}
+
+message Conversation {
+  string text = 1;
+  int64 conversation_id = 2;
+  repeated string past_user_inputs = 3;
+  repeated string generated_responses = 4;
 }

@@ -1,7 +1,8 @@
 import mii
 
+name="distilroberta-base"
 mii.deploy("question-answering",
-           "deepset/roberta-large-squad2",
+           name,
            mii.DeploymentType.LOCAL,
-           deployment_name="roberta-qa-deployment",
-           local_model_path=".cache/models/roberta-large")
+           deployment_name=name+"-qa-deployment",
+           local_model_path=".cache/models/"+name)
