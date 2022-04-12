@@ -12,6 +12,7 @@ import time
 
 from transformers import Conversation
 
+
 class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
     def __init__(self, inference_pipeline):
         self.inference_pipeline = inference_pipeline
@@ -43,9 +44,16 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         return modelresponse_pb2.SingleStringReply(response=f"{response}")
 
     def ConversationalReply(self, request, context):
-        conv = Conversation(text=request.text, conversation_id = request.conversation_id, past_user_inputs=request.past_user_inputs, generated_responses=request.generated_responses)
+        conv = Conversation(text=request.text,
+                            conversation_id=request.conversation_id,
+                            past_user_inputs=request.past_user_inputs,
+                            generated_responses=request.generated_responses)
         self.inference_pipeline(conv)
-        return modelresponse_pb2.ConversationReply(conversation_id=conv.uuid, past_user_inputs=conv.past_user_inputs, generated_responses=conv.generated_responses)
+        return modelresponse_pb2.ConversationReply(
+            conversation_id=conv.uuid,
+            past_user_inputs=conv.past_user_inputs,
+            generated_responses=conv.generated_responses)
+
 
 def serve(inference_pipeline, port):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

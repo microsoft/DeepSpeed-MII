@@ -11,6 +11,6 @@ name = "roberta-base"
 
 print(f"Querying {name}...")
 
-generator = mii.mii_query_handle(name+"_deployment")
+generator = mii.mii_query_handle(name + "_deployment")
 results = generator.query({'query': "Hello I'm a <mask> model."})
 print(results)

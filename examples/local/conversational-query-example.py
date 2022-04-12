@@ -14,12 +14,22 @@ print(f"Querying {name}...")
 
 str = "DeepSpeed is the greatest"
 
-generator = mii.mii_query_handle(name+"_deployment")
-conv = generator.query2({'text': str, 'conversation_id': 3, 'past_user_inputs':[], 'generated_responses':[] })
+generator = mii.mii_query_handle(name + "_deployment")
+conv = generator.query2({
+    'text': str,
+    'conversation_id': 3,
+    'past_user_inputs': [],
+    'generated_responses': []
+})
 
 print(conv)
 
 str = "How is DeepSpeed?"
-conv = generator.query2({'text': str, 'conversation_id': conv.conversation_id, 'past_user_inputs': conv.past_user_inputs, 'generated_responses': conv.generated_responses})
+conv = generator.query2({
+    'text': str,
+    'conversation_id': conv.conversation_id,
+    'past_user_inputs': conv.past_user_inputs,
+    'generated_responses': conv.generated_responses
+})
 
 print(conv)

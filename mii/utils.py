@@ -66,7 +66,9 @@ def get_task(task_name):
 def _get_hf_models_by_type(model_type, task=None):
     api = HfApi()
     models = api.list_models(filter=model_type)
-    return [m.modelId for m in models] if task is None else [m.modelId for m in models if m.pipeline_tag == task]
+    return [m.modelId for m in models
+            ] if task is None else [m.modelId for m in models if m.pipeline_tag == task]
+
 
 #TODO read this from a file containing list of files supported for each task
 def _get_supported_models_name(task):

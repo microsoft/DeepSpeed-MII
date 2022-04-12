@@ -11,6 +11,6 @@ print(f"Deploying {name}...")
 mii.deploy('conversational',
            name,
            mii.DeploymentType.LOCAL,
-           deployment_name=name+"_deployment",
-           local_model_path=".cache/models/"+name,
+           deployment_name=name + "_deployment",
+           local_model_path=".cache/models/" + name,
            mii_configs=mii_configs)
