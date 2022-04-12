@@ -42,8 +42,8 @@ class ModelResponseStub(object):
                 )
         self.ConversationalReply = channel.unary_unary(
                 '/modelresponse.ModelResponse/ConversationalReply',
-                request_serializer=modelresponse__pb2.Conversation.SerializeToString,
-                response_deserializer=modelresponse__pb2.Conversation.FromString,
+                request_serializer=modelresponse__pb2.ConversationRequest.SerializeToString,
+                response_deserializer=modelresponse__pb2.ConversationReply.FromString,
                 )
 
 
@@ -118,8 +118,8 @@ def add_ModelResponseServicer_to_server(servicer, server):
             ),
             'ConversationalReply': grpc.unary_unary_rpc_method_handler(
                     servicer.ConversationalReply,
-                    request_deserializer=modelresponse__pb2.Conversation.FromString,
-                    response_serializer=modelresponse__pb2.Conversation.SerializeToString,
+                    request_deserializer=modelresponse__pb2.ConversationRequest.FromString,
+                    response_serializer=modelresponse__pb2.ConversationReply.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -229,7 +229,7 @@ class ModelResponse(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/ConversationalReply',
-            modelresponse__pb2.Conversation.SerializeToString,
-            modelresponse__pb2.Conversation.FromString,
+            modelresponse__pb2.ConversationRequest.SerializeToString,
+            modelresponse__pb2.ConversationReply.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

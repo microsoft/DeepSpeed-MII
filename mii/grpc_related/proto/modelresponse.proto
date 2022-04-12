@@ -29,7 +29,7 @@ service ModelResponse {
   rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
   rpc FillMaskReply(SingleStringRequest) returns (SingleStringReply) {}
   rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
-  rpc ConversationalReply(Conversation) returns (Conversation) {}
+  rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
 }
 
 // The request message containing the user's name.
@@ -47,9 +47,15 @@ message QARequest {
   string context = 2;
 }
 
-message Conversation {
+message ConversationRequest {
   string text = 1;
-  int64 conversation_id = 2;
+  optional int64 conversation_id = 2;
   repeated string past_user_inputs = 3;
   repeated string generated_responses = 4;
+}
+
+message ConversationReply {
+  int64 conversation_id = 1;
+  repeated string past_user_inputs = 2;
+  repeated string generated_responses = 3;
 }

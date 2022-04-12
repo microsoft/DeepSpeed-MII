@@ -14,14 +14,15 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13modelresponse.proto\x12\rmodelresponse\"&\n\x13SingleStringRequest\x12\x0f\n\x07request\x18\x01 \x01(\t\"%\n\x11SingleStringReply\x12\x10\n\x08response\x18\x01 \x01(\t\".\n\tQARequest\x12\x10\n\x08question\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontext\x18\x02 \x01(\t\"l\n\x0c\x43onversation\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x17\n\x0f\x63onversation_id\x18\x02 \x01(\x03\x12\x18\n\x10past_user_inputs\x18\x03 \x03(\t\x12\x1b\n\x13generated_responses\x18\x04 \x03(\t2\xb0\x04\n\rModelResponse\x12X\n\x0eGeneratorReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12]\n\x13\x43lassificationReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12V\n\x16QuestionAndAnswerReply\x12\x18.modelresponse.QARequest\x1a .modelresponse.SingleStringReply\"\x00\x12W\n\rFillMaskReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12\x62\n\x18TokenClassificationReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12Q\n\x13\x43onversationalReply\x12\x1b.modelresponse.Conversation\x1a\x1b.modelresponse.Conversation\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13modelresponse.proto\x12\rmodelresponse\"&\n\x13SingleStringRequest\x12\x0f\n\x07request\x18\x01 \x01(\t\"%\n\x11SingleStringReply\x12\x10\n\x08response\x18\x01 \x01(\t\".\n\tQARequest\x12\x10\n\x08question\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontext\x18\x02 \x01(\t\"\x8c\x01\n\x13\x43onversationRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x1c\n\x0f\x63onversation_id\x18\x02 \x01(\x03H\x00\x88\x01\x01\x12\x18\n\x10past_user_inputs\x18\x03 \x03(\t\x12\x1b\n\x13generated_responses\x18\x04 \x03(\tB\x12\n\x10_conversation_id\"c\n\x11\x43onversationReply\x12\x17\n\x0f\x63onversation_id\x18\x01 \x01(\x03\x12\x18\n\x10past_user_inputs\x18\x02 \x03(\t\x12\x1b\n\x13generated_responses\x18\x03 \x03(\t2\xbc\x04\n\rModelResponse\x12X\n\x0eGeneratorReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12]\n\x13\x43lassificationReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12V\n\x16QuestionAndAnswerReply\x12\x18.modelresponse.QARequest\x1a .modelresponse.SingleStringReply\"\x00\x12W\n\rFillMaskReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12\x62\n\x18TokenClassificationReply\x12\".modelresponse.SingleStringRequest\x1a .modelresponse.SingleStringReply\"\x00\x12]\n\x13\x43onversationalReply\x12\".modelresponse.ConversationRequest\x1a .modelresponse.ConversationReply\"\x00\x62\x06proto3')
 
 
 
 _SINGLESTRINGREQUEST = DESCRIPTOR.message_types_by_name['SingleStringRequest']
 _SINGLESTRINGREPLY = DESCRIPTOR.message_types_by_name['SingleStringReply']
 _QAREQUEST = DESCRIPTOR.message_types_by_name['QARequest']
-_CONVERSATION = DESCRIPTOR.message_types_by_name['Conversation']
+_CONVERSATIONREQUEST = DESCRIPTOR.message_types_by_name['ConversationRequest']
+_CONVERSATIONREPLY = DESCRIPTOR.message_types_by_name['ConversationReply']
 SingleStringRequest = _reflection.GeneratedProtocolMessageType('SingleStringRequest', (_message.Message,), {
   'DESCRIPTOR' : _SINGLESTRINGREQUEST,
   '__module__' : 'modelresponse_pb2'
@@ -43,12 +44,19 @@ QARequest = _reflection.GeneratedProtocolMessageType('QARequest', (_message.Mess
   })
 _sym_db.RegisterMessage(QARequest)
 
-Conversation = _reflection.GeneratedProtocolMessageType('Conversation', (_message.Message,), {
-  'DESCRIPTOR' : _CONVERSATION,
+ConversationRequest = _reflection.GeneratedProtocolMessageType('ConversationRequest', (_message.Message,), {
+  'DESCRIPTOR' : _CONVERSATIONREQUEST,
   '__module__' : 'modelresponse_pb2'
-  # @@protoc_insertion_point(class_scope:modelresponse.Conversation)
+  # @@protoc_insertion_point(class_scope:modelresponse.ConversationRequest)
   })
-_sym_db.RegisterMessage(Conversation)
+_sym_db.RegisterMessage(ConversationRequest)
+
+ConversationReply = _reflection.GeneratedProtocolMessageType('ConversationReply', (_message.Message,), {
+  'DESCRIPTOR' : _CONVERSATIONREPLY,
+  '__module__' : 'modelresponse_pb2'
+  # @@protoc_insertion_point(class_scope:modelresponse.ConversationReply)
+  })
+_sym_db.RegisterMessage(ConversationReply)
 
 _MODELRESPONSE = DESCRIPTOR.services_by_name['ModelResponse']
 if _descriptor._USE_C_DESCRIPTORS == False:
@@ -60,8 +68,10 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _SINGLESTRINGREPLY._serialized_end=115
   _QAREQUEST._serialized_start=117
   _QAREQUEST._serialized_end=163
-  _CONVERSATION._serialized_start=165
-  _CONVERSATION._serialized_end=273
-  _MODELRESPONSE._serialized_start=276
-  _MODELRESPONSE._serialized_end=836
+  _CONVERSATIONREQUEST._serialized_start=166
+  _CONVERSATIONREQUEST._serialized_end=306
+  _CONVERSATIONREPLY._serialized_start=308
+  _CONVERSATIONREPLY._serialized_end=407
+  _MODELRESPONSE._serialized_start=410
+  _MODELRESPONSE._serialized_end=982
 # @@protoc_insertion_point(module_scope)

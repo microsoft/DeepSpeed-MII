@@ -178,7 +178,7 @@ class MIIServerClient():
 
         elif self.task == mii.Tasks.CONVERSATIONAL:
             response = await self.stubs[stub_id].ConversationalReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+                mii.modelresponse_pb2.ConversationRequest(text=request_dict['text'], conversation_id=request_dict['conversation_id'] if 'conversation_id' in request_dict else None, past_user_inputs=request_dict['past_user_inputs'], generated_responses=request_dict['generated_responses']))
 
         else:
             assert False, "unknown task"
@@ -220,5 +220,16 @@ class MIIServerClient():
             response = self.asyncio_loop.run_until_complete(
                 self._query_in_tensor_parallel(request_dict))
             generated_string = response.result().response
+        return generated_string
 
+    def query2(self, request_dict):
+
+        if not self.use_grpc_server:
+            response = self._request_response(request_dict)
+            generated_string = f"{response}"
+        else:
+            assert self.initialize_grpc_client, "grpc client has not been setup when this model was created"
+            response = self.asyncio_loop.run_until_complete(
+                self._query_in_tensor_parallel(request_dict))
+            generated_string = response.result()
         return generated_string
