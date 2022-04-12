@@ -168,6 +168,18 @@ class MIIServerClient():
             response = await self.stubs[stub_id].QuestionAndAnswerReply(
                 mii.modelresponse_pb2.QARequest(question=request_dict['question'],
                                                 context=request_dict['context']))
+        elif self.task == mii.Tasks.FILL_MASK:
+            response = await self.stubs[stub_id].FillMaskReply(
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+
+        elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
+            response = await self.stubs[stub_id].TokenClassificationReply(
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+
+        elif self.task == mii.Tasks.CONVERSATIONAL:
+            response = await self.stubs[stub_id].ConversationalReply(
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+
         else:
             assert False, "unknown task"
         return response
@@ -183,6 +195,16 @@ class MIIServerClient():
         elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = self.model(question=request_dict['query'],
                                   context=request_dict['context'])
+
+        elif self.task == mii.Tasks.FILL_MASK:
+            response = self.model(request_dict['query'])
+
+        elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
+            response = self.model(request_dict['query'])
+
+        elif self.task == mii.Tasks.CONVERSATIONAL:
+            response = self.model(["", request_dict['query']])
+
         else:
             raise NotSupportedError(f"task is not supported: {self.task}")
         end = time.time()

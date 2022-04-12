@@ -33,6 +33,17 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
                                            context=request.context)
         return modelresponse_pb2.SingleStringReply(response=f"{response}")
 
+    def FillMaskReply(self, request, context):
+        response = self.inference_pipeline(request.request)
+        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+
+    def TokenClassificationReply(self, request, context):
+        response = self.inference_pipeline(request.request)
+        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+
+    def ConversationalReply(self, request, context):
+        response = self.inference_pipeline(request.request)
+        return modelresponse_pb2.Conversation(response=f"{response}")
 
 def serve(inference_pipeline, port):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
