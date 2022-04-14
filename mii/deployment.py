@@ -126,9 +126,75 @@ def deploy(task_name,
            aml_workspace=None,
            aks_target=None,
            aks_deploy_config=None,
-           enable_deepspeed=True,
            force_register_model=False,
+           enable_deepspeed=True,
            mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
+    """Deploy a task using specified model. For usage examples see:
+
+        mii/examples/local/gpt2-local-example.py
+        mii/examples/azure-local/gpt2-azure-local-example.py
+        mii/examples/azure-aks/gpt2-azure-aks-example.py
+
+
+    Arguments:
+        task_name: Name of the machine learning task to be deployed.Currently MII supports the following list of tasks
+            ``['text-generation', 'question-answering']``
+
+        model_name: Name of a supported model for the task. Models in MII are sourced from multiple open-source projects 
+            such as Huggingface Transformer, FairSeq, EluetherAI etc. For the list of supported models for each task, please
+            see here [TODO]. 
+
+        deployment_type: One of the ``enum mii.DeploymentTypes: [LOCAL, AML_LOCAL, AML_ON_AKS]``.  
+            *``LOCAL`` uses a grpc server to create a local deployment, and query the model must be done by creating a query handle using 
+              `mii.mii_query_handle` and posting queries using ``mii_request_handle.query`` API,
+            *``AML_LOCAL`` creates a local deployment using Azure ML and provides a URI where HTTP queries can be posted. This requires an azure subscription. 
+            *``AML_ON_AKS`` deploys the model using Azure ML on an Azure AKS cluster and provides a URI where HTTP queries can be posted. 
+              This requires an azure subscription and resources to create an AKS cluster. For both of the AML deployments, if deploying for the first time, the
+              specified model is first registered and uploaded to your Azure Workspace and will be reused in subsequent deployments.
+
+        deployment_name: Name of the deployment. Used as an identifier for posting queries for ``LOCAL`` deployment. 
+            For ``AML_ON_AKS`` deployment, this will be the name of the endpoint.
+
+        
+        local_model_path: Optional: Local folder where the model checkpoints are available. 
+            This should be provided if you want to use your own checkpoint instead of the default open-source checkpoints for the supported models for `LOCAL` deployment.
+            For AML deployments, AML will look for the most recent model registered in your workspace for a given ``model_name`` and ``aml_model_tags``, 
+            and ignore the ``local_model_path`` if a matching ``model_name`` and ``aml_model_tags`` already exist. If you want MII to use the ``local_model_path`` with 
+            AML deployments, either set a new ``aml_model_tags`` to register the model from ``local_model_path`` to your Azure workspace, or set ``force_register_model=True``, 
+            to re-register the the model with the exisiting ``model_name`` and ``aml_model_tags`` using the checkpoints in ``local_model_path``.
+            
+
+        aml_model_tags: Optional: Only needed for AML deployments. Tags used when registering your model to Azure Workspace, when deploying for the first time. 
+            For later deployments, tags are used as filters to identify the model from your workspace for AML based deployment.
+            Fpr details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.model.model?view=azure-ml-py
+
+        aml_workspace: Optional: Azure Workspace ``azureml.core.Workspace`` for AML deployment. 
+            For details see here: https://docs.microsoft.com/en-us/azure/machine-learning/how-to-manage-workspace?tabs=python#create-a-workspace
+
+
+        aks_target: Optional: ``azureml.core.compute.ComputeTarget`` for `AML_ON_AKS` deployment created using AKS Compute. 
+            It specifies the AKS cluster in your Azure Workspace on which the model is deployed. 
+            For more details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.compute.akscompute?view=azure-ml-py
+
+
+        aks_deploy_config: Optional: ``azureml.core.webservice.aks.AksServiceDeploymentConfiguration`` for `AML_ON_AKS` deployment. 
+            It specifies deployment configurations such as number of replicas, number of GPUs per replica, amount of memory, etc. 
+            It is created using `deploy_configuration` method of AKSWebService Class: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice.akswebservice?view=azure-ml-py
+            
+        enable_deepspeed: Optional: Defaults to True. Use this flag to enable or disable DeepSpeed-Inference optimizations
+
+        force_register_model: Optional: Defaults to False. For AML deployments, set it to True if you want to re-register your model 
+            with the same ``aml_model_tags`` using checkpoints from ``local_model_path``.
+
+        mii_configs: Optional: Dictionary specifying optimization and deployment configurations. Defaults to ``mii.constants.MII_CONFIGS_DEFAULT``. 
+            mii_config is future looking to support extensions in optimization strategies supported by DeepSpeed Inference as we extend mii. 
+            As of now, it can be used to set tensor-slicing degree using mii.constants.TENSOR_PARALLEL_KEY and port number for deployment using mii.constants.PORT_NUMBER_KEY.
+    Returns:
+        If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
+        If deployment_type is `AML_LOCAL` or `AML_ON_AKS`, returns a a Webservice object from `azureml.core.webservice` corresponding to the deployed webservice
+        For more details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice(class)?view=azure-ml-py.
+        
+    """
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)

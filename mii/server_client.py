@@ -12,6 +12,19 @@ from mii.utils import logger
 
 
 def mii_query_handle(deployment_name):
+    """Get a query handle for a local deployment:
+
+        mii/examples/local/gpt2-query-example.py
+        mii/examples/local/roberta-qa-query-example.py
+        
+
+    Arguments:
+        deployment_name: Name of the deployment. Used as an identifier for posting queries for ``LOCAL`` deployment. 
+    
+    Returns:
+        query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
+        
+    """
 
     configs = mii.utils.import_score_file(deployment_name).configs
 
@@ -189,7 +202,17 @@ class MIIServerClient():
         return f"{response}" + f"\n Model Execution Time: {end-start} seconds"
 
     def query(self, request_dict):
+        """Query a local deployment:
 
+            mii/examples/local/gpt2-query-example.py
+            mii/examples/local/roberta-qa-query-example.py
+
+        Arguments:
+            request_dict: A task specific request dictionary consiting of the inputs to the models 
+        
+        Returns:
+            response: Response of the model           
+        """
         if not self.use_grpc_server:
             response = self._request_response(request_dict)
             generated_string = f"{response}"
