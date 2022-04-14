@@ -16,14 +16,14 @@ def mii_query_handle(deployment_name):
 
         mii/examples/local/gpt2-query-example.py
         mii/examples/local/roberta-qa-query-example.py
-        
+
 
     Arguments:
-        deployment_name: Name of the deployment. Used as an identifier for posting queries for ``LOCAL`` deployment. 
-    
+        deployment_name: Name of the deployment. Used as an identifier for posting queries for ``LOCAL`` deployment.
+
     Returns:
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
-        
+
     """
 
     configs = mii.utils.import_score_file(deployment_name).configs
@@ -208,10 +208,10 @@ class MIIServerClient():
             mii/examples/local/roberta-qa-query-example.py
 
         Arguments:
-            request_dict: A task specific request dictionary consiting of the inputs to the models 
-        
+            request_dict: A task specific request dictionary consistinging of the inputs to the models
+
         Returns:
-            response: Response of the model           
+            response: Response of the model
         """
         if not self.use_grpc_server:
             response = self._request_response(request_dict)
