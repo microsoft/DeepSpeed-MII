@@ -4,9 +4,6 @@ import grpc
 
 import mii
 
-mii_configs = mii.constants.MII_CONFIGS_DEFAULT
-mii_configs[mii.constants.TENSOR_PARALLEL_KEY] = 2
-
 # gpt2
 name = "microsoft/DialoGPT-small"
 

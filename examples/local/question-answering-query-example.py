@@ -1,7 +1,6 @@
 import os
 import grpc
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
 import mii
 
 name = "deepset/roberta-large-squad2"
