@@ -13,4 +13,4 @@ print(f"Querying {name}...")
 
 generator = mii.mii_query_handle(name + "_deployment")
 results = generator.query({'query': "My name is jean-baptiste and I live in montreal."})
-print(results)
+print(results.response)

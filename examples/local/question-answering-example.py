@@ -1,6 +1,6 @@
 import mii
 
-name = "distilroberta-base"
+name = "deepset/roberta-large-squad2"
 mii.deploy("question-answering",
            name,
            mii.DeploymentType.LOCAL,
