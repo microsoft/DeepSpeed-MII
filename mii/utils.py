@@ -6,9 +6,11 @@ import os
 import logging
 import importlib
 
-from mii.constants import MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
+from huggingface_hub import HfApi
+
+from mii.constants import CONVERSATIONAL_NAME, FILL_MASK_NAME, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
     MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
-    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TENSOR_PARALLEL_KEY, PORT_NUMBER_KEY
+    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TENSOR_PARALLEL_KEY, PORT_NUMBER_KEY, TOKEN_CLASSIFICATION_NAME
 
 from mii.constants import Tasks
 
@@ -27,6 +29,15 @@ def get_task_name(task):
     if task == Tasks.TEXT_CLASSIFICATION:
         return TEXT_CLASSIFICATION_NAME
 
+    if task == Tasks.FILL_MASK:
+        return FILL_MASK_NAME
+
+    if task == Tasks.TOKEN_CLASSIFICATION:
+        return TOKEN_CLASSIFICATION_NAME
+
+    if task == Tasks.CONVERSATIONAL:
+        return CONVERSATIONAL_NAME
+
     assert False, f"Unknown Task {task}"
 
 
@@ -40,19 +51,64 @@ def get_task(task_name):
     if task_name == TEXT_CLASSIFICATION_NAME:
         return Tasks.TEXT_CLASSIFICATION
 
+    if task_name == FILL_MASK_NAME:
+        return Tasks.FILL_MASK
+
+    if task_name == TOKEN_CLASSIFICATION_NAME:
+        return Tasks.TOKEN_CLASSIFICATION
+
+    if task_name == CONVERSATIONAL_NAME:
+        return Tasks.CONVERSATIONAL
+
     assert False, f"Unknown Task {task_name}"
+
+
+def _get_hf_models_by_type(model_type, task=None):
+    api = HfApi()
+    models = api.list_models(filter=model_type)
+    return [m.modelId for m in models
+            ] if task is None else [m.modelId for m in models if m.pipeline_tag == task]
 
 
 #TODO read this from a file containing list of files supported for each task
 def _get_supported_models_name(task):
+    supported_models = []
+    task_name = get_task_name(task)
     if task == Tasks.TEXT_GENERATION:
-        supported_models = ['gpt2']
+        supported_model_types = ['gpt2']
+        for mt in supported_model_types:
+            hf_models = _get_hf_models_by_type(mt, task_name)
+            supported_models.extend(hf_models)
 
     elif task == Tasks.TEXT_CLASSIFICATION:
-        supported_models = 'roberta-large-mnli'
+        supported_model_types = ['roberta', 'gpt2']
+        for mt in supported_model_types:
+            hf_models = _get_hf_models_by_type(mt, task_name)
+            supported_models.extend(hf_models)
 
     elif task == Tasks.QUESTION_ANSWERING:
-        supported_models = ['deepset/roberta-large-squad2']
+        supported_model_types = ['roberta']
+        for mt in supported_model_types:
+            hf_models = _get_hf_models_by_type(mt, task_name)
+            supported_models.extend(hf_models)
+
+    elif task == Tasks.FILL_MASK:
+        supported_model_types = ['roberta']
+        for mt in supported_model_types:
+            hf_models = _get_hf_models_by_type(mt, task_name)
+            supported_models.extend(hf_models)
+
+    elif task == Tasks.TOKEN_CLASSIFICATION:
+        supported_model_types = ['roberta']
+        for mt in supported_model_types:
+            hf_models = _get_hf_models_by_type(mt, task_name)
+            supported_models.extend(hf_models)
+
+    elif task == Tasks.CONVERSATIONAL:
+        supported_model_types = ['gpt2']
+        for mt in supported_model_types:
+            hf_models = _get_hf_models_by_type(mt, task_name)
+            supported_models.extend(hf_models)
     else:
         assert False, f"{task} is not supported"
 

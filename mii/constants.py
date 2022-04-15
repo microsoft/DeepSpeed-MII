@@ -20,11 +20,17 @@ class Tasks(enum.Enum):
     TEXT_GENERATION = 1
     TEXT_CLASSIFICATION = 2
     QUESTION_ANSWERING = 3
+    FILL_MASK = 4
+    TOKEN_CLASSIFICATION = 5
+    CONVERSATIONAL = 6
 
 
 TEXT_GENERATION_NAME = 'text-generation'
 TEXT_CLASSIFICATION_NAME = 'text-classification'
 QUESTION_ANSWERING_NAME = 'question-answering'
+FILL_MASK_NAME = 'fill-mask'
+TOKEN_CLASSIFICATION_NAME = 'token-classification'
+CONVERSATIONAL_NAME = 'conversational'
 
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'

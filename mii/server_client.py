@@ -174,13 +174,30 @@ class MIIServerClient():
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
 
         elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
-            response = await self.stubs[stub_id].EntailmentReply(
+            response = await self.stubs[stub_id].ClassificationReply(
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
 
         elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = await self.stubs[stub_id].QuestionAndAnswerReply(
                 mii.modelresponse_pb2.QARequest(question=request_dict['question'],
                                                 context=request_dict['context']))
+        elif self.task == mii.Tasks.FILL_MASK:
+            response = await self.stubs[stub_id].FillMaskReply(
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+
+        elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
+            response = await self.stubs[stub_id].TokenClassificationReply(
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+
+        elif self.task == mii.Tasks.CONVERSATIONAL:
+            response = await self.stubs[stub_id].ConversationalReply(
+                mii.modelresponse_pb2.ConversationRequest(
+                    text=request_dict['text'],
+                    conversation_id=request_dict['conversation_id']
+                    if 'conversation_id' in request_dict else None,
+                    past_user_inputs=request_dict['past_user_inputs'],
+                    generated_responses=request_dict['generated_responses']))
+
         else:
             assert False, "unknown task"
         return response
@@ -196,6 +213,16 @@ class MIIServerClient():
         elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = self.model(question=request_dict['query'],
                                   context=request_dict['context'])
+
+        elif self.task == mii.Tasks.FILL_MASK:
+            response = self.model(request_dict['query'])
+
+        elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
+            response = self.model(request_dict['query'])
+
+        elif self.task == mii.Tasks.CONVERSATIONAL:
+            response = self.model(["", request_dict['query']])
+
         else:
             raise NotSupportedError(f"task is not supported: {self.task}")
         end = time.time()
@@ -215,11 +242,10 @@ class MIIServerClient():
         """
         if not self.use_grpc_server:
             response = self._request_response(request_dict)
-            generated_string = f"{response}"
+            ret = f"{response}"
         else:
             assert self.initialize_grpc_client, "grpc client has not been setup when this model was created"
             response = self.asyncio_loop.run_until_complete(
                 self._query_in_tensor_parallel(request_dict))
-            generated_string = response.result().response
-
-        return generated_string
+            ret = response.result()
+        return ret

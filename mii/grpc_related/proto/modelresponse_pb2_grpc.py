@@ -29,6 +29,21 @@ class ModelResponseStub(object):
             request_serializer=modelresponse__pb2.QARequest.SerializeToString,
             response_deserializer=modelresponse__pb2.SingleStringReply.FromString,
         )
+        self.FillMaskReply = channel.unary_unary(
+            '/modelresponse.ModelResponse/FillMaskReply',
+            request_serializer=modelresponse__pb2.SingleStringRequest.SerializeToString,
+            response_deserializer=modelresponse__pb2.SingleStringReply.FromString,
+        )
+        self.TokenClassificationReply = channel.unary_unary(
+            '/modelresponse.ModelResponse/TokenClassificationReply',
+            request_serializer=modelresponse__pb2.SingleStringRequest.SerializeToString,
+            response_deserializer=modelresponse__pb2.SingleStringReply.FromString,
+        )
+        self.ConversationalReply = channel.unary_unary(
+            '/modelresponse.ModelResponse/ConversationalReply',
+            request_serializer=modelresponse__pb2.ConversationRequest.SerializeToString,
+            response_deserializer=modelresponse__pb2.ConversationReply.FromString,
+        )
 
 
 class ModelResponseServicer(object):
@@ -48,6 +63,24 @@ class ModelResponseServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def QuestionAndAnswerReply(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def FillMaskReply(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def TokenClassificationReply(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ConversationalReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -73,6 +106,24 @@ def add_ModelResponseServicer_to_server(servicer, server):
             servicer.QuestionAndAnswerReply,
             request_deserializer=modelresponse__pb2.QARequest.FromString,
             response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
+        ),
+        'FillMaskReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.FillMaskReply,
+            request_deserializer=modelresponse__pb2.SingleStringRequest.FromString,
+            response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
+        ),
+        'TokenClassificationReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.TokenClassificationReply,
+            request_deserializer=modelresponse__pb2.SingleStringRequest.FromString,
+            response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
+        ),
+        'ConversationalReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.ConversationalReply,
+            request_deserializer=modelresponse__pb2.ConversationRequest.FromString,
+            response_serializer=modelresponse__pb2.ConversationReply.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler('modelresponse.ModelResponse',
@@ -153,6 +204,84 @@ class ModelResponse(object):
             '/modelresponse.ModelResponse/QuestionAndAnswerReply',
             modelresponse__pb2.QARequest.SerializeToString,
             modelresponse__pb2.SingleStringReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
+    @staticmethod
+    def FillMaskReply(request,
+                      target,
+                      options=(),
+                      channel_credentials=None,
+                      call_credentials=None,
+                      insecure=False,
+                      compression=None,
+                      wait_for_ready=None,
+                      timeout=None,
+                      metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modelresponse.ModelResponse/FillMaskReply',
+            modelresponse__pb2.SingleStringRequest.SerializeToString,
+            modelresponse__pb2.SingleStringReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
+    @staticmethod
+    def TokenClassificationReply(request,
+                                 target,
+                                 options=(),
+                                 channel_credentials=None,
+                                 call_credentials=None,
+                                 insecure=False,
+                                 compression=None,
+                                 wait_for_ready=None,
+                                 timeout=None,
+                                 metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modelresponse.ModelResponse/TokenClassificationReply',
+            modelresponse__pb2.SingleStringRequest.SerializeToString,
+            modelresponse__pb2.SingleStringReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
+    @staticmethod
+    def ConversationalReply(request,
+                            target,
+                            options=(),
+                            channel_credentials=None,
+                            call_credentials=None,
+                            insecure=False,
+                            compression=None,
+                            wait_for_ready=None,
+                            timeout=None,
+                            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modelresponse.ModelResponse/ConversationalReply',
+            modelresponse__pb2.ConversationRequest.SerializeToString,
+            modelresponse__pb2.ConversationReply.FromString,
             options,
             channel_credentials,
             insecure,
