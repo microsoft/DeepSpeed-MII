@@ -12,3 +12,4 @@ results = generator.query({
     'context': "DeepSpeed is the greatest"
 })
 print(results.response)
+print(f"time_taken: {results.time_taken}")

@@ -23,35 +23,51 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
                                            do_sample=True,
                                            min_length=50)
         end = time.time()
-        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+        return modelresponse_pb2.SingleStringReply(response=f"{response}",
+                                                   time_taken=end - start)
 
     def ClassificationReply(self, request, context):
+        start = time.time()
         response = self.inference_pipeline(request.request, return_all_scores=True)
-        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+        end = time.time()
+        return modelresponse_pb2.SingleStringReply(response=f"{response}",
+                                                   time_taken=end - start)
 
     def QuestionAndAnswerReply(self, request, context):
+        start = time.time()
         response = self.inference_pipeline(question=request.question,
                                            context=request.context)
-        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+        end = time.time()
+        return modelresponse_pb2.SingleStringReply(response=f"{response}",
+                                                   time_taken=end - start)
 
     def FillMaskReply(self, request, context):
+        start = time.time()
         response = self.inference_pipeline(request.request)
-        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+        end = time.time()
+        return modelresponse_pb2.SingleStringReply(response=f"{response}",
+                                                   time_taken=end - start)
 
     def TokenClassificationReply(self, request, context):
+        start = time.time()
         response = self.inference_pipeline(request.request)
-        return modelresponse_pb2.SingleStringReply(response=f"{response}")
+        end = time.time()
+        return modelresponse_pb2.SingleStringReply(response=f"{response}",
+                                                   time_taken=end - start)
 
     def ConversationalReply(self, request, context):
+        start = time.time()
         conv = Conversation(text=request.text,
                             conversation_id=request.conversation_id,
                             past_user_inputs=request.past_user_inputs,
                             generated_responses=request.generated_responses)
         self.inference_pipeline(conv)
+        end = time.time()
         return modelresponse_pb2.ConversationReply(
             conversation_id=conv.uuid,
             past_user_inputs=conv.past_user_inputs,
-            generated_responses=conv.generated_responses)
+            generated_responses=conv.generated_responses,
+            time_taken=end - start)
 
 
 def serve(inference_pipeline, port):

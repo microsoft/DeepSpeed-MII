@@ -40,7 +40,7 @@ message SingleStringRequest {
 // The response message containing the greetings
 message SingleStringReply {
   string response = 1;
-  int32 time_taken = 2;
+  float time_taken = 2;
 }
 
 message QARequest {
@@ -59,5 +59,5 @@ message ConversationReply {
   int64 conversation_id = 1;
   repeated string past_user_inputs = 2;
   repeated string generated_responses = 3;
-  int32 time_taken = 2;
+  float time_taken = 4;
 }

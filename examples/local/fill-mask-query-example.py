@@ -12,5 +12,6 @@ name = "roberta-base"
 print(f"Querying {name}...")
 
 generator = mii.mii_query_handle(name + "_deployment")
-results = generator.query({'query': "Hello I'm a <mask> model."})
-print(results.response)
+result = generator.query({'query': "Hello I'm a <mask> model."})
+print(result.response)
+print("time_taken:", result.time_taken)

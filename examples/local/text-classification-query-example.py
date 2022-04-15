@@ -15,5 +15,6 @@ name = "roberta-large-mnli"
 print(f"Querying {name}...")
 
 generator = mii.mii_query_handle(name + "_deployment")
-results = generator.query({'query': "DeepSpeed is the greatest"})
-print(results.response)
+result = generator.query({'query': "DeepSpeed is the greatest"})
+print(result.response)
+print("time_taken:", result.time_taken)
