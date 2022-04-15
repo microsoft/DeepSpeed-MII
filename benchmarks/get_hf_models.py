@@ -11,26 +11,35 @@ from dataclasses import dataclass
 
 api = HfApi()
 
-
 @dataclass_json
 @dataclass(frozen=True,repr=True,eq=True)
 class Model:
     name: str
     type: str
+    task: str
     url: str
     size: int = 0
     downloads: int = 0
     def __lt__(self, other):
         return self.size > other.size or (self.size == other.size and self.downloads > other.downloads)
 
-def _get_models_by_type_and_task(model_type, task=None):
+def _get_models_by_type_and_task(model_type=None, task=None, min_downloads=10000):
     models = api.list_models(filter=model_type)
     # sort by number of downloads
     ordered = sorted(models,
                      reverse=True,
                      key=lambda t: t.downloads
                      if hasattr(t, "downloads") else 0)
-    return [ m for m in ordered if m.pipeline_tag and m.pipeline_tag == task] if task else [ m for m in ordered]
+    ret = []
+    for m in ordered:
+        if hasattr(m, "downloads") and m.downloads > min_downloads:
+            # print(m.modelId)
+            if task:
+                if hasattr(m, "pipeline_tag") and m.pipeline_tag == task:
+                    ret.append(m)
+            else:
+                ret.append(m)
+    return ret
 
 def _get_model_size(model_name):
     url = f"https://huggingface.co/{model_name}/blob/main/pytorch_model.bin"
@@ -80,7 +89,7 @@ def _populate_model_list(model_type, tasks, total_count=None, write_file_path="m
                     if size == -1:
                         continue
                     downloads = m.downloads if hasattr(m, "downloads") else 0
-                    mm = Model(name, type, url, size, downloads)
+                    mm = Model(name, type, m.pipeline_tag, url, size, downloads)
                     models.append(mm)
                     cnt += 1
                     if total_count and cnt == total_count:
@@ -101,7 +110,8 @@ def _write_model_list_to_file(models, file_path):
         f.write(models_json)
     print(f"Wrote {len(models)} models to file {file_path}")
 
-def _sample_models(models, total=5, bin_top_k=1, model_type=None, task=None):
+def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
+    assert models, "models list is empty"
     sampled_models = []
     models.sort()
     filtered_models = []
@@ -112,7 +122,7 @@ def _sample_models(models, total=5, bin_top_k=1, model_type=None, task=None):
             if m.type != model_type:
                 continue
         if task:
-            if m.pipeline_tag != task:
+            if m.task != task:
                 continue
         filtered_models.append(m)
         if m.size > max_size:
@@ -136,8 +146,8 @@ if __name__ == "__main__":
     model_types = ["roberta", "gpt2", "bert"]
     tasks = ["question-answering", "text-generation", "fill-mask", "token-classification", "conversational", "text-classification" ]
 
-    # model_list = _populate_model_list(model_types, tasks)
-    model_list = _populate_model_list(model_types, tasks, total_count = 40, read_file_path = "models.json")
+    model_list = _populate_model_list(model_types, tasks)
+    # model_list = _populate_model_list(model_types, tasks, read_file_path = "models.json")
 
     sampled_models, min_size, max_size = _sample_models(model_list, 10)
     _write_model_list_to_file(sampled_models, "sampled_models.json")
