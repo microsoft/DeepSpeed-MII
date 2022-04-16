@@ -10,7 +10,7 @@ from huggingface_hub import HfApi
 
 from mii.constants import CONVERSATIONAL_NAME, FILL_MASK_NAME, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
     MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
-    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TENSOR_PARALLEL_KEY, PORT_NUMBER_KEY, TOKEN_CLASSIFICATION_NAME
+    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TENSOR_PARALLEL_KEY, PORT_NUMBER_KEY, TOKEN_CLASSIFICATION_NAME, SUPPORTED_MODEL_TYPES
 
 from mii.constants import Tasks
 
@@ -75,38 +75,32 @@ def _get_supported_models_name(task):
     supported_models = []
     task_name = get_task_name(task)
     if task == Tasks.TEXT_GENERATION:
-        supported_model_types = ['gpt2']
-        for mt in supported_model_types:
+        for mt in SUPPORTED_MODEL_TYPES:
             hf_models = _get_hf_models_by_type(mt, task_name)
             supported_models.extend(hf_models)
 
     elif task == Tasks.TEXT_CLASSIFICATION:
-        supported_model_types = ['roberta', 'gpt2']
-        for mt in supported_model_types:
+        for mt in SUPPORTED_MODEL_TYPES:
             hf_models = _get_hf_models_by_type(mt, task_name)
             supported_models.extend(hf_models)
 
     elif task == Tasks.QUESTION_ANSWERING:
-        supported_model_types = ['roberta']
-        for mt in supported_model_types:
+        for mt in SUPPORTED_MODEL_TYPES:
             hf_models = _get_hf_models_by_type(mt, task_name)
             supported_models.extend(hf_models)
 
     elif task == Tasks.FILL_MASK:
-        supported_model_types = ['roberta']
-        for mt in supported_model_types:
+        for mt in SUPPORTED_MODEL_TYPES:
             hf_models = _get_hf_models_by_type(mt, task_name)
             supported_models.extend(hf_models)
 
     elif task == Tasks.TOKEN_CLASSIFICATION:
-        supported_model_types = ['roberta']
-        for mt in supported_model_types:
+        for mt in SUPPORTED_MODEL_TYPES:
             hf_models = _get_hf_models_by_type(mt, task_name)
             supported_models.extend(hf_models)
 
     elif task == Tasks.CONVERSATIONAL:
-        supported_model_types = ['gpt2']
-        for mt in supported_model_types:
+        for mt in SUPPORTED_MODEL_TYPES:
             hf_models = _get_hf_models_by_type(mt, task_name)
             supported_models.extend(hf_models)
     else:
