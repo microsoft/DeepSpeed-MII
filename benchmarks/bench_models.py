@@ -1,8 +1,12 @@
+from cgitb import enable
 import subprocess
 import sys
 import os
 import time
+import argparse
+import csv
 
+from statistics import mean
 from get_hf_models import Model
 import mii
 
@@ -30,7 +34,7 @@ def size_to_string(size, units=None, precision=2):
         else:
             return str(size)
 
-def _deploy_model(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
+def _deploy_model(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT, enable_deepspeed=True):
     name = model.name
     type = model.type
     task = model.task
@@ -39,7 +43,8 @@ def _deploy_model(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
             mii.DeploymentType.LOCAL,
             deployment_name=name + "_deployment",
             local_model_path=".cache/models/" + name,
-            mii_configs=mii_configs)
+            mii_configs=mii_configs,
+            enable_deepspeed=True)
 
 def _kill_deployment(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
     kill_cmd = [
@@ -54,24 +59,50 @@ def _kill_deployment(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
 
     if result.returncode > 0:
         sys.exit(result.returncode)
-
     print(f"Killed deployment {model.name}")
 
 if __name__ == "__main__":
-    read_file_path = "sampled_models.json"
-    models = []
+    parser = argparse.ArgumentParser(description="Benchmark models")
+    parser.add_argument("-f", "--model_file", type=str, default="sampled_models.json", help="Path to file containing model list")
+    parser.add_argument("-o", "--output_file", type=str, default="bench_models_output.json", help="Path to file containing model list")
+    parser.add_argument("-i", "--model_index", type=int, default=0, help="Index of model in the model_files to benchmark")
+    parser.add_argument("-n", "--num_iters", type=int, help="number of iterations to run", default=10)
+    parser.add_argument("--disable_deepspeed", action='store_true')
+    args = parser.parse_args()
 
-    if read_file_path and os.path.exists(read_file_path):
-        print(f"Populating model list from file {read_file_path}...")
-        with open(read_file_path) as f:
+    model_file = args.model_file
+    models = []
+    if os.path.exists(model_file):
+        with open(model_file) as f:
             data = f.read()
             models = Model.schema().loads(data, many=True)
 
-    print(f"Populated {len(models)} models from file {read_file_path}")
+    print(f"Populated {len(models)} models from file {model_file}")
 
-    for model in models:
-        print(f" Benchmakring {model.type}, {model.task}, {size_to_string(model.size)}")
-        _deploy_model(model)
-        time.sleep(10)
-        _kill_deployment(model) # NEED A PROCESS REF TO KILL
-        exit()
+    print(args)
+    model_index = args.model_index
+    model = models[model_index]
+    num_iters = args.num_iters
+    enable_deepspeed = not args.disable_deepspeed
+    input = "DeepSpeed is the greatest"
+
+    print(f" Benchmakring {model.type}, {model.task}, {size_to_string(model.size)} with enable_deepspeed={enable_deepspeed}")
+
+    _deploy_model(model, enable_deepspeed=enable_deepspeed)
+
+    time_takens = []
+    for i in range(num_iters):
+        if i < 1: continue # warmup
+        generator = mii.mii_query_handle(model.name + "_deployment")
+        result = generator.query({'query': input})
+        time_takens.append(result.time_taken)
+
+    mean_time = mean(time_takens)
+    print(f"mean time_taken: {mean_time}")
+
+    with open(args.output_file, 'a') as f:
+        writer = csv.writer(f)
+        row = [model.name, model.type, model.size, model.task, mean_time, enable_deepspeed, model.url]
+        writer.writerow(row)
+
+    _kill_deployment(model)
