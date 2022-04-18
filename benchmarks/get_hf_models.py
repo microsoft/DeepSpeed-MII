@@ -23,7 +23,7 @@ class Model:
     def __lt__(self, other):
         return self.size > other.size or (self.size == other.size and self.downloads > other.downloads)
 
-def _get_models_by_type_and_task(model_type=None, task=None, min_downloads=10000):
+def _get_models_by_type_and_task(model_type=None, task=None, min_downloads=5000):
     models = api.list_models(filter=model_type)
     # sort by number of downloads
     ordered = sorted(models,
@@ -130,12 +130,12 @@ def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
         if m.size < min_size:
             min_size = m.size
 
-    step = (len(filtered_models) + total-1 ) // total
+    step = len(filtered_models) // total
 
-    for i in range(0, len(filtered_models), step):
+    for i in range(0, total*step, step):
         left = i
         right = min(i+step, i+bin_top_k)
-        ordered = sorted(models[left:right], reverse=True,
+        ordered = sorted(filtered_models[left:right], reverse=True,
                      key=lambda t: t.downloads
                      if hasattr(t, "downloads") else 0)
         sampled_models.append(ordered[0])
@@ -146,11 +146,11 @@ if __name__ == "__main__":
     model_types = ["roberta", "gpt2", "bert"]
     tasks = ["question-answering", "text-generation", "fill-mask", "token-classification", "conversational", "text-classification" ]
 
-    model_list = _populate_model_list(model_types, tasks)
-    # model_list = _populate_model_list(model_types, tasks, read_file_path = "models.json")
+    # model_list = _populate_model_list(model_types, tasks, write_file_path = "all_models.json")
+    model_list = _populate_model_list(model_types, tasks, read_file_path = "all_models.json")
 
-    sampled_models, min_size, max_size = _sample_models(model_list, 10)
-    _write_model_list_to_file(sampled_models, "sampled_models.json")
-
-    print(f"Sampled {len(sampled_models)} models from size between {min_size} and {max_size}")
+    for mt in ["roberta", "gpt2"]:
+        sampled_models, min_size, max_size = _sample_models(model_list, total=20, model_type=mt)
+        _write_model_list_to_file(sampled_models, f"sampled_models_{mt}.json")
+        print(f"Sampled {len(sampled_models)} {mt} models from size between {min_size} and {max_size}")
 

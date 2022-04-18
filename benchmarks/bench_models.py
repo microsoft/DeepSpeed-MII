@@ -44,7 +44,7 @@ def _deploy_model(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT, enable_d
             deployment_name=name + "_deployment",
             local_model_path=".cache/models/" + name,
             mii_configs=mii_configs,
-            enable_deepspeed=True)
+            enable_deepspeed=enable_deepspeed)
 
 def _kill_deployment(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
     kill_cmd = [
@@ -63,11 +63,13 @@ def _kill_deployment(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Benchmark models")
-    parser.add_argument("-f", "--model_file", type=str, default="sampled_models.json", help="Path to file containing model list")
-    parser.add_argument("-o", "--output_file", type=str, default="bench_models_output.json", help="Path to file containing model list")
+    parser.add_argument("-f", "--model_file", type=str, default="sampled_models_gpt2.json", help="Path to file containing model list")
+    parser.add_argument("-o", "--output_file", type=str, default="bench_output_gpt2.csv", help="Path to file containing benchmark output")
     parser.add_argument("-i", "--model_index", type=int, default=0, help="Index of model in the model_files to benchmark")
     parser.add_argument("-n", "--num_iters", type=int, help="number of iterations to run", default=10)
     parser.add_argument("--disable_deepspeed", action='store_true')
+    parser.add_argument("--reuse_output", action='store_true')
+
     args = parser.parse_args()
 
     model_file = args.model_file
@@ -79,30 +81,64 @@ if __name__ == "__main__":
 
     print(f"Populated {len(models)} models from file {model_file}")
 
-    print(args)
     model_index = args.model_index
     model = models[model_index]
+
+    if os.path.exists(args.output_file) and args.reuse_output:
+        if model.name in open(args.output_file).read():
+            print(f"Skipping {model.name} as it already exists in {args.output_file}")
+            sys.exit(0)
+
     num_iters = args.num_iters
     enable_deepspeed = not args.disable_deepspeed
     input = "DeepSpeed is the greatest"
 
-    print(f" Benchmakring {model.type}, {model.task}, {size_to_string(model.size)} with enable_deepspeed={enable_deepspeed}")
+    print(f"Benchmarking {model_index}: {model.name}, {model.type}, {model.task}, {size_to_string(model.size)} with enable_deepspeed={enable_deepspeed}")
 
     _deploy_model(model, enable_deepspeed=enable_deepspeed)
 
     time_takens = []
     for i in range(num_iters):
-        if i < 1: continue # warmup
-        generator = mii.mii_query_handle(model.name + "_deployment")
-        result = generator.query({'query': input})
-        time_takens.append(result.time_taken)
+        if model.task == "conversational":
+            generator = mii.mii_query_handle(model.name + "_deployment")
+            result = generator.query({
+                'text': input,
+                'conversation_id': 3,
+                'past_user_inputs': [],
+                'generated_responses': []
+            })
+            if i < 1: continue # warmup
+            time_takens.append(result.time_taken)
+        elif model.task == "question-answering":
+            generator = mii.mii_query_handle(model.name + "_deployment")
+            results = generator.query({
+                'question': "What is the greatest?",
+                'context': "DeepSpeed is the greatest"
+            })
+            if i < 1: continue
+        elif model.task == "fill-mask":
+            generator = mii.mii_query_handle(model.name + "_deployment")
+            if model.type == "roberta":
+                mask = "<mask>"
+            elif model.type == "bert":
+                mask = "[MASK]"
+            else:
+                mask = "<mask>"
+            result = generator.query({'query': "Hello I'm a " + mask + " model."})
+            time_takens.append(result.time_taken)
+            if i < 1: continue
+        else:
+            generator = mii.mii_query_handle(model.name + "_deployment")
+            result = generator.query({'query': input})
+            if i < 1: continue # warmup
+            time_takens.append(result.time_taken)
 
     mean_time = mean(time_takens)
     print(f"mean time_taken: {mean_time}")
 
     with open(args.output_file, 'a') as f:
         writer = csv.writer(f)
-        row = [model.name, model.type, model.size, model.task, mean_time, enable_deepspeed, model.url]
+        row = [model.name, model.type, size_to_string(model.size), model.size, model.task, mean_time, enable_deepspeed, model.url]
         writer.writerow(row)
 
-    _kill_deployment(model)
+    # _kill_deployment(model)

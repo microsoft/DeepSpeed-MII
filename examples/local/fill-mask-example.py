@@ -4,8 +4,9 @@ mii_configs = mii.constants.MII_CONFIGS_DEFAULT
 
 # roberta
 name = "roberta-base"
+name = "vinai/bertweet-large"
 
-name = "bert-base-uncased"
+# name = "bert-base-uncased"
 
 print(f"Deploying {name}...")
 
