@@ -1,4 +1,7 @@
-# DeepSpeed MII
+<div align="center">
+ <img src="docs/images/mii-white.svg#gh-light-mode-only" width="400px">
+ <img src="docs/images/mii-dark.svg#gh-dark-mode-only" width="400px">
+</div>
 
 Model Implementations for Inference (MII) is a new open-source python library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementation of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can deployed on-premise or on Azure through AML with just a few lines of code while achieving a latency and cost reduction of up to Nx 
 
