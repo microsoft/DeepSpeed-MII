@@ -1,16 +1,48 @@
 # DeepSpeed MII
 
-## Installation
+Model Implementations for Inference (MII) is a new open-source python library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementation of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can deployed on-premise or on Azure through AML with just a few lines of code while achieving a latency and cost reduction of up to Nx 
 
-### Local deployments
+TODO: add figure showing latency reductions across many models w. MII over baseline
+
+## How does MII work?
+
+Under-the-hood MII is powered by DeepSpeed-Inference. Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize thoughput. It does so using one of many pre-specified model injection policies, that allows DeepSpeed-Inference to identify the underlying pytorch model architecture and replace it with an optimized implementation. This injection can replace a single GPU module with multi-GPU variations enabling models to run on single GPU device, or seamlessly scale to tens of GPUs for dense models and hundreds of GPUs for sparse models for lower latency and higher throughput.  
+
+MII makes the expansive set of optimizations in DeepSpeed-Inference easily accessible to its users by automatically integrating them to thousands of popular transformer models. For a full set of optimizations in DeepSpeed-Inference please see here (TODO: cite ds-inference paper or blog)
+
+## Supported Models and Tasks
+
+MII supports a growing list of tasks such as text-generation, question-answering, text-classification, etc, across thousands of transformer models available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. It supports dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.  
+
+For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)
+
+## Getting Started with MII 
+
+### Installation
+
+#### Local deployments
 `pip install .[local]` will install all dependencies required for a local deployment.
 
-### Azure deployments
+#### Azure deployments
 `pip install .[azure]` will install all python-based dependencies required for a local deployment.
 
 Azure local deployments require:
 * nvidia-docker
-* TODO: what else is needed here?
+
+### Deploying with MII 
+
+MII allows supported models to be deployed with just a few lines of code both on-premise and on Azure. 
+
+#### On-Premises Deployment 
+
+TODO: add example code for local deployment
+
+#### Azure Deployment
+
+Azure-Local Deployment 
+
+Azure-on-AKS-Deployment 
+
 
 ## Contributing
 
