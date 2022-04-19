@@ -15,6 +15,8 @@ PORT_NUMBER_KEY = 'port_number'
 MII_CONFIGS_KEY = 'mii_configs'
 MII_CONFIGS_DEFAULT = {TENSOR_PARALLEL_KEY: 1, PORT_NUMBER_KEY: 50050}
 
+SUPPORTED_MODEL_TYPES = ['roberta', 'gpt2', 'bert']
+
 
 class Tasks(enum.Enum):
     TEXT_GENERATION = 1
