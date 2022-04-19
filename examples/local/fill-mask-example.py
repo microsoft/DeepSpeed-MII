@@ -8,6 +8,8 @@ name = "vinai/bertweet-large"
 
 # name = "bert-base-uncased"
 
+name = "bert-base-uncased"
+
 print(f"Deploying {name}...")
 
 mii.deploy('fill-mask',
