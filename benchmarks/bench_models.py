@@ -136,21 +136,19 @@ if __name__ == "__main__":
                 mask = "[MASK]"
             elif model.name in ["flaubert/flaubert_large_cased", "flaubert/flaubert_base_uncased"]:
                 mask = "<special1>"
+                input
             elif model.type == "bert":
                 mask = "[MASK]"
             elif model.type == "roberta":
                 mask = "<mask>"
             else:
                 mask = "<mask>"
-            result = generator.query({'query': "Hello I'm a " + mask + " model."})
+            input = "Hello I'm a " + mask + " model."
+            result = generator.query({'query': input})
             if i < 1: continue
             time_takens.append(result.time_taken)
         else:
             generator = mii.mii_query_handle(model.name + "_deployment")
-            if model.name in ["uer/gpt2-chinese-cluecorpussmall", "uer/gpt2-chinese-ancient", "uer/gpt2-chinese-poem" ] or "chinese" in model.name:
-                input = "这是很久之前的事情了"
-            if model.name in ["rinna/japanese-gpt2-small"]:
-                input = "生命、宇宙、そして万物についての究極の疑問の答えは"
             result = generator.query({'query': input})
             if i < 1: continue # warmup
             time_takens.append(result.time_taken)
@@ -160,7 +158,7 @@ if __name__ == "__main__":
 
     if enable_deepspeed:
         with open(args.output_file, 'a') as f:
-            f.write(f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {enable_deepspeed}, {mean_time}")
+            f.write(f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}")
     else:
         ds_time = 0.0
         with open(args.output_file, 'r') as f:

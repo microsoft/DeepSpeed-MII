@@ -1,4 +1,5 @@
 from cmath import inf
+from marshmallow import EXCLUDE
 import requests
 import re
 import json
@@ -10,6 +11,8 @@ from dataclasses_json import dataclass_json
 from dataclasses import dataclass
 
 api = HfApi()
+
+EXCLUDED_MODELS = ["flaubert/flaubert_large_cased", "flaubert/flaubert_base_uncased"]
 
 @dataclass_json
 @dataclass(frozen=True,repr=True,eq=True)
@@ -110,7 +113,7 @@ def _write_model_list_to_file(models, file_path):
         f.write(models_json)
     print(f"Wrote {len(models)} models to file {file_path}")
 
-def _sample_models(models, total=5, bin_top_k=1, model_type=None, task=None):
+def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
     assert models, "models list is empty"
     sampled_models = []
     models.sort()
@@ -126,6 +129,8 @@ def _sample_models(models, total=5, bin_top_k=1, model_type=None, task=None):
                 continue
         if "chinese" in m.name or "japanese" in m.name:
             continue
+        if m.name in EXCLUDED_MODELS:
+            continue
         filtered_models.append(m)
         if m.size > max_size:
             max_size = m.size
@@ -140,6 +145,7 @@ def _sample_models(models, total=5, bin_top_k=1, model_type=None, task=None):
         ordered = sorted(filtered_models[left:right], reverse=True,
                      key=lambda t: t.downloads
                      if hasattr(t, "downloads") else 0)
+        sampled_models.append(ordered[0])
     return list(set(sampled_models)), min_size, max_size
 
 
@@ -169,6 +175,7 @@ def size_to_string(size, units=None, precision=2):
 
 if __name__ == "__main__":
     model_types = ["roberta", "gpt2", "bert"]
+    model_types = ["bert"]
     tasks = ["question-answering", "text-generation", "fill-mask", "token-classification", "conversational", "text-classification" ]
 
     # model_list = _populate_model_list(model_types, tasks, write_file_path = "all_models.json")
