@@ -84,13 +84,26 @@ if __name__ == "__main__":
     model_index = args.model_index
     model = models[model_index]
 
-    if os.path.exists(args.output_file) and args.reuse_output:
-        if model.name in open(args.output_file).read():
-            print(f"Skipping {model.name} as it already exists in {args.output_file}")
-            sys.exit(0)
-
     num_iters = args.num_iters
     enable_deepspeed = not args.disable_deepspeed
+
+    def get_line(name, path):
+        with open(path) as f:
+            lines = f.readlines()
+            for l in lines:
+                if name in l:
+                    n = l.split(",")[1]
+                    if name == n.replace(" ", "") :
+                        return l
+        return None
+
+    if os.path.exists(args.output_file) and args.reuse_output:
+        line = get_line(model.name, args.output_file)
+
+        if line and (enable_deepspeed or ((not enable_deepspeed) and "False" in line)):
+            print(f"Skipping {model_index}: {model.name} as it already exists in {args.output_file}")
+            sys.exit(0)
+
     input = "DeepSpeed is the greatest"
 
     print(f"Benchmarking {model_index}: {model.name}, {model.type}, {model.task}, {size_to_string(model.size)} with enable_deepspeed={enable_deepspeed}")
@@ -111,24 +124,33 @@ if __name__ == "__main__":
             time_takens.append(result.time_taken)
         elif model.task == "question-answering":
             generator = mii.mii_query_handle(model.name + "_deployment")
-            results = generator.query({
+            result = generator.query({
                 'question': "What is the greatest?",
                 'context': "DeepSpeed is the greatest"
             })
             if i < 1: continue
+            time_takens.append(result.time_taken)
         elif model.task == "fill-mask":
             generator = mii.mii_query_handle(model.name + "_deployment")
-            if model.type == "roberta":
-                mask = "<mask>"
+            if model.name in ["ufal/robeczech-base", "klue/roberta-large"]:
+                mask = "[MASK]"
+            elif model.name in ["flaubert/flaubert_large_cased", "flaubert/flaubert_base_uncased"]:
+                mask = "<special1>"
             elif model.type == "bert":
                 mask = "[MASK]"
+            elif model.type == "roberta":
+                mask = "<mask>"
             else:
                 mask = "<mask>"
             result = generator.query({'query': "Hello I'm a " + mask + " model."})
-            time_takens.append(result.time_taken)
             if i < 1: continue
+            time_takens.append(result.time_taken)
         else:
             generator = mii.mii_query_handle(model.name + "_deployment")
+            if model.name in ["uer/gpt2-chinese-cluecorpussmall", "uer/gpt2-chinese-ancient", "uer/gpt2-chinese-poem" ] or "chinese" in model.name:
+                input = "这是很久之前的事情了"
+            if model.name in ["rinna/japanese-gpt2-small"]:
+                input = "生命、宇宙、そして万物についての究極の疑問の答えは"
             result = generator.query({'query': input})
             if i < 1: continue # warmup
             time_takens.append(result.time_taken)
@@ -136,9 +158,17 @@ if __name__ == "__main__":
     mean_time = mean(time_takens)
     print(f"mean time_taken: {mean_time}")
 
-    with open(args.output_file, 'a') as f:
-        writer = csv.writer(f)
-        row = [model.name, model.type, size_to_string(model.size), model.size, model.task, mean_time, enable_deepspeed, model.url]
-        writer.writerow(row)
+    if enable_deepspeed:
+        with open(args.output_file, 'a') as f:
+            f.write(f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {enable_deepspeed}, {mean_time}")
+    else:
+        ds_time = 0.0
+        with open(args.output_file, 'r') as f:
+            lastline = f.readlines()[-1]
+            ds_time = float(lastline.split(",")[-1])
+        if ds_time:
+            with open(args.output_file, 'a') as f:
+                print(f"{enable_deepspeed}, {mean_time}, {mean_time/ds_time}\n")
+                f.write(f", {enable_deepspeed}, {mean_time}, {mean_time/ds_time}\n")
 
     # _kill_deployment(model)

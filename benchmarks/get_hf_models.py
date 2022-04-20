@@ -110,7 +110,7 @@ def _write_model_list_to_file(models, file_path):
         f.write(models_json)
     print(f"Wrote {len(models)} models to file {file_path}")
 
-def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
+def _sample_models(models, total=5, bin_top_k=1, model_type=None, task=None):
     assert models, "models list is empty"
     sampled_models = []
     models.sort()
@@ -124,6 +124,8 @@ def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
         if task:
             if m.task != task:
                 continue
+        if "chinese" in m.name or "japanese" in m.name:
+            continue
         filtered_models.append(m)
         if m.size > max_size:
             max_size = m.size
@@ -138,9 +140,32 @@ def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
         ordered = sorted(filtered_models[left:right], reverse=True,
                      key=lambda t: t.downloads
                      if hasattr(t, "downloads") else 0)
-        sampled_models.append(ordered[0])
-    return sampled_models, min_size, max_size
+    return list(set(sampled_models)), min_size, max_size
 
+
+def size_to_string(size, units=None, precision=2):
+    if units is None:
+        if size // 10**12 > 0:
+            return str(round(size / 10**12, 2)) + " T"
+        elif size // 10**9 > 0:
+            return str(round(size / 10**9, 2)) + " G"
+        elif size // 10**6 > 0:
+            return str(round(size / 10**6, 2)) + " M"
+        elif size // 10**3:
+            return str(round(size / 10**3, 2)) + " k"
+        else:
+            return str(size)
+    else:
+        if units == "T":
+            return str(round(size / 10.0**12, precision)) + " " + units
+        elif units == "G":
+            return str(round(size / 10.0**9, precision)) + " " + units
+        elif units == "M":
+            return str(round(size / 10.0**6, precision)) + " " + units
+        elif units == "K":
+            return str(round(size / 10.0**3, precision)) + " " + units
+        else:
+            return str(size)
 
 if __name__ == "__main__":
     model_types = ["roberta", "gpt2", "bert"]
@@ -149,8 +174,10 @@ if __name__ == "__main__":
     # model_list = _populate_model_list(model_types, tasks, write_file_path = "all_models.json")
     model_list = _populate_model_list(model_types, tasks, read_file_path = "all_models.json")
 
-    for mt in ["roberta", "gpt2"]:
-        sampled_models, min_size, max_size = _sample_models(model_list, total=20, model_type=mt)
-        _write_model_list_to_file(sampled_models, f"sampled_models_{mt}.json")
+    for mt in ["roberta", "gpt2", "bert"]:
+        sampled_models, min_size, max_size = _sample_models(model_list, total=40, model_type=mt)
+        min_size = size_to_string(min_size).replace(' ', '')
+        max_size = size_to_string(max_size).replace(' ', '')
+        _write_model_list_to_file(sampled_models, f"sampled_models_{mt}_{min_size}_{max_size}.json")
         print(f"Sampled {len(sampled_models)} {mt} models from size between {min_size} and {max_size}")
 
