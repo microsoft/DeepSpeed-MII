@@ -5,17 +5,17 @@ TOTAL_MODELS=40
 START=0
 END=$(($TOTAL_MODELS-1))
 
-MODEL_TYPE="roberta_63_1.48G"
+# MODEL_TYPE="roberta_63_1.48G"
 # MODEL_TYPE="gpt2_2.52M_6.43G"
-# MODEL_TYPE="bert_63_1.46G"
+MODEL_TYPE="bert_63_1.46G"
 
 MODEL_FILE="sampled_models_$MODEL_TYPE.json"
 OUTPUT_FILE="bench_output_$MODEL_TYPE.csv"
 
-MODEL_NAME="chkla/roberta-argument"
+MODEL_NAME="bert-large-uncased-whole-word-masking"
 python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE
 pkill -9 python
-python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE --disable_deepspeed
+python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE --disable_deepspeed  --reuse_output
 pkill -9 python
 
 exit 0
