@@ -66,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--model_file", type=str, default="sampled_models_gpt2.json", help="Path to file containing model list")
     parser.add_argument("-o", "--output_file", type=str, default="bench_output_gpt2.csv", help="Path to file containing benchmark output")
     parser.add_argument("-i", "--model_index", type=int, default=0, help="Index of model in the model_files to benchmark")
+    parser.add_argument("--model_name", type=str, default=None, help="Name of the model in the model_files to benchmark")
     parser.add_argument("-n", "--num_iters", type=int, help="number of iterations to run", default=10)
     parser.add_argument("--disable_deepspeed", action='store_true')
     parser.add_argument("--reuse_output", action='store_true')
@@ -83,6 +84,14 @@ if __name__ == "__main__":
 
     model_index = args.model_index
     model = models[model_index]
+    output_file = args.output_file
+
+    if args.model_name is not None:
+        find = [m for m in models if m.name == args.model_name]
+        print(find)
+        if find:
+            model = find[0]
+            output_file = (args.model_name).replace('/', '_')
 
     num_iters = args.num_iters
     enable_deepspeed = not args.disable_deepspeed
@@ -97,11 +106,11 @@ if __name__ == "__main__":
                         return l
         return None
 
-    if os.path.exists(args.output_file) and args.reuse_output:
-        line = get_line(model.name, args.output_file)
+    if os.path.exists(output_file) and args.reuse_output:
+        line = get_line(model.name, output_file)
 
         if line and (enable_deepspeed or ((not enable_deepspeed) and "False" in line)):
-            print(f"Skipping {model_index}: {model.name} as it already exists in {args.output_file}")
+            print(f"Skipping {model_index}: {model.name} as it already exists in {output_file}")
             sys.exit(0)
 
     input = "DeepSpeed is the greatest"
@@ -157,15 +166,19 @@ if __name__ == "__main__":
     print(f"mean time_taken: {mean_time}")
 
     if enable_deepspeed:
-        with open(args.output_file, 'a') as f:
-            f.write(f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}")
+        if args.model_name is not None:
+            with open(output_file, 'w') as f:
+                f.write(f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}")
+        else:
+            with open(output_file, 'a') as f:
+                f.write(f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}")
     else:
         ds_time = 0.0
-        with open(args.output_file, 'r') as f:
+        with open(output_file, 'r') as f:
             lastline = f.readlines()[-1]
             ds_time = float(lastline.split(",")[-1])
         if ds_time:
-            with open(args.output_file, 'a') as f:
+            with open(output_file, 'a') as f:
                 print(f"{enable_deepspeed}, {mean_time}, {mean_time/ds_time}\n")
                 f.write(f", {enable_deepspeed}, {mean_time}, {mean_time/ds_time}\n")
 
