@@ -67,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_file", type=str, default="bench_output_gpt2.csv", help="Path to file containing benchmark output")
     parser.add_argument("-i", "--model_index", type=int, default=0, help="Index of model in the model_files to benchmark")
     parser.add_argument("--model_name", type=str, default=None, help="Name of the model in the model_files to benchmark")
-    parser.add_argument("-n", "--num_iters", type=int, help="number of iterations to run", default=10)
+    parser.add_argument("-n", "--num_iters", type=int, help="number of iterations to run", default=20)
     parser.add_argument("--disable_deepspeed", action='store_true')
     parser.add_argument("--reuse_output", action='store_true')
 
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         print(find)
         if find:
             model = find[0]
-            output_file = (args.model_name).replace('/', '_')
+            output_file = "test_" + (args.model_name).replace('/', '_')
 
     num_iters = args.num_iters
     enable_deepspeed = not args.disable_deepspeed
