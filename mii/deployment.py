@@ -2,7 +2,6 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import os
-import json
 
 import mii
 from mii import utils
@@ -10,6 +9,7 @@ from mii.constants import DeploymentType
 from mii.utils import logger, log_levels
 from mii.models.utils import download_model_and_get_path
 import pprint
+import inspect
 try:
     from azureml.core import Environment
     from azureml.core.model import InferenceConfig
@@ -274,7 +274,15 @@ def _deploy_aml_local(model,
                       aml_deployment_name,
                       mii_configs=None):
 
-    deployment_config = LocalWebservice.deploy_configuration(port=6789)
+    #XXX: Future azureml api that supports passing a container runtime for GPU support,
+    # once it's released we can branch on azureml version.
+    fsig = inspect.signature(LocalWebservice.deploy_configuration)
+    if 'container_runtime' in fsig.parameters:
+        deployment_config = LocalWebservice.deploy_configuration(
+            port=6789,
+            container_runtime='nvidia')
+    else:
+        deployment_config = LocalWebservice.deploy_configuration(port=6789)
 
     service = Model.deploy(
         aml_workspace,

@@ -140,6 +140,14 @@ class MIIServerClient():
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
             server_args_str += " --ds-optimize" if ds_optimize else ""
+
+            #XXX: fetch model provider based on model name in a more general way
+            if model_name == "gpt-neox":
+                provider = mii.constants.MODEL_PROVIDER_NAME_EA
+            else:
+                provider = mii.constants.MODEL_PROVIDER_NAME_HF
+            server_args_str += f" --provider {provider}"
+
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             print(cmd)
             process = subprocess.Popen(cmd)
