@@ -15,8 +15,6 @@ PORT_NUMBER_KEY = 'port_number'
 MII_CONFIGS_KEY = 'mii_configs'
 MII_CONFIGS_DEFAULT = {TENSOR_PARALLEL_KEY: 1, PORT_NUMBER_KEY: 50050}
 
-SUPPORTED_MODEL_TYPES = ['roberta', 'gpt2', 'bert']
-
 
 class Tasks(enum.Enum):
     TEXT_GENERATION = 1
@@ -33,6 +31,16 @@ QUESTION_ANSWERING_NAME = 'question-answering'
 FILL_MASK_NAME = 'fill-mask'
 TOKEN_CLASSIFICATION_NAME = 'token-classification'
 CONVERSATIONAL_NAME = 'conversational'
+
+SUPPORTED_MODEL_TYPES = ['roberta', 'gpt2', 'bert', 'gpt_neo', 'gptj']
+SUPPORTED_TASKS = [
+    TEXT_GENERATION_NAME,
+    TEXT_CLASSIFICATION_NAME,
+    QUESTION_ANSWERING_NAME,
+    FILL_MASK_NAME,
+    TOKEN_CLASSIFICATION_NAME,
+    CONVERSATIONAL_NAME
+]
 
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
