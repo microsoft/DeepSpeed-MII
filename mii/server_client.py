@@ -50,6 +50,7 @@ class MIIServerClient():
                  model_name,
                  model_path,
                  ds_optimize=True,
+                 ds_zero=False,
                  mii_configs={},
                  initialize_service=True,
                  initialize_grpc_client=True,
@@ -78,6 +79,7 @@ class MIIServerClient():
             self.process = self._initialize_service(model_name,
                                                     model_path,
                                                     ds_optimize,
+                                                    ds_zero,
                                                     mii_configs)
             if self.use_grpc_server:
                 self._wait_until_server_is_live()
@@ -128,13 +130,14 @@ class MIIServerClient():
             is_alive = False
         return is_alive
 
-    def _initialize_service(self, model_name, model_path, ds_optimize, mii_configs):
+    def _initialize_service(self, model_name, model_path, ds_optimize, ds_zero, mii_configs):
         process = None
         if not self.use_grpc_server:
             self.model = mii.load_models(mii.get_task_name(self.task),
                                          model_name,
                                          model_path,
-                                         ds_optimize)
+                                         ds_optimize,
+                                         ds_zero)
         else:
             if self._is_socket_open(self.port_number):
                 raise RuntimeError(
@@ -162,7 +165,7 @@ class MIIServerClient():
             server_args_str += f" --provider {provider}"
 
             server_args_str += f" --config {b64_config_str}"
-
+            server_args_str += " --ds-zero" if ds_zero else ""
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             logger.info(f"multi-gpu deepspeed launch: {cmd}")
             process = subprocess.Popen(cmd)
