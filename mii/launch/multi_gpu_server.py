@@ -16,6 +16,10 @@ def main():
                         "--ds-optimize",
                         action='store_true',
                         help="Enable DeepSpeed")
+    parser.add_argument("-z",
+                        "--ds-zero",
+                        action='store_true',
+                        help="Enable DeepSpeed ZeRO")
     parser.add_argument(
         "-p",
         "--port",
@@ -29,7 +33,8 @@ def main():
     inference_pipeline = load_models(args.task_name,
                                      args.model,
                                      args.model_path,
-                                     args.ds_optimize)
+                                     args.ds_optimize,
+                                     args.ds_zero)
     #print(inference("Test product is ", do_sample=True, min_length=50))
     serve(inference_pipeline, port)
 

@@ -48,6 +48,7 @@ class MIIServerClient():
                  model_name,
                  model_path,
                  ds_optimize=True,
+                 ds_zero=False,
                  mii_configs=mii.constants.MII_CONFIGS_DEFAULT,
                  initialize_service=True,
                  initialize_grpc_client=True,
@@ -71,7 +72,10 @@ class MIIServerClient():
             self.model = None
 
         if self.initialize_service:
-            self.process = self._initialize_service(model_name, model_path, ds_optimize)
+            self.process = self._initialize_service(model_name,
+                                                    model_path,
+                                                    ds_optimize,
+                                                    ds_zero)
             if self.use_grpc_server:
                 self._wait_until_server_is_live()
 
@@ -123,13 +127,14 @@ class MIIServerClient():
             is_alive = False
         return is_alive
 
-    def _initialize_service(self, model_name, model_path, ds_optimize):
+    def _initialize_service(self, model_name, model_path, ds_optimize, ds_zero):
         process = None
         if not self.use_grpc_server:
             self.model = mii.load_models(mii.get_task_name(self.task),
                                          model_name,
                                          model_path,
-                                         ds_optimize)
+                                         ds_optimize,
+                                         ds_zero)
         else:
             if self._is_socket_open(self.port_number):
                 raise RuntimeError(
@@ -140,6 +145,7 @@ class MIIServerClient():
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
             server_args_str += " --ds-optimize" if ds_optimize else ""
+            server_args_str += " --ds-zero" if ds_zero else ""
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             print(cmd)
             process = subprocess.Popen(cmd)
