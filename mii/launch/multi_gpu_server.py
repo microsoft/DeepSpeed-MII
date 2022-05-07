@@ -27,6 +27,11 @@ def main():
                         "--ds-zero",
                         action='store_true',
                         help="Enable DeepSpeed ZeRO")
+    parser.add_argument("-c",
+                        "--ds-config",
+                        type=str,
+                        help="path to DeepSpeed ZeRO config")
+
     parser.add_argument(
         "-p",
         "--port",
@@ -56,6 +61,7 @@ def main():
                                      model_path=args.model_path,
                                      ds_optimize=args.ds_optimize,
                                      ds_zero=args.ds_zero
+                                     ds_config=args.ds_config,
                                      provider=provider,
                                      mii_config=mii_config)
 

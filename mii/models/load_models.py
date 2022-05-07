@@ -5,8 +5,15 @@ import os
 import mii
 import torch
 import deepspeed
+from deepspeed.runtime.zero.constants import *
 
-from transformers import AutoConfig
+
+def check_zero_ds_config(config):
+    config_zero = config.get(ZERO_OPTIMIZATION, {})
+    stage = config_zero.get(ZERO_OPTIMIZATION_STAGE, None)
+    if stage != ZERO_OPTIMIZATION_WEIGHTS:
+        assert False, "DeepSpeed ZeRO inference is only supported for ZeRO 3 optimization stage"
+
 
 def hf_provider(model_path, model_name, task_name, mii_config):
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
@@ -31,7 +38,7 @@ def eleutherai_provider(model_path, model_name, task_name, mii_config):
     return NeoXPipeline(config)
 
 
-def load_models(task_name, model_name, model_path, ds_optimize, ds_zero, provider, mii_config):
+def load_models(task_name, model_name, model_path, ds_optimize, ds_zero, provider, mii_config, ds_config_path=None):
     global generator
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 
@@ -65,46 +72,10 @@ def load_models(task_name, model_name, model_path, ds_optimize, ds_zero, provide
             replace_method='auto',
             args=args)
     elif ds_zero:
-        config = AutoConfig.from_pretrained(model_name)
-        model_hidden_size = config.n_embd
-
-        ds_config = {
-            "fp16": {
-                "enabled": False
-            },
-            "bf16": {
-                "enabled": False
-            },
-            "zero_optimization": {
-                "stage": 3,
-                "offload_param": {
-                    "device": "nvme",
-                    "nvme_path": "/mnt/nvme0/offload",
-                    "pin_memory": True,
-                    "buffer_count": 6,
-                    "buffer_size": 1e9,
-                    "max_in_cpu": 1e9
-                },
-                "aio": {
-                    "block_size": 262144,
-                    "queue_depth": 32,
-                    "thread_count": 1,
-                    "single_submit": False,
-                    "overlap_events": True
-                },
-                "overlap_comm": True,
-                "contiguous_gradients": True,
-                "reduce_bucket_size": model_hidden_size * model_hidden_size,
-                "stage3_prefetch_bucket_size":
-                0.1 * model_hidden_size * model_hidden_size,
-                "stage3_max_live_parameters": 1e8,
-                "stage3_max_reuse_distance": 1e8,
-                "stage3_param_persistence_threshold": 10 * model_hidden_size
-            },
-            "steps_per_print": 2000,
-            "train_micro_batch_size_per_gpu": 1,
-            "wall_clock_breakdown": False
-        }
+        assert os.path.exists(ds_config_path), '{ds_config_path} does not exist'
+        import json
+        ds_config = json.load(open(ds_config_path, "r"))
+        check_zero_ds_config(ds_config)
 
         # initialise Deepspeed ZeRO and store only the engine object
         ds_engine = deepspeed.initialize(model=inference_pipeline.model,

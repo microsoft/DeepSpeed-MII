@@ -2,11 +2,15 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import asyncio
+from readline import write_history_file
 import torch
 import sys
 import subprocess
 import time
 import grpc
+import os
+import json
+from pathlib import Path
 import mii
 import base64
 import json
@@ -51,6 +55,7 @@ class MIIServerClient():
                  model_path,
                  ds_optimize=True,
                  ds_zero=False,
+                 ds_config=None,
                  mii_configs={},
                  initialize_service=True,
                  initialize_grpc_client=True,
@@ -80,6 +85,7 @@ class MIIServerClient():
                                                     model_path,
                                                     ds_optimize,
                                                     ds_zero,
+                                                    ds_config,
                                                     mii_configs)
             if self.use_grpc_server:
                 self._wait_until_server_is_live()
@@ -130,14 +136,15 @@ class MIIServerClient():
             is_alive = False
         return is_alive
 
-    def _initialize_service(self, model_name, model_path, ds_optimize, ds_zero, mii_configs):
+    def _initialize_service(self, model_name, model_path, ds_optimize, ds_zero, ds_config, mii_configs):
         process = None
         if not self.use_grpc_server:
             self.model = mii.load_models(mii.get_task_name(self.task),
                                          model_name,
                                          model_path,
                                          ds_optimize,
-                                         ds_zero)
+                                         ds_zero,
+                                         ds_config)
         else:
             if self._is_socket_open(self.port_number):
                 raise RuntimeError(
@@ -166,6 +173,24 @@ class MIIServerClient():
 
             server_args_str += f" --config {b64_config_str}"
             server_args_str += " --ds-zero" if ds_zero else ""
+            if ds_zero and ds_config is not None:
+                if isinstance(ds_config, dict):
+
+                    def create_config_from_dict(tmpdir, config_dict):
+                        config_path = os.path.join(tmpdir, 'temp_config.json')
+                        with open(config_path, 'w') as fd:
+                            json.dump(config_dict, fd)
+                        return config_path
+
+                    model_dir = Path(model_path).parent.absolute()
+                    ds_config_path = create_config_from_dict(model_dir, ds_config)
+                elif isinstance(ds_config, str):
+                    ds_config_path = ds_config
+                else:
+                    raise ValueError(
+                        f"Expected a string path to an existing deepspeed config, or a dictionary. Received: {ds_config}"
+                    )
+                server_args_str += f" --ds-config {ds_config_path}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             logger.info(f"multi-gpu deepspeed launch: {cmd}")
             process = subprocess.Popen(cmd)

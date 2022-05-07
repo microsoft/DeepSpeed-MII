@@ -1,7 +1,7 @@
 import mii
 from transformers import AutoConfig
 
-mii_config = {"dtype": "fp16"}
+mii_configs = mii.constants.MII_CONFIGS_DEFAULT
 
 name = "distilgpt2"
 name = "gpt2-xl"
@@ -21,20 +21,7 @@ ds_config = {
         "offload_param": {
             "device": "nvme",
             "nvme_path": "/mnt/nvme0/offload",
-            "pin_memory": True,
-            "buffer_count": 6,
-            "buffer_size": 1e9,
-            "max_in_cpu": 1e9
         },
-        "aio": {
-            "block_size": 262144,
-            "queue_depth": 32,
-            "thread_count": 1,
-            "single_submit": False,
-            "overlap_events": True
-        },
-        "overlap_comm": True,
-        "contiguous_gradients": True,
         "reduce_bucket_size": model_hidden_size * model_hidden_size,
         "stage3_prefetch_bucket_size": 0.1 * model_hidden_size * model_hidden_size,
         "stage3_max_live_parameters": 1e8,
@@ -43,6 +30,9 @@ ds_config = {
     },
     "train_micro_batch_size_per_gpu": 1,
 }
+
+# or give a path to a config file
+# ds_config = "./tmp_config.json"
 
 mii.deploy('text-generation',
            name,

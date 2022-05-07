@@ -28,6 +28,7 @@ def create_score_file(deployment_name,
                       model_name,
                       ds_optimize,
                       ds_zero,
+                      ds_config,
                       mii_configs):
     config_dict = {}
     config_dict[mii.constants.TASK_NAME_KEY] = mii.get_task_name(task)
@@ -35,6 +36,7 @@ def create_score_file(deployment_name,
     config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
     config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs.dict()
     config_dict[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
+    config_dict[mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
     config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs
 
     if len(mii.__path__) > 1:
@@ -136,6 +138,7 @@ def deploy(task_name,
            force_register_model=False,
            enable_deepspeed=True,
            enable_zero=False,
+           ds_config=None,
            mii_configs={}):
     """Deploy a task using specified model. For usage examples see:
 
@@ -191,6 +194,7 @@ def deploy(task_name,
 
         enable_deepspeed: Optional: Defaults to True. Use this flag to enable or disable DeepSpeed-Inference optimizations
         enable_zero: Optional: Defaults to False. Use this flag to enable or disable DeepSpeed-ZeRO inference
+        ds_config: Optional: Defaults to None. Use this to specify the DeepSpeed configuration when enabling DeepSpeed-ZeRO inference
         force_register_model: Optional: Defaults to False. For AML deployments, set it to True if you want to re-register your model
             with the same ``aml_model_tags`` using checkpoints from ``local_model_path``.
 
@@ -216,6 +220,7 @@ def deploy(task_name,
                       model_name,
                       enable_deepspeed,
                       enable_zero,
+                      ds_config,
                       mii_configs)
 
     if deployment_type == DeploymentType.LOCAL:
