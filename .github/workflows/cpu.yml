@@ -1,0 +1,33 @@
+name: Formatting
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'staging**'
+  pull_request:
+    branches:
+      '**'
+
+jobs:
+
+  # formatting and basic install on cpu-only machine
+  formatting:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: environment
+        run: |
+          which python
+          python --version
+
+      - name: Install MII
+        run: |
+          pip install .[dev]
+
+      - name: Unit tests
+        run: |
+          cd tests
+          pytest --color=test --durations=0 --verbose -m "CPU" ./
