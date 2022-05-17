@@ -195,9 +195,7 @@ def deploy(task_name,
         For more details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice(class)?view=azure-ml-py.
 
     """
-    mii_configs = mii.constants.MII_CONFIGS_DEFAULT.copy()
-    for key, val in mii_user_configs.items():
-        mii_configs[key] = val
+    mii_configs = mii.config.MIIConfig(**mii_user_configs).dict()
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)
