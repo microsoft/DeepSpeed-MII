@@ -11,8 +11,8 @@ on:
 
 jobs:
 
-  # formatting and basic install on cpu-only machine
-  formatting:
+  # basic install and cpu-only tests
+  unit-tests:
     runs-on: ubuntu-20.04
 
     steps:
