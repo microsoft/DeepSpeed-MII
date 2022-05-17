@@ -128,7 +128,7 @@ def deploy(task_name,
            aks_deploy_config=None,
            force_register_model=False,
            enable_deepspeed=True,
-           mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
+           mii_user_configs={}):
     """Deploy a task using specified model. For usage examples see:
 
         mii/examples/local/gpt2-local-example.py
@@ -186,7 +186,7 @@ def deploy(task_name,
         force_register_model: Optional: Defaults to False. For AML deployments, set it to True if you want to re-register your model
             with the same ``aml_model_tags`` using checkpoints from ``local_model_path``.
 
-        mii_configs: Optional: Dictionary specifying optimization and deployment configurations. Defaults to ``mii.constants.MII_CONFIGS_DEFAULT``.
+        mii_user_configs: Optional: Dictionary specifying optimization and deployment configurations that should override defaults in ``mii.constants.MII_CONFIGS_DEFAULT``.
             mii_config is future looking to support extensions in optimization strategies supported by DeepSpeed Inference as we extend mii.
             As of now, it can be used to set tensor-slicing degree using mii.constants.TENSOR_PARALLEL_KEY and port number for deployment using mii.constants.PORT_NUMBER_KEY.
     Returns:
@@ -195,6 +195,9 @@ def deploy(task_name,
         For more details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice(class)?view=azure-ml-py.
 
     """
+    mii_configs = mii.constants.MII_CONFIGS_DEFAULT.copy()
+    for key, val in mii_user_configs.items():
+        mii_configs[key] = val
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)
