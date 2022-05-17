@@ -8,6 +8,7 @@ class DeploymentType(enum.Enum):
     AML_LOCAL = 2
     AML_ON_AKS = 3
 
+MII_CONFIGS_KEY = 'mii_configs'
 
 class Tasks(enum.Enum):
     TEXT_GENERATION = 1

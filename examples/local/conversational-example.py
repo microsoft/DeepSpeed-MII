@@ -1,8 +1,6 @@
 import mii
-from mii.constants import PORT_NUMBER_KEY
 
-mii_configs = mii.constants.MII_CONFIGS_DEFAULT
-mii_configs[mii.constants.TENSOR_PARALLEL_KEY] = 2
+mii_configs = {'tensor_parallel': 2}
 
 # gpt2
 name = "microsoft/DialoGPT-small"
