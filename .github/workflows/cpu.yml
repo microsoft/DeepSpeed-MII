@@ -25,7 +25,7 @@ jobs:
 
       - name: Install MII
         run: |
-          pip install .[dev]
+          pip install .[dev,local]
 
       - name: Unit tests
         run: |
