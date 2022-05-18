@@ -22,11 +22,15 @@ def test_base_config():
                              },
                              {
                                  'port_number': 'fail',
-                                 'tensor_parallel': '4'
+                                 'tensor_parallel': 4
                              },
                              {
-                                 'port_number': '12345',
+                                 'port_number': 12345,
                                  'tensor_parallel': 'fail'
+                             },
+                             {
+                                 'port_fail': 12345,
+                                 'tensor_parallel': 4
                              },
                          ])
 def test_base_config_literalfail(config):
