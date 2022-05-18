@@ -2,7 +2,7 @@ import mii
 
 mii_configs = mii.constants.MII_CONFIGS_DEFAULT
 
-name = "distilgpt2"
+name = "microsoft/DialoGPT-medium"
 mii.deploy('text-generation',
            name,
            mii.DeploymentType.LOCAL,

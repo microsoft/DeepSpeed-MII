@@ -12,7 +12,10 @@ def load_models(task_name, model_name, model_path, ds_optimize):
     world_size = int(os.getenv('WORLD_SIZE', '1'))
     os.environ['TRANSFORMERS_CACHE'] = model_path
     from transformers import pipeline
-    inference_pipeline = pipeline(task_name, model=model_name, device=local_rank)
+    inference_pipeline = pipeline(task_name,
+                                  model=model_name,
+                                  device=local_rank,
+                                  framework="pt")
 
     if ds_optimize:
         inference_pipeline.model = deepspeed.init_inference(

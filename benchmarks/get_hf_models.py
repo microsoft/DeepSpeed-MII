@@ -12,10 +12,19 @@ from dataclasses import dataclass
 
 api = HfApi()
 
-EXCLUDED_MODELS = ["flaubert/flaubert_large_cased", "flaubert/flaubert_base_uncased"]
+EXCLUDED_MODELS = [
+    "flaubert/flaubert_large_cased",
+    "flaubert/flaubert_base_uncased",
+    "zenham/khemx_m_e4_16h",
+    "aubmindlab/aragpt2-mega",
+    "remotejob/tweetsDISTILGPT2fi_v4",
+    "aubmindlab/aragpt2-mega",
+    "Zixtrauce/JohnBot"
+]
+
 
 @dataclass_json
-@dataclass(frozen=True,repr=True,eq=True)
+@dataclass(frozen=True, repr=True, eq=True)
 class Model:
     name: str
     type: str
@@ -23,16 +32,19 @@ class Model:
     url: str
     size: int = 0
     downloads: int = 0
-    def __lt__(self, other):
-        return self.size > other.size or (self.size == other.size and self.downloads > other.downloads)
 
-def _get_models_by_type_and_task(model_type=None, task=None, min_downloads=5000):
+    def __lt__(self, other):
+        return self.size > other.size or (self.size == other.size
+                                          and self.downloads > other.downloads)
+
+
+def _get_models_by_type_and_task(model_type=None, task=None, min_downloads=10000):
     models = api.list_models(filter=model_type)
     # sort by number of downloads
     ordered = sorted(models,
                      reverse=True,
-                     key=lambda t: t.downloads
-                     if hasattr(t, "downloads") else 0)
+                     key=lambda t: t.downloads if hasattr(t,
+                                                          "downloads") else 0)
     ret = []
     for m in ordered:
         if hasattr(m, "downloads") and m.downloads > min_downloads:
@@ -44,10 +56,11 @@ def _get_models_by_type_and_task(model_type=None, task=None, min_downloads=5000)
                 ret.append(m)
     return ret
 
+
 def _get_model_size(model_name):
     url = f"https://huggingface.co/{model_name}/blob/main/pytorch_model.bin"
     response = requests.get(url)
-    if response.status_code != 200: # only check pytorch models
+    if response.status_code != 200:  # only check pytorch models
         return -1
     data = response.text
     regex = r"<strong>Size of remote file:<\/strong>\s*([\d\.]+)\s+(\w+)<\/li>"
@@ -64,7 +77,12 @@ def _get_model_size(model_name):
         size *= 1024 * 1024 * 1024 * 1024
     return size
 
-def _populate_model_list(model_type, tasks, total_count=None, write_file_path="models.json", read_file_path=None):
+
+def _populate_model_list(model_type,
+                         tasks,
+                         total_count=None,
+                         write_file_path="all_models.json",
+                         read_file_path=None):
     models = []
     cnt = 0
 
@@ -107,11 +125,13 @@ def _populate_model_list(model_type, tasks, total_count=None, write_file_path="m
         _write_model_list_to_file(models, write_file_path)
     return models
 
+
 def _write_model_list_to_file(models, file_path):
     models_json = Model.schema().dumps(models, many=True)
     with open(file_path, 'w') as f:
         f.write(models_json)
     print(f"Wrote {len(models)} models to file {file_path}")
+
 
 def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
     assert models, "models list is empty"
@@ -138,13 +158,16 @@ def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
             min_size = m.size
 
     step = len(filtered_models) // total
+    if step == 0:
+        step = 1
 
-    for i in range(0, total*step, step):
+    for i in range(0, min(total * step, len(filtered_models)), step):
         left = i
-        right = min(i+step, i+bin_top_k)
-        ordered = sorted(filtered_models[left:right], reverse=True,
-                     key=lambda t: t.downloads
-                     if hasattr(t, "downloads") else 0)
+        right = min(i + step, i + bin_top_k)
+        ordered = sorted(filtered_models[left:right],
+                         reverse=True,
+                         key=lambda t: t.downloads if hasattr(t,
+                                                              "downloads") else 0)
         sampled_models.append(ordered[0])
     return list(set(sampled_models)), min_size, max_size
 
@@ -173,18 +196,30 @@ def size_to_string(size, units=None, precision=2):
         else:
             return str(size)
 
+
 if __name__ == "__main__":
     model_types = ["roberta", "gpt2", "bert"]
-    model_types = ["bert"]
-    tasks = ["question-answering", "text-generation", "fill-mask", "token-classification", "conversational", "text-classification" ]
+    # model_types = ["gpt2"]
+    tasks = [
+        "question-answering",
+        "text-generation",
+        "fill-mask",
+        "token-classification",
+        "conversational",
+        "text-classification"
+    ]
 
     # model_list = _populate_model_list(model_types, tasks, write_file_path = "all_models.json")
-    model_list = _populate_model_list(model_types, tasks, read_file_path = "all_models.json")
+    model_list = _populate_model_list(model_types,
+                                      tasks,
+                                      read_file_path="all_models.json")
 
-    for mt in ["roberta", "gpt2", "bert"]:
+    for mt in ["roberta"]:
         sampled_models, min_size, max_size = _sample_models(model_list, total=40, model_type=mt)
         min_size = size_to_string(min_size).replace(' ', '')
         max_size = size_to_string(max_size).replace(' ', '')
-        _write_model_list_to_file(sampled_models, f"sampled_models_{mt}_{min_size}_{max_size}.json")
-        print(f"Sampled {len(sampled_models)} {mt} models from size between {min_size} and {max_size}")
-
+        _write_model_list_to_file(sampled_models,
+                                  f"sampled_models_{mt}_{min_size}_{max_size}.json")
+        print(
+            f"Sampled {len(sampled_models)} {mt} models from size between {min_size} and {max_size}"
+        )
