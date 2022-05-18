@@ -30,4 +30,4 @@ jobs:
       - name: Unit tests
         run: |
           cd tests
-          pytest --color=test --durations=0 --verbose -m "CPU" ./
+          pytest --color=yes --durations=0 --verbose -m "CPU" ./
