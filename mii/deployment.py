@@ -28,7 +28,7 @@ def create_score_file(deployment_name, task, model_name, ds_optimize, mii_config
     config_dict[mii.constants.TASK_NAME_KEY] = mii.get_task_name(task)
     config_dict[mii.constants.MODEL_NAME_KEY] = model_name
     config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
-    config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs
+    config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs.dict()
 
     if len(mii.__path__) > 1:
         logger.warning(
@@ -128,7 +128,7 @@ def deploy(task_name,
            aks_deploy_config=None,
            force_register_model=False,
            enable_deepspeed=True,
-           mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
+           mii_configs={}):
     """Deploy a task using specified model. For usage examples see:
 
         mii/examples/local/gpt2-local-example.py
@@ -186,19 +186,20 @@ def deploy(task_name,
         force_register_model: Optional: Defaults to False. For AML deployments, set it to True if you want to re-register your model
             with the same ``aml_model_tags`` using checkpoints from ``local_model_path``.
 
-        mii_configs: Optional: Dictionary specifying optimization and deployment configurations. Defaults to ``mii.constants.MII_CONFIGS_DEFAULT``.
+        mii_configs: Optional: Dictionary specifying optimization and deployment configurations that should override defaults in ``mii.config.MIIConfig``.
             mii_config is future looking to support extensions in optimization strategies supported by DeepSpeed Inference as we extend mii.
-            As of now, it can be used to set tensor-slicing degree using mii.constants.TENSOR_PARALLEL_KEY and port number for deployment using mii.constants.PORT_NUMBER_KEY.
+            As of now, it can be used to set tensor-slicing degree using 'tensor_parallel' and port number for deployment using 'port_number'.
     Returns:
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
         If deployment_type is `AML_LOCAL` or `AML_ON_AKS`, returns a a Webservice object from `azureml.core.webservice` corresponding to the deployed webservice
         For more details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice(class)?view=azure-ml-py.
 
     """
+    # parse and validate mii config
+    mii_configs = mii.config.MIIConfig(**mii_configs)
 
     task = mii.get_task(task_name)
     mii.check_if_task_and_model_is_supported(task, model_name)
-    mii.utils.validate_mii_configs(mii_configs)
 
     logger.info(f"*************DeepSpeed Optimizations: {enable_deepspeed}*************")
 
@@ -214,7 +215,7 @@ def deploy(task_name,
 
     assert aml_workspace is not None, "Workspace cannot be none for AML deployments"
 
-    #either return a previously registered model, or register a new model
+    # either return a previously registered model, or register a new model
     model = _get_aml_model(task_name,
                            model_name,
                            aml_model_tags,
@@ -224,7 +225,6 @@ def deploy(task_name,
 
     logger.info(f"Deploying model {model}")
 
-    #return
     inference_config = _get_inference_config(aml_workspace, deployment_name)
 
     if deployment_type == DeploymentType.AML_LOCAL:
