@@ -1,6 +1,7 @@
 import enum
 from .server_client import MIIServerClient, mii_query_handle
 from .deployment import deploy
+from .terminate import terminate_local_server
 from .config import MIIConfig
 from .constants import DeploymentType, Tasks
 

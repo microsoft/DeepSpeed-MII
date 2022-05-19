@@ -77,11 +77,9 @@ def _get_supported_models_name(task):
         elif provider == ModelProvider.ELEUTHER_AI:
             if task_name == TEXT_GENERATION_NAME:
                 models = [model_type]
-            else:
-                raise ValueError(f"{model_type} does not support {task_name} task")
-        else:
-            raise ValueError("Model provider '{provider}' not supported")
         supported_models.extend(models)
+    if not supported_models:
+        raise ValueError(f"Task {task} not supported")
 
     return supported_models
 

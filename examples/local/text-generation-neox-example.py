@@ -1,6 +1,6 @@
 import mii
 
-mii_config = {"tensor_parallel": 4, "port_number": 50050}
+mii_config = {"tensor_parallel": 4, "port_number": 50050, "dtype": "fp16"}
 
 name = "gpt-neox"
 mii.deploy('text-generation',
