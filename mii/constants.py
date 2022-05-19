@@ -28,7 +28,29 @@ FILL_MASK_NAME = 'fill-mask'
 TOKEN_CLASSIFICATION_NAME = 'token-classification'
 CONVERSATIONAL_NAME = 'conversational'
 
-SUPPORTED_MODEL_TYPES = ['roberta', 'gpt2', 'bert', 'gpt_neo', 'gptj']
+
+class ModelProvider(enum.Enum):
+    HUGGING_FACE = 1
+    ELEUTHER_AI = 2
+
+
+MODEL_PROVIDER_NAME_HF = "hugging-face"
+MODEL_PROVIDER_NAME_EA = "eleuther-ai"
+
+MODEL_PROVIDER_MAP = {
+    MODEL_PROVIDER_NAME_HF: ModelProvider.HUGGING_FACE,
+    MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI
+}
+
+SUPPORTED_MODEL_TYPES = {
+    'roberta': ModelProvider.HUGGING_FACE,
+    'gpt2': ModelProvider.HUGGING_FACE,
+    'bert': ModelProvider.HUGGING_FACE,
+    'gpt_neo': ModelProvider.HUGGING_FACE,
+    'gptj': ModelProvider.HUGGING_FACE,
+    'gpt-neox': ModelProvider.ELEUTHER_AI,
+}
+
 SUPPORTED_TASKS = [
     TEXT_GENERATION_NAME,
     TEXT_CLASSIFICATION_NAME,
