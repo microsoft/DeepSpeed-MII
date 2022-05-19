@@ -196,7 +196,6 @@ def deploy(task_name,
 
     """
     # parse and validate mii config
-    #TODO: test and validate supported dtypes
     mii_configs = mii.config.MIIConfig(**mii_configs)
 
     task = mii.get_task(task_name)
