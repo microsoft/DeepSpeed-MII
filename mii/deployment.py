@@ -28,7 +28,7 @@ def create_score_file(deployment_name, task, model_name, ds_optimize, mii_config
     config_dict[mii.constants.TASK_NAME_KEY] = mii.get_task_name(task)
     config_dict[mii.constants.MODEL_NAME_KEY] = model_name
     config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
-    config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs
+    config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs.dict()
 
     if len(mii.__path__) > 1:
         logger.warning(
