@@ -34,7 +34,7 @@ jobs:
           python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
       - name: Install MII
         run: |
-          pip install --yes --upgrade deepspeed
+          pip install --upgrade deepspeed
           pip install .[dev,local]
           ds_report
       - name: Unit tests
