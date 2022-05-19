@@ -28,11 +28,6 @@ def deploy_query_local(task_name: str, model_name: str, config: dict, query: dic
 
 
 ''' This one crashes. Need to debug later
-        (
-            "text-classification",
-            "roberta-large-mnli",
-            {"query": "DeepSpeed is the greatest"},
-        ),
 '''
 
 
@@ -77,6 +72,13 @@ def deploy_query_local(task_name: str, model_name: str, config: dict, query: dic
          {
              "query": "My name is jean-baptiste and I live in montreal."
          }),
+        (
+            "text-classification",
+            "roberta-large-mnli",
+            {
+                "query": "DeepSpeed is the greatest"
+            },
+        ),
     ],
 )
 def test_single_GPU_local_deployment(task_name: str, model_name: str, query: dict):
