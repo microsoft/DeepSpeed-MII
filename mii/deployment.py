@@ -195,6 +195,8 @@ def deploy(task_name,
         For more details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice(class)?view=azure-ml-py.
 
     """
+    # parse and validate mii config
+    #TODO: test and validate supported dtypes
     mii_configs = mii.config.MIIConfig(**mii_configs)
 
     task = mii.get_task(task_name)
