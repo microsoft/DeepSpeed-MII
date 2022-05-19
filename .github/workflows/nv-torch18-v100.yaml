@@ -35,7 +35,7 @@ jobs:
       - name: Install MII
         run: |
           pip uninstall deepspeed
-          pip install .[local]
+          pip install .[dev,local]
           ds_report
       - name: Unit tests
         run: |
