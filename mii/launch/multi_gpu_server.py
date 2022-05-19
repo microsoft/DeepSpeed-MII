@@ -31,7 +31,6 @@ def main():
     parser.add_argument("-c", "--config", type=str, help="base64 encoded mii config")
     args = parser.parse_args()
 
-
     provider = mii.constants.MODEL_PROVIDER_MAP.get(args.provider, None)
     assert provider is not None, f"Unknown model provider: {args.provider}"
 

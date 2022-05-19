@@ -44,7 +44,10 @@ def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_co
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         from megatron import mpu
         from argparse import Namespace
-        inference_pipeline = eleutherai_provider(model_path, model_name, task_name, mii_config)
+        inference_pipeline = eleutherai_provider(model_path,
+                                                 model_name,
+                                                 task_name,
+                                                 mii_config)
         training_mp_size = 2
         args = inference_pipeline.neox_args
     else:
