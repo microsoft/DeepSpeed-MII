@@ -8,6 +8,8 @@ import subprocess
 import time
 import grpc
 import mii
+import base64
+import json
 from mii.utils import logger
 
 
@@ -73,7 +75,10 @@ class MIIServerClient():
             self.model = None
 
         if self.initialize_service:
-            self.process = self._initialize_service(model_name, model_path, ds_optimize)
+            self.process = self._initialize_service(model_name,
+                                                    model_path,
+                                                    ds_optimize,
+                                                    mii_configs)
             if self.use_grpc_server:
                 self._wait_until_server_is_live()
 
@@ -123,7 +128,7 @@ class MIIServerClient():
             is_alive = False
         return is_alive
 
-    def _initialize_service(self, model_name, model_path, ds_optimize):
+    def _initialize_service(self, model_name, model_path, ds_optimize, mii_configs):
         process = None
         if not self.use_grpc_server:
             self.model = mii.load_models(mii.get_task_name(self.task),
@@ -136,14 +141,22 @@ class MIIServerClient():
                     f"Server is already running on port {self.port_number}, please shutdown to use different port."
                 )
 
+            # serialize mii config
+            # convert json str -> bytes
+            json_bytes = mii_configs.json().encode()
+            # base64 encoded bytes
+            b64_config_bytes = base64.urlsafe_b64encode(json_bytes)
+            # bytes -> str
+            b64_config_str = b64_config_bytes.decode()
+
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
             server_args_str += " --ds-optimize" if ds_optimize else ""
+            server_args_str += f" --config {b64_config_str}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
-            print(cmd)
+            logger.info(f"multi-gpu deepspeed launch: {cmd}")
             process = subprocess.Popen(cmd)
-            #TODO: do we need to hold onto this process handle for clean-up purposes?
         return process
 
     def _initialize_grpc_client(self):

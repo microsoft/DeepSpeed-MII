@@ -195,6 +195,7 @@ def deploy(task_name,
         For more details see here: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice(class)?view=azure-ml-py.
 
     """
+    # parse and validate mii config
     mii_configs = mii.config.MIIConfig(**mii_configs)
 
     task = mii.get_task(task_name)
@@ -214,7 +215,7 @@ def deploy(task_name,
 
     assert aml_workspace is not None, "Workspace cannot be none for AML deployments"
 
-    #either return a previously registered model, or register a new model
+    # either return a previously registered model, or register a new model
     model = _get_aml_model(task_name,
                            model_name,
                            aml_model_tags,
@@ -224,7 +225,6 @@ def deploy(task_name,
 
     logger.info(f"Deploying model {model}")
 
-    #return
     inference_config = _get_inference_config(aml_workspace, deployment_name)
 
     if deployment_type == DeploymentType.AML_LOCAL:
