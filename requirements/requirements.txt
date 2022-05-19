@@ -1,5 +1,6 @@
 asyncio
 grpcio
 grpcio-tools
+pydantic
 torch
 transformers

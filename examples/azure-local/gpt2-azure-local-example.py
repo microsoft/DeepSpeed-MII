@@ -8,8 +8,7 @@ ws = Workspace(workspace_name=os.environ["AZ_WORKSPACE"],
                subscription_id=os.environ["AZ_SUB_ID"],
                resource_group=os.environ["AZ_RESOURCE_GROUP"])
 
-mii_configs = mii.constants.MII_CONFIGS_DEFAULT
-mii_configs[mii.constants.TENSOR_PARALLEL_KEY] = 1
+mii_configs = {'tensor_parallel': 1}
 
 mii.deploy(task_name="text-generation",
            model_name="gpt2",

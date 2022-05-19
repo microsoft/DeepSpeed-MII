@@ -48,10 +48,12 @@ class MIIServerClient():
                  model_name,
                  model_path,
                  ds_optimize=True,
-                 mii_configs=mii.constants.MII_CONFIGS_DEFAULT,
+                 mii_configs={},
                  initialize_service=True,
                  initialize_grpc_client=True,
                  use_grpc_server=False):
+
+        mii_configs = mii.config.MIIConfig(**mii_configs)
 
         self.task = mii.get_task(task_name)
 
@@ -65,7 +67,7 @@ class MIIServerClient():
         self.initialize_service = initialize_service
         self.initialize_grpc_client = initialize_grpc_client
 
-        self.port_number = mii_configs[mii.constants.PORT_NUMBER_KEY]
+        self.port_number = mii_configs.port_number
 
         if initialize_service and not self.use_grpc_server:
             self.model = None
@@ -82,9 +84,7 @@ class MIIServerClient():
 
     def _get_num_gpus(self, mii_configs):
         def get_tensor_parallel_gpus(mii_configs):
-            TP_KEY = mii.constants.TENSOR_PARALLEL_KEY
-            assert TP_KEY in mii_configs, "Must have tensor parallelism key in parallelism config"
-            num_gpus = mii_configs[TP_KEY]
+            num_gpus = mii_configs.tensor_parallel
 
             assert torch.cuda.device_count() >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
             return num_gpus
