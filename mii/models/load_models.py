@@ -16,6 +16,8 @@ def load_models(task_name, model_name, model_path, ds_optimize):
                                   model=model_name,
                                   device=local_rank,
                                   framework="pt")
+    # inference_pipeline.model.eval()
+    # inference_pipeline.model.half()
 
     if ds_optimize:
         inference_pipeline.model = deepspeed.init_inference(
@@ -23,6 +25,7 @@ def load_models(task_name, model_name, model_path, ds_optimize):
             mp_size=world_size,
             dtype=torch.float,
             replace_with_kernel_inject=True,
-            replace_method='auto')
+            replace_method='auto',
+            enable_cuda_graph=True)
 
     return inference_pipeline

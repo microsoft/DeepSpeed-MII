@@ -20,7 +20,7 @@ def size_to_string(size, units=None, precision=2):
         elif size // 10**6 > 0:
             return str(round(size / 10**6, 2)) + " M"
         elif size // 10**3:
-            return str(round(size / 10**3, 2)) + " k"
+            return str(round(size / 10**3, 2)) + " K"
         else:
             return str(size)
     else:
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     input = "DeepSpeed is the greatest"  # 5 tokens, deepspeed is counted as 2 tokens
 
     print(
-        f"Benchmarking {model_index}: {model.name}, {model.type}, {model.task}, {size_to_string(model.size)} with enable_deepspeed={enable_deepspeed}"
+        f"Benchmarking {model_index}: {model.name}, {model.type}, {model.task}, {size_to_string(model.size/4)} with enable_deepspeed={enable_deepspeed}"
     )
 
     _deploy_model(model, enable_deepspeed=enable_deepspeed)
@@ -201,12 +201,12 @@ if __name__ == "__main__":
         if args.model_name is not None:
             with open(output_file, 'w') as f:
                 f.write(
-                    f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}"
+                    f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size/4)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}"
                 )
         else:
             with open(output_file, 'a') as f:
                 f.write(
-                    f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}"
+                    f"{model_index}, {model.name}, {model.type}, {size_to_string(model.size/4)}, {model.size}, {model.task}, {model.url}, {model.downloads}, {enable_deepspeed}, {mean_time}"
                 )
     else:
         ds_time = 0.0

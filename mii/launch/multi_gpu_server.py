@@ -30,7 +30,7 @@ def main():
                                      args.model,
                                      args.model_path,
                                      args.ds_optimize)
-    #print(inference("Test product is ", do_sample=True, min_length=50))
+    #print(inference("Test product is ", do_sample=True, min_length=25))
     serve(inference_pipeline, port)
 
 

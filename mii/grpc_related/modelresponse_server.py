@@ -21,7 +21,8 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         start = time.time()
         response = self.inference_pipeline(request.request,
                                            do_sample=True,
-                                           min_length=50)
+                                           min_length=25,
+                                           max_length=25)
         end = time.time()
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                    time_taken=end - start)

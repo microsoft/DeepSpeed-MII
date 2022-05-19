@@ -19,7 +19,12 @@ EXCLUDED_MODELS = [
     "aubmindlab/aragpt2-mega",
     "remotejob/tweetsDISTILGPT2fi_v4",
     "aubmindlab/aragpt2-mega",
-    "Zixtrauce/JohnBot"
+    "Zixtrauce/JohnBot",
+    "avichr/hebEMO_anticipation",
+    "julien-c/bert-xsmall-dummy",
+    "julien-c/dummy-unknown",
+    "julien-c/dummy-diff-tokenizer",
+    "sshleifer/tiny-distilroberta-base",
 ]
 
 
@@ -67,7 +72,7 @@ def _get_model_size(model_name):
     found = re.findall(regex, data, re.MULTILINE)
     size, unit = found[0]
     size = float(size)
-    if unit == "KB":
+    if unit == "KB" or unit == "kB":
         size *= 1024
     elif unit == "MB":
         size *= 1024 * 1024
@@ -151,11 +156,9 @@ def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
             continue
         if m.name in EXCLUDED_MODELS:
             continue
+        if "dummy" in m.name or "hf-internal" in m.name or "testing" in m.name:
+            continue
         filtered_models.append(m)
-        if m.size > max_size:
-            max_size = m.size
-        if m.size < min_size:
-            min_size = m.size
 
     step = len(filtered_models) // total
     if step == 0:
@@ -169,6 +172,12 @@ def _sample_models(models, total=5, bin_top_k=3, model_type=None, task=None):
                          key=lambda t: t.downloads if hasattr(t,
                                                               "downloads") else 0)
         sampled_models.append(ordered[0])
+
+    for m in sampled_models:
+        if m.size > max_size:
+            max_size = m.size
+        if m.size < min_size:
+            min_size = m.size
     return list(set(sampled_models)), min_size, max_size
 
 
@@ -180,8 +189,8 @@ def size_to_string(size, units=None, precision=2):
             return str(round(size / 10**9, 2)) + " G"
         elif size // 10**6 > 0:
             return str(round(size / 10**6, 2)) + " M"
-        elif size // 10**3:
-            return str(round(size / 10**3, 2)) + " k"
+        elif size // 10**3 > 0:
+            return str(round(size / 10**3, 2)) + " K"
         else:
             return str(size)
     else:
@@ -198,14 +207,13 @@ def size_to_string(size, units=None, precision=2):
 
 
 if __name__ == "__main__":
-    model_types = ["roberta", "gpt2", "bert"]
+    model_types = ["roberta", "gpt2", "bert", "gpt_neo", "gptj"]
     # model_types = ["gpt2"]
     tasks = [
         "question-answering",
         "text-generation",
         "fill-mask",
         "token-classification",
-        "conversational",
         "text-classification"
     ]
 
@@ -214,12 +222,13 @@ if __name__ == "__main__":
                                       tasks,
                                       read_file_path="all_models.json")
 
-    for mt in ["roberta"]:
+    for mt in model_types:
         sampled_models, min_size, max_size = _sample_models(model_list, total=40, model_type=mt)
-        min_size = size_to_string(min_size).replace(' ', '')
-        max_size = size_to_string(max_size).replace(' ', '')
-        _write_model_list_to_file(sampled_models,
-                                  f"sampled_models_{mt}_{min_size}_{max_size}.json")
+        min_size_h = size_to_string(min_size // 4).replace(' ', '')
+        max_size_h = size_to_string(max_size // 4).replace(' ', '')
+        _write_model_list_to_file(
+            sampled_models,
+            f"sampled_models_{mt}_{min_size_h}_{max_size_h}_{len(sampled_models)}.json")
         print(
             f"Sampled {len(sampled_models)} {mt} models from size between {min_size} and {max_size}"
         )

@@ -1,0 +1,6 @@
+7, avichr/hebEMO_disgust, bert, 438.3 M, 438304768, text-classification, https://huggingface.co/avichr/hebEMO_disgust, 20624
+8, avichr/hebEMO_anger, bert, 438.3 M, 438304768, text-classification, https://huggingface.co/avichr/hebEMO_anger, 20658
+14, avichr/hebEMO_fear, bert, 438.3 M, 438304768, text-classification, https://huggingface.co/avichr/hebEMO_fear, 20688
+16, echarlaix/bert-base-uncased-sst2-acc91.1-d37-hybrid, bert, 369.1 M, 369098752, text-classification, https://huggingface.co/echarlaix/bert-base-uncased-sst2-acc91.1-d37-hybrid, 56884
+18, sshleifer/tiny-dbmdz-bert-large-cased-finetuned-conll03-english, bert, 245.76 K, 245760, token-classification, https://huggingface.co/sshleifer/tiny-dbmdz-bert-large-cased-finetuned-conll03-english, 25255
+26, avichr/hebEMO_joy, bert, 438.3 M, 438304768, text-classification, https://huggingface.co/avichr/hebEMO_joy, 20712
