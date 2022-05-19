@@ -155,9 +155,8 @@ class MIIServerClient():
             server_args_str += " --ds-optimize" if ds_optimize else ""
             server_args_str += f" --config {b64_config_str}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
-            print(cmd)
+            logger.info(f"multi-gpu deepspeed launch: {cmd}")
             process = subprocess.Popen(cmd)
-            #TODO: do we need to hold onto this process handle for clean-up purposes?
         return process
 
     def _initialize_grpc_client(self):
