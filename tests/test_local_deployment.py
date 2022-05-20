@@ -20,7 +20,7 @@ def query_local(model_name: str, query: dict):
     return result
 
 
-def deploy_query_local(task_name: str, model_name: str, config: dict, query: dict):
+def deploy_query_local(task_name: str, model_name: str, query: dict, config: dict):
     deploy_local(task_name, model_name, config)
     result = query_local(model_name, query)
     mii.terminate_local_server(model_name + "_deployment")
@@ -32,6 +32,7 @@ def deploy_query_local(task_name: str, model_name: str, config: dict, query: dic
 
 
 @pytest.mark.local
+@pytest.mark.parametrize("config", [{'dtype':'fp32'}, {'dtype':'fp16'}])
 @pytest.mark.parametrize(
     "task_name, model_name, query",
     [
@@ -81,12 +82,12 @@ def deploy_query_local(task_name: str, model_name: str, config: dict, query: dic
         ),
     ],
 )
-def test_single_GPU_local_deployment(task_name: str, model_name: str, query: dict):
-    config = {'tensor_parallel': 1}
+def test_single_GPU_local_deployment(task_name: str, model_name: str, query: dict, config: dict):
+    config['tensor_parallel'] = 1
     result = deploy_query_local(task_name=task_name,
                                 model_name=model_name,
-                                config=config,
-                                query=query)
+                                query=query,
+                                config=config)
     assert result
 
 
