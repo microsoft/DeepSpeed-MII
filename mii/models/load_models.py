@@ -11,10 +11,10 @@ def hf_provider(model_path, model_name, task_name, mii_config):
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     os.environ['TRANSFORMERS_CACHE'] = model_path
     from transformers import pipeline
-    pipeline = pipeline(task_name, model=model_name, device=local_rank)
+    inference_pipeline = pipeline(task_name, model=model_name, device=local_rank)
     if mii_config.torch_dtype() == torch.half:
         inference_pipeline.model.half()
-    return pipeline
+    return inference_pipeline
 
 
 def eleutherai_provider(model_path, model_name, task_name, mii_config):
