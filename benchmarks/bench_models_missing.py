@@ -11,13 +11,13 @@ from statistics import mean
 from get_hf_models import Model
 import mii
 
-MODEL_TYPE = "roberta_81.53M_357.02M_34"
+# MODEL_TYPE = "roberta_81.53M_357.02M_34"
 # MODEL_TYPE="gpt2_629.14K_1.61G_12"
 # MODEL_TYPE="bert_61.44K_335.54M_40"
-# MODEL_TYPE="gpt_neo_83.36M_2.67G_4"
+MODEL_TYPE = "gpt_neo_83.36M_2.67G_4"
 # MODEL_TYPE="gptj_6.04G_6.04G_1"
 
-DATA_TYPE = "fp32"
+DATA_TYPE = "fp16"
 MODEL_FILE = "sampled_models_$MODEL_TYPE.json"
 OUTPUT_FILE = "output_${MODEL_TYPE}_${DATA_TYPE}.csv"
 
@@ -68,7 +68,7 @@ for l in lines:
         existing_ids.append(id)
 print(f"existing_ids = {existing_ids}")
 
-missing_out = "missing_" + MODEL_TYPE + ".csv"
+missing_out = "missing_" + MODEL_TYPE + "_" + DATA_TYPE + ".csv"
 id = 0
 for m in models:
     if id not in existing_ids:
