@@ -2,6 +2,9 @@ import pytest
 
 import mii
 
+fp32_config = {'dtype': 'fp32'}
+fp16_config = {'dtype': 'fp16'}
+
 
 def deploy_local(task_name: str, model_name: str, config: dict):
     mii.deploy(
@@ -32,7 +35,7 @@ def deploy_query_local(task_name: str, model_name: str, query: dict, config: dic
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("config", [{'dtype':'fp32'}, {'dtype':'fp16'}])
+@pytest.mark.parametrize("config", [fp32_config, fp16_config])
 @pytest.mark.parametrize(
     "task_name, model_name, query",
     [
@@ -82,7 +85,12 @@ def deploy_query_local(task_name: str, model_name: str, query: dict, config: dic
         ),
     ],
 )
-def test_single_GPU_local_deployment(task_name: str, model_name: str, query: dict, config: dict):
+def test_single_GPU_local_deployment(task_name: str,
+                                     model_name: str,
+                                     query: dict,
+                                     config: dict):
+    if (model_name in ['bert-base-uncased']) and (config == single_gpu_fp16_config):
+        pytest.skip(f"Model f{model_name} not supported for FP16")
     config['tensor_parallel'] = 1
     result = deploy_query_local(task_name=task_name,
                                 model_name=model_name,
