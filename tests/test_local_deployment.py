@@ -89,7 +89,7 @@ def test_single_GPU_local_deployment(task_name: str,
                                      model_name: str,
                                      query: dict,
                                      config: dict):
-    if (model_name in ['bert-base-uncased']) and (config == single_gpu_fp16_config):
+    if (model_name in ['bert-base-uncased']) and (config == fp16_config):
         pytest.skip(f"Model f{model_name} not supported for FP16")
     config['tensor_parallel'] = 1
     result = deploy_query_local(task_name=task_name,
