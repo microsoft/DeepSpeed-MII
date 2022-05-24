@@ -25,7 +25,7 @@ def eleutherai_provider(model_path, model_name, task_name, mii_config):
         "load": model_path,
         "vocab_file": os.path.join(model_path,
                                    "20B_tokenizer.json"),
-        "model_parallel_size": world_size
+        "model_parallel_size": world_size,
     }
     return NeoXPipeline(config)
 
@@ -54,14 +54,13 @@ def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_co
         raise ValueError(f"Unknown model provider {provider}")
 
     if ds_optimize:
-        inference_pipeline.model = deepspeed.init_inference(
-            inference_pipeline.model,
-            mp_size=world_size,
-            training_mp_size=training_mp_size,
-            mpu=mpu,
-            dtype=mii_config.torch_dtype(),
-            replace_with_kernel_inject=True,
-            replace_method='auto',
-            args=args)
+        deepspeed.init_inference(inference_pipeline.model,
+                                 mp_size=world_size,
+                                 training_mp_size=training_mp_size,
+                                 mpu=mpu,
+                                 dtype=mii_config.torch_dtype(),
+                                 replace_with_kernel_inject=True,
+                                 replace_method='auto',
+                                 args=args)
 
     return inference_pipeline
