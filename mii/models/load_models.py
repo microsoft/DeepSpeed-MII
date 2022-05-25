@@ -19,13 +19,12 @@ def hf_provider(model_path, model_name, task_name, mii_config):
 
 def eleutherai_provider(model_path, model_name, task_name, mii_config):
     world_size = int(os.getenv('WORLD_SIZE', '1'))
-    assert mii_config.torch_dtype() == torch.half, "gpt-neox only support fp16"
     from megatron.neox_pipeline import NeoXPipeline
     config = {
         "load": model_path,
         "vocab_file": os.path.join(model_path,
                                    "20B_tokenizer.json"),
-        "model_parallel_size": world_size,
+        "model_parallel_size": world_size
     }
     return NeoXPipeline(config)
 
@@ -42,6 +41,7 @@ def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_co
         mpu = None
         args = None
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
+        assert mii_config.torch_dtype() == torch.half, "gpt-neox only support fp16"
         assert mii_config.enable_cuda_graph == False, "Provider EleutherAI not supported with Cuda Graphs"
         from megatron import mpu
         from argparse import Namespace
@@ -61,6 +61,7 @@ def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_co
             training_mp_size=training_mp_size,
             mpu=mpu,
             dtype=mii_config.torch_dtype(),
+            enable_cuda_graph=mii_config.enable_cuda_graph,
             replace_with_kernel_inject=True,
             replace_method='auto',
             args=args)
