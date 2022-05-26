@@ -61,7 +61,6 @@ def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_co
             training_mp_size=training_mp_size,
             mpu=mpu,
             dtype=mii_config.torch_dtype(),
-            enable_cuda_graph=mii_config.enable_cuda_graph,
             replace_with_kernel_inject=True,
             replace_method='auto',
             args=args)
