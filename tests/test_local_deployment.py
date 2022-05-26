@@ -7,7 +7,7 @@ import mii
 def validate_config(config):
     if (config.model_name in ['bert-base-uncased']) and (config.mii_config['dtype']
                                                          == 'fp16'):
-        pytest.skip(f"Model f{model_name} not supported for FP16")
+        pytest.skip(f"Model f{config.model_name} not supported for FP16")
 
 
 @pytest.fixture(scope="function")
