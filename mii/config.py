@@ -6,6 +6,7 @@ class MIIConfig(BaseModel):
     tensor_parallel: int = 1
     port_number: int = 50050
     dtype: str = "float"
+    enable_cuda_graph: bool = False
 
     @validator('dtype')
     def dtype_valid(cls, value):
