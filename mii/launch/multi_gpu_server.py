@@ -27,9 +27,7 @@ def main():
                         "--ds-zero",
                         action='store_true',
                         help="Enable DeepSpeed ZeRO")
-    parser.add_argument("--ds-config",
-                        type=str,
-                        help="path to DeepSpeed ZeRO config")
+    parser.add_argument("--ds-config", type=str, help="path to DeepSpeed ZeRO config")
 
     parser.add_argument(
         "-p",

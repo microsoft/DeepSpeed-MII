@@ -38,7 +38,14 @@ def eleutherai_provider(model_path, model_name, task_name, mii_config):
     return NeoXPipeline(config)
 
 
-def load_models(task_name, model_name, model_path, ds_optimize, ds_zero, provider, mii_config, ds_config_path=None):
+def load_models(task_name,
+                model_name,
+                model_path,
+                ds_optimize,
+                ds_zero,
+                provider,
+                mii_config,
+                ds_config_path=None):
     global generator
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 

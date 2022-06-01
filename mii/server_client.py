@@ -136,7 +136,13 @@ class MIIServerClient():
             is_alive = False
         return is_alive
 
-    def _initialize_service(self, model_name, model_path, ds_optimize, ds_zero, ds_config, mii_configs):
+    def _initialize_service(self,
+                            model_name,
+                            model_path,
+                            ds_optimize,
+                            ds_zero,
+                            ds_config,
+                            mii_configs):
         process = None
         if not self.use_grpc_server:
             self.model = mii.load_models(mii.get_task_name(self.task),
