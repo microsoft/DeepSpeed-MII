@@ -1,7 +1,7 @@
 import mii
 from transformers import AutoConfig
 
-mii_config = {"dtype": "fp16"}
+mii_configs = {"dtype": "fp16"}
 
 name = "distilgpt2"
 name = "gpt2-xl"
@@ -11,7 +11,7 @@ model_hidden_size = config.n_embd
 
 ds_config = {
     "fp16": {
-        "enabled": False
+        "enabled": True
     },
     "bf16": {
         "enabled": False
@@ -19,12 +19,7 @@ ds_config = {
     "zero_optimization": {
         "stage": 3,
         "offload_param": {
-            "device": "nvme",
-            "nvme_path": "/mnt/nvme0/offload",
-            "pin_memory": True,
-            "buffer_count": 6,
-            "buffer_size": 1e9,
-            "max_in_cpu": 1e9
+            "device": "cpu",
         },
         "aio": {
             "block_size": 262144,

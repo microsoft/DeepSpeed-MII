@@ -37,7 +37,6 @@ def create_score_file(deployment_name,
     config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs.dict()
     config_dict[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
     config_dict[mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
-    config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs
 
     if len(mii.__path__) > 1:
         logger.warning(
