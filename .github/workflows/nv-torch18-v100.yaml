@@ -34,7 +34,7 @@ jobs:
           python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
       - name: Install MII
         run: |
-          pip install deepspeed==0.6.4
+          git clone https://github.com/microsoft/DeepSpeed.git && pip install ./DeepSpeed
           pip install .[dev,local]
           ds_report
       - name: Unit tests
