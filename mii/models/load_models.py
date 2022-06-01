@@ -63,6 +63,7 @@ def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_co
             dtype=mii_config.torch_dtype(),
             replace_with_kernel_inject=True,
             replace_method='auto',
+            enable_cuda_graph=mii_config.enable_cuda_graph,
             args=args)
 
     return inference_pipeline
