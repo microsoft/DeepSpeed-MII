@@ -1,4 +1,4 @@
-name: Formatting
+name: CPU
 
 on:
   push:
@@ -15,8 +15,8 @@ concurrency:
 
 jobs:
 
-  # formatting and basic install on cpu-only machine
-  formatting:
+  # basic install and cpu-only tests
+  unit-tests:
     runs-on: ubuntu-20.04
 
     steps:
@@ -29,8 +29,9 @@ jobs:
 
       - name: Install MII
         run: |
-          pip install .[dev]
+          pip install .[dev,local]
 
-      - name: Formatting checks
+      - name: Unit tests
         run: |
-           pre-commit run --all-files
+          cd tests
+          pytest --color=yes --durations=0 --verbose -m "CPU" ./

@@ -10,13 +10,9 @@ from huggingface_hub import HfApi
 
 from mii.constants import CONVERSATIONAL_NAME, FILL_MASK_NAME, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
     MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
-    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TENSOR_PARALLEL_KEY, PORT_NUMBER_KEY, TOKEN_CLASSIFICATION_NAME, SUPPORTED_MODEL_TYPES
+    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TOKEN_CLASSIFICATION_NAME, SUPPORTED_MODEL_TYPES, ModelProvider
 
 from mii.constants import Tasks
-
-
-def validate_mii_configs(mii_configs):
-    assert TENSOR_PARALLEL_KEY in mii_configs and PORT_NUMBER_KEY in mii_configs, "Missing configs {TENSOR_PARALLEL_KEY} and {PORT_NUMBER_KEY}"
 
 
 def get_task_name(task):
@@ -38,7 +34,7 @@ def get_task_name(task):
     if task == Tasks.CONVERSATIONAL:
         return CONVERSATIONAL_NAME
 
-    assert False, f"Unknown Task {task}"
+    raise ValueError(f"Unknown Task {task}")
 
 
 def get_task(task_name):
@@ -74,43 +70,21 @@ def _get_hf_models_by_type(model_type, task=None):
 def _get_supported_models_name(task):
     supported_models = []
     task_name = get_task_name(task)
-    if task == Tasks.TEXT_GENERATION:
-        for mt in SUPPORTED_MODEL_TYPES:
-            hf_models = _get_hf_models_by_type(mt, task_name)
-            supported_models.extend(hf_models)
 
-    elif task == Tasks.TEXT_CLASSIFICATION:
-        for mt in SUPPORTED_MODEL_TYPES:
-            hf_models = _get_hf_models_by_type(mt, task_name)
-            supported_models.extend(hf_models)
-
-    elif task == Tasks.QUESTION_ANSWERING:
-        for mt in SUPPORTED_MODEL_TYPES:
-            hf_models = _get_hf_models_by_type(mt, task_name)
-            supported_models.extend(hf_models)
-
-    elif task == Tasks.FILL_MASK:
-        for mt in SUPPORTED_MODEL_TYPES:
-            hf_models = _get_hf_models_by_type(mt, task_name)
-            supported_models.extend(hf_models)
-
-    elif task == Tasks.TOKEN_CLASSIFICATION:
-        for mt in SUPPORTED_MODEL_TYPES:
-            hf_models = _get_hf_models_by_type(mt, task_name)
-            supported_models.extend(hf_models)
-
-    elif task == Tasks.CONVERSATIONAL:
-        for mt in SUPPORTED_MODEL_TYPES:
-            hf_models = _get_hf_models_by_type(mt, task_name)
-            supported_models.extend(hf_models)
-    else:
-        assert False, f"{task} is not supported"
+    for model_type, provider in SUPPORTED_MODEL_TYPES.items():
+        if provider == ModelProvider.HUGGING_FACE:
+            models = _get_hf_models_by_type(model_type, task_name)
+        elif provider == ModelProvider.ELEUTHER_AI:
+            if task_name == TEXT_GENERATION_NAME:
+                models = [model_type]
+        supported_models.extend(models)
+    if not supported_models:
+        raise ValueError(f"Task {task} not supported")
 
     return supported_models
 
 
 def check_if_task_and_model_is_supported(task, model_name):
-    supported = False
     supported_models = _get_supported_models_name(task)
     assert model_name in supported_models, f"{task} only supports {supported_models}"
 

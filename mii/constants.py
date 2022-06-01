@@ -9,11 +9,7 @@ class DeploymentType(enum.Enum):
     AML_ON_AKS = 3
 
 
-TENSOR_PARALLEL_KEY = 'tensor_parallel'
-PORT_NUMBER_KEY = 'port_number'
-
 MII_CONFIGS_KEY = 'mii_configs'
-MII_CONFIGS_DEFAULT = {TENSOR_PARALLEL_KEY: 1, PORT_NUMBER_KEY: 50050}
 
 
 class Tasks(enum.Enum):
@@ -32,7 +28,29 @@ FILL_MASK_NAME = 'fill-mask'
 TOKEN_CLASSIFICATION_NAME = 'token-classification'
 CONVERSATIONAL_NAME = 'conversational'
 
-SUPPORTED_MODEL_TYPES = ['roberta', 'gpt2', 'bert', 'gpt_neo', 'gptj']
+
+class ModelProvider(enum.Enum):
+    HUGGING_FACE = 1
+    ELEUTHER_AI = 2
+
+
+MODEL_PROVIDER_NAME_HF = "hugging-face"
+MODEL_PROVIDER_NAME_EA = "eleuther-ai"
+
+MODEL_PROVIDER_MAP = {
+    MODEL_PROVIDER_NAME_HF: ModelProvider.HUGGING_FACE,
+    MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI
+}
+
+SUPPORTED_MODEL_TYPES = {
+    'roberta': ModelProvider.HUGGING_FACE,
+    'gpt2': ModelProvider.HUGGING_FACE,
+    'bert': ModelProvider.HUGGING_FACE,
+    'gpt_neo': ModelProvider.HUGGING_FACE,
+    'gptj': ModelProvider.HUGGING_FACE,
+    'gpt-neox': ModelProvider.ELEUTHER_AI,
+}
+
 SUPPORTED_TASKS = [
     TEXT_GENERATION_NAME,
     TEXT_CLASSIFICATION_NAME,
