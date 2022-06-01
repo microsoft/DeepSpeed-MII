@@ -1,41 +1,41 @@
 import pytest
+from types import SimpleNamespace
 
 import mii
 
-fp32_config = {'dtype': 'fp32'}
-fp16_config = {'dtype': 'fp16'}
+
+def validate_config(config):
+    if (config.model_name in ['bert-base-uncased']) and (config.mii_config['dtype']
+                                                         == 'fp16'):
+        pytest.skip(f"Model f{config.model_name} not supported for FP16")
 
 
-def deploy_local(task_name: str, model_name: str, config: dict):
+@pytest.fixture(scope="function")
+def config(task_name: str, model_name: str, mii_config: dict, query: dict):
+    test_config = SimpleNamespace(task_name=task_name,
+                                  model_name=model_name,
+                                  mii_config=mii_config,
+                                  query=query)
+    validate_config(test_config)
+    return test_config
+
+
+@pytest.fixture(scope="function")
+def local_deployment(config):
     mii.deploy(
-        task_name=task_name,
-        model_name=model_name,
+        task_name=config.task_name,
+        model_name=config.model_name,
         deployment_type=mii.DeploymentType.LOCAL,
-        deployment_name=model_name + "_deployment",
-        local_model_path=".cache/models/" + model_name,
-        mii_configs=config,
+        deployment_name=config.model_name + "_deployment",
+        local_model_path=".cache/models/" + config.model_name,
+        mii_configs=config.mii_config,
     )
-
-
-def query_local(model_name: str, query: dict):
-    generator = mii.mii_query_handle(model_name + "_deployment")
-    result = generator.query(query)
-    return result
-
-
-def deploy_query_local(task_name: str, model_name: str, query: dict, config: dict):
-    deploy_local(task_name, model_name, config)
-    result = query_local(model_name, query)
-    mii.terminate_local_server(model_name + "_deployment")
-    return result
-
-
-''' This one crashes. Need to debug later
-'''
+    yield config
+    mii.terminate_local_server(config.model_name + "_deployment")
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("config", [fp32_config, fp16_config])
+@pytest.mark.parametrize("mii_config", [{'dtype': 'fp16'}, {'dtype': 'fp32'}])
 @pytest.mark.parametrize(
     "task_name, model_name, query",
     [
@@ -85,17 +85,9 @@ def deploy_query_local(task_name: str, model_name: str, query: dict, config: dic
         ),
     ],
 )
-def test_single_GPU_local_deployment(task_name: str,
-                                     model_name: str,
-                                     query: dict,
-                                     config: dict):
-    if (model_name in ['bert-base-uncased']) and (config == fp16_config):
-        pytest.skip(f"Model f{model_name} not supported for FP16")
-    config['tensor_parallel'] = 1
-    result = deploy_query_local(task_name=task_name,
-                                model_name=model_name,
-                                query=query,
-                                config=config)
+def test_single_GPU_local_deployment(local_deployment):
+    generator = mii.mii_query_handle(local_deployment.model_name + "_deployment")
+    result = generator.query(local_deployment.query)
     assert result
 
 

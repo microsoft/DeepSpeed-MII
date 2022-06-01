@@ -27,7 +27,6 @@ def hf_provider(model_path, model_name, task_name, mii_config):
 
 def eleutherai_provider(model_path, model_name, task_name, mii_config):
     world_size = int(os.getenv('WORLD_SIZE', '1'))
-    assert mii_config.torch_dtype() == torch.half, "gpt-neox only support fp16"
     from megatron.neox_pipeline import NeoXPipeline
     config = {
         "load": model_path,
@@ -57,6 +56,8 @@ def load_models(task_name,
         mpu = None
         args = None
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
+        assert mii_config.torch_dtype() == torch.half, "gpt-neox only support fp16"
+        assert mii_config.enable_cuda_graph == False, "Provider EleutherAI not supported with Cuda Graphs"
         from megatron import mpu
         from argparse import Namespace
         inference_pipeline = eleutherai_provider(model_path,
@@ -77,6 +78,7 @@ def load_models(task_name,
             dtype=mii_config.torch_dtype(),
             replace_with_kernel_inject=True,
             replace_method='auto',
+            enable_cuda_graph=mii_config.enable_cuda_graph,
             args=args)
     elif ds_zero:
         assert os.path.exists(ds_config_path), '{ds_config_path} does not exist'
