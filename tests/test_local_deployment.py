@@ -66,8 +66,8 @@ def deployment_config(task_name: str,
     config = SimpleNamespace(task_name=task_name,
                              model_name=model_name,
                              deployment_type=mii.DeploymentType.LOCAL,
-                             deployment_name=model_name+"_deployment",
-                             local_model_path=".cache/models/"+model_name,
+                             deployment_name=model_name + "_deployment",
+                             local_model_path=".cache/models/" + model_name,
                              mii_configs=mii_configs,
                              enable_deepspeed=enable_deepspeed,
                              enable_zero=enable_zero,
@@ -95,6 +95,7 @@ def local_deployment(deployment_config, expected_failure):
 
 
 ''' Unit tests '''
+
 
 @pytest.mark.local
 @pytest.mark.parametrize("mii_configs",
