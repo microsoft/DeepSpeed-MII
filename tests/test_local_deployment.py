@@ -98,15 +98,7 @@ def local_deployment(deployment_config, expected_failure):
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("mii_configs",
-                         [{
-                             'dtype': 'fp16',
-                             'tensor_parallel': 1
-                         },
-                          {
-                              'dtype': 'fp32',
-                              'tensor_parallel': 1
-                          }])
+@pytest.mark.parametrize("dtype", ['fp16', 'fp32'])
 @pytest.mark.parametrize(
     "task_name, model_name, query",
     [
