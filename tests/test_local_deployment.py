@@ -6,7 +6,7 @@ import mii
 
 
 def validate_config(config):
-    if (config.model_name in ['bert-base-uncased']) and (config.mii_config['dtype']
+    if (config.model_name in ['bert-base-uncased']) and (config.mii_configs['dtype']
                                                          == 'fp16'):
         pytest.skip(f"Model f{config.model_name} not supported for FP16")
 
@@ -48,7 +48,7 @@ def ds_config(request):
 
 
 @pytest.fixture(scope="function")
-def mii_config(dtype: str, tensor_parallel: int, port_number: int):
+def mii_configs(dtype: str, tensor_parallel: int, port_number: int):
     return {
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
@@ -59,15 +59,16 @@ def mii_config(dtype: str, tensor_parallel: int, port_number: int):
 @pytest.fixture(scope="function")
 def deployment_config(task_name: str,
                       model_name: str,
-                      query: dict,
-                      mii_config: dict,
+                      mii_configs: dict,
                       enable_deepspeed: bool,
                       enable_zero: bool,
                       ds_config: dict):
     config = SimpleNamespace(task_name=task_name,
                              model_name=model_name,
-                             query=query,
-                             mii_config=mii_config,
+                             deployment_type=mii.DeploymentType.LOCAL,
+                             deployment_name=model_name+"_deployment",
+                             local_model_path=".cache/models/"+model_name,
+                             mii_configs=mii_configs,
                              enable_deepspeed=enable_deepspeed,
                              enable_zero=enable_zero,
                              ds_config=ds_config)
@@ -83,33 +84,20 @@ def expected_failure(request):
 @pytest.fixture(scope="function")
 def local_deployment(deployment_config, expected_failure):
     if expected_failure is not None:
-        with pytest.raises(expected_failure):
-            mii.deploy(task_name=deployment_config.task_name,
-                       model_name=deployment_config.model_name,
-                       deployment_type=mii.DeploymentType.LOCAL,
-                       deployment_name=deployment_config.model_name + "_deployment",
-                       local_model_path=".cache/models/" + deployment_config.model_name,
-                       mii_configs=deployment_config.mii_config,
-                       enable_deepspeed=deployment_config.enable_deepspeed,
-                       enable_zero=deployment_config.enable_zero,
-                       ds_config=deployment_config.ds_config)
-        yield None
+        with pytest.raises(expected_failure) as excinfo:
+            mii.deploy(**deployment_config.__dict__)
+        yield excinfo
+        mii.terminate_local_server(deployment_config.deployment_name)
     else:
-        mii.deploy(task_name=deployment_config.task_name,
-                   model_name=deployment_config.model_name,
-                   deployment_type=mii.DeploymentType.LOCAL,
-                   deployment_name=deployment_config.model_name + "_deployment",
-                   local_model_path=".cache/models/" + deployment_config.model_name,
-                   mii_configs=deployment_config.mii_config,
-                   enable_deepspeed=deployment_config.enable_deepspeed,
-                   enable_zero=deployment_config.enable_zero,
-                   ds_config=deployment_config.ds_config)
-        yield config
-        mii.terminate_local_server(deployment_config.model_name + "_deployment")
+        mii.deploy(**deployment_config.__dict__)
+        yield deployment_config
+        mii.terminate_local_server(deployment_config.deployment_name)
 
+
+''' Unit tests '''
 
 @pytest.mark.local
-@pytest.mark.parametrize("mii_config",
+@pytest.mark.parametrize("mii_configs",
                          [{
                              'dtype': 'fp16',
                              'tensor_parallel': 1
@@ -167,9 +155,9 @@ def local_deployment(deployment_config, expected_failure):
         ),
     ],
 )
-def test_single_GPU(local_deployment):
-    generator = mii.mii_query_handle(local_deployment.model_name + "_deployment")
-    result = generator.query(local_deployment.query)
+def test_single_GPU(local_deployment, query):
+    generator = mii.mii_query_handle(local_deployment.deployment_name)
+    result = generator.query(query)
     assert result
 
 
@@ -203,13 +191,14 @@ def test_single_GPU(local_deployment):
         ),
     ],
 )
-def test_zero_config(local_deployment):
-    generator = mii.mii_query_handle(local_deployment.model_name + "_deployment")
-    result = generator.query(local_deployment.query)
+def test_zero_config(local_deployment, query):
+    generator = mii.mii_query_handle(local_deployment.deployment_name)
+    result = generator.query(query)
     assert result
 
 
 @pytest.mark.local
+@pytest.mark.parametrize("expected_failure", [AssertionError])
 @pytest.mark.parametrize("enable_deepspeed, enable_zero, dtype",
                          [(True,
                            True,
@@ -217,7 +206,6 @@ def test_zero_config(local_deployment):
                           (False,
                            True,
                            'fp16')])
-@pytest.mark.parametrize("expected_failure", [AssertionError])
 @pytest.mark.parametrize("ds_config",
                          [
                              {
@@ -248,8 +236,8 @@ def test_zero_config(local_deployment):
         ),
     ],
 )
-def test_zero_config_fail(local_deployment):
-    pass
+def test_zero_config_fail(local_deployment, query):
+    assert "MII Config Error" in str(local_deployment.value)
 
 
 ''' Not working yet

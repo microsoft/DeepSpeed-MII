@@ -183,12 +183,14 @@ class MIIServerClient():
                 if isinstance(ds_config, dict):
 
                     def create_config_from_dict(tmpdir, config_dict):
+                        if not os.path.exists(tmpdir):
+                            os.makedirs(tmpdir)
                         config_path = os.path.join(tmpdir, 'temp_config.json')
                         with open(config_path, 'w') as fd:
                             json.dump(config_dict, fd)
                         return config_path
 
-                    model_dir = Path(model_path).parent.absolute()
+                    model_dir = Path(model_path).parent.resolve()
                     ds_config_path = create_config_from_dict(model_dir, ds_config)
                 elif isinstance(ds_config, str):
                     ds_config_path = ds_config

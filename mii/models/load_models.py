@@ -6,6 +6,7 @@ import mii
 import torch
 import deepspeed
 from deepspeed.runtime.zero.constants import *
+from pathlib import Path
 
 
 def check_zero_ds_config(config):
@@ -17,7 +18,7 @@ def check_zero_ds_config(config):
 
 def hf_provider(model_path, model_name, task_name, mii_config):
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
-    os.environ['TRANSFORMERS_CACHE'] = model_path
+    os.environ['TRANSFORMERS_CACHE'] = str(Path(model_path).resolve())
     from transformers import pipeline
     inference_pipeline = pipeline(task_name, model=model_name, device=local_rank)
     if mii_config.torch_dtype() == torch.half:

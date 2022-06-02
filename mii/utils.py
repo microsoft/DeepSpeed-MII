@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import importlib
+from pathlib import Path
 
 from huggingface_hub import HfApi
 
@@ -109,7 +110,7 @@ def is_aml():
 
 
 def set_model_path(model_path):
-    os.environ['MII_MODEL_DIR'] = model_path
+    os.environ['MII_MODEL_DIR'] = str(Path(model_path).resolve())
 
 
 def mii_cache_path():
