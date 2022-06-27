@@ -210,14 +210,15 @@ def deploy(task_name,
     # parse and validate mii config
     mii_configs = mii.config.MIIConfig(**mii_configs)
     if enable_zero:
-        if hasattr(ds_config, 'fp16') and ds_config['fp16']['enabled']:
-            assert mii_configs.torch_dtype() == torch.half, "MII Config Error: MII dtype and ZeRO dtype must match"
+        if ds_config.get("fp16", {}).get("enabled", False):
+            assert (mii_configs.torch_dtype() == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
         else:
-            assert mii_configs.torch_dtype() == torch.float, "MII Config Error: MII dtype and ZeRO dtype must match"
-    assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot enabled, select only one"
+            assert (mii_configs.torch_dtype() == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
+    assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
     task = mii.get_task(task_name)
-    mii.check_if_task_and_model_is_supported(task, model_name)
+    if enable_deepspeed:
+        mii.check_if_task_and_model_is_supported(task, model_name)
 
     logger.info(f"*************DeepSpeed Optimizations: {enable_deepspeed}*************")
 
