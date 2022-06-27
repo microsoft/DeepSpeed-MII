@@ -4,9 +4,6 @@ import enum
 #TODO naming..
 class DeploymentType(enum.Enum):
     LOCAL = 1
-    #expose GPUs
-    AML_LOCAL = 2
-    AML_ON_AKS = 3
 
 
 MII_CONFIGS_KEY = 'mii_configs'
