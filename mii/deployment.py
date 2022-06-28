@@ -217,6 +217,7 @@ def deploy(task_name,
     assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
     task = mii.get_task(task_name)
+    mii.check_if_task_and_model_is_valid(task, model_name)
     if enable_deepspeed:
         mii.check_if_task_and_model_is_supported(task, model_name)
 
