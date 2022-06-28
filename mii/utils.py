@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import importlib
+import mii
 from pathlib import Path
 
 from huggingface_hub import HfApi
@@ -166,6 +167,23 @@ subprocess.run([sys.executable] + install_cmd.split(" "), env=env)
 
 def setup_task():
     return get_model_path(), not is_aml(), is_aml()
+
+
+dtype_proto_field = {
+    str: "svalue",
+    int: "ivalue",
+    float: "fvalue",
+    bool: "bvalue",
+}
+
+
+def kwarg_dict_to_proto(kwarg_dict):
+    def get_proto_value(value):
+        proto_value = mii.modelresponse_pb2.Value()
+        setattr(proto_value, dtype_proto_field[type(value)], value)
+        return proto_value
+
+    return {k: get_proto_value(v) for k, v in kwarg_dict.items()}
 
 
 log_levels = {

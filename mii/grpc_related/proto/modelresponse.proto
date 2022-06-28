@@ -32,9 +32,19 @@ service ModelResponse {
   rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
 }
 
+message Value {
+    oneof oneof_values {
+        string svalue = 1;
+        int64 ivalue = 2;
+        float fvalue = 3;
+        bool bvalue = 4;
+    }
+}
+
 // The request message containing the user's name.
 message SingleStringRequest {
   string request = 1;
+  map<string,Value> query_kwargs = 2;
 }
 
 // The response message containing the greetings
@@ -46,6 +56,7 @@ message SingleStringReply {
 message QARequest {
   string question = 1;
   string context = 2;
+  map<string,Value> query_kwargs = 3;
 }
 
 message ConversationRequest {
@@ -53,6 +64,7 @@ message ConversationRequest {
   optional int64 conversation_id = 2;
   repeated string past_user_inputs = 3;
   repeated string generated_responses = 4;
+  map<string,Value> query_kwargs = 5;
 }
 
 message ConversationReply {

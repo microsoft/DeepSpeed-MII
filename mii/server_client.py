@@ -14,7 +14,7 @@ from pathlib import Path
 import mii
 import base64
 import json
-from mii.utils import logger
+from mii.utils import logger, kwarg_dict_to_proto
 
 
 def mii_query_handle(deployment_name):
@@ -214,38 +214,45 @@ class MIIServerClient():
             self.stubs.append(stub)
 
     #runs task in parallel and return the result from the first task
-    async def _query_in_tensor_parallel(self, request_string):
+    async def _query_in_tensor_parallel(self, request_string, query_kwargs):
         responses = []
         for i in range(self.num_gpus):
             responses.append(
                 self.asyncio_loop.create_task(
                     self._request_async_response(i,
-                                                 request_string)))
+                                                 request_string,
+                                                 query_kwargs)))
 
         await responses[0]
 
         return responses[0]
 
-    async def _request_async_response(self, stub_id, request_dict):
+    async def _request_async_response(self, stub_id, request_dict, query_kwargs):
+        proto_kwargs = kwarg_dict_to_proto(query_kwargs)
         if self.task == mii.Tasks.TEXT_GENERATION:
             response = await self.stubs[stub_id].GeneratorReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
+                                                          query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
             response = await self.stubs[stub_id].ClassificationReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
+                                                          query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = await self.stubs[stub_id].QuestionAndAnswerReply(
                 mii.modelresponse_pb2.QARequest(question=request_dict['question'],
-                                                context=request_dict['context']))
+                                                context=request_dict['context'],
+                                                query_kwargs=proto_kwargs))
         elif self.task == mii.Tasks.FILL_MASK:
             response = await self.stubs[stub_id].FillMaskReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
+                                                          query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
             response = await self.stubs[stub_id].TokenClassificationReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query']))
+                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
+                                                          query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.CONVERSATIONAL:
             response = await self.stubs[stub_id].ConversationalReply(
@@ -254,39 +261,41 @@ class MIIServerClient():
                     conversation_id=request_dict['conversation_id']
                     if 'conversation_id' in request_dict else None,
                     past_user_inputs=request_dict['past_user_inputs'],
-                    generated_responses=request_dict['generated_responses']))
+                    generated_responses=request_dict['generated_responses'],
+                    query_kwargs=proto_kwargs))
 
         else:
             assert False, "unknown task"
         return response
 
-    def _request_response(self, request_dict):
+    def _request_response(self, request_dict, query_kwargs):
         start = time.time()
         if self.task == mii.Tasks.TEXT_GENERATION:
-            response = self.model(request_dict['query'], do_sample=True, min_length=50)
+            response = self.model(request_dict['query'], **query_kwargs)
 
         elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
-            response = self.model(request_dict['query'], return_all_scores=True)
+            response = self.model(request_dict['query'], **query_kwargs)
 
         elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = self.model(question=request_dict['query'],
-                                  context=request_dict['context'])
+                                  context=request_dict['context'],
+                                  **query_kwargs)
 
         elif self.task == mii.Tasks.FILL_MASK:
-            response = self.model(request_dict['query'])
+            response = self.model(request_dict['query'], **query_kwargs)
 
         elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
-            response = self.model(request_dict['query'])
+            response = self.model(request_dict['query'], **query_kwargs)
 
         elif self.task == mii.Tasks.CONVERSATIONAL:
-            response = self.model(["", request_dict['query']])
+            response = self.model(["", request_dict['query']], **query_kwargs)
 
         else:
             raise NotSupportedError(f"task is not supported: {self.task}")
         end = time.time()
         return f"{response}" + f"\n Model Execution Time: {end-start} seconds"
 
-    def query(self, request_dict):
+    def query(self, request_dict, **query_kwargs):
         """Query a local deployment:
 
             mii/examples/local/gpt2-query-example.py
@@ -294,16 +303,18 @@ class MIIServerClient():
 
         Arguments:
             request_dict: A task specific request dictionary consistinging of the inputs to the models
+            query_kwargs: additional query parameters for the model
 
         Returns:
             response: Response of the model
         """
         if not self.use_grpc_server:
-            response = self._request_response(request_dict)
+            response = self._request_response(request_dict, query_kwargs)
             ret = f"{response}"
         else:
             assert self.initialize_grpc_client, "grpc client has not been setup when this model was created"
             response = self.asyncio_loop.run_until_complete(
-                self._query_in_tensor_parallel(request_dict))
+                self._query_in_tensor_parallel(request_dict,
+                                               query_kwargs))
             ret = response.result()
         return ret

@@ -19,9 +19,16 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
 
     def GeneratorReply(self, request, context):
         start = time.time()
-        response = self.inference_pipeline(request.request,
-                                           do_sample=True,
-                                           min_length=50)
+        kwargs = {
+            k: getattr(v,
+                       v.WhichOneof("oneof_values"))
+            for k,
+            v in request.kwargs.items()
+        }
+        print("REQUEST KWARGS",
+              request.kwargs,
+              request.kwargs['min_length'].WhichOneof("oneof_values"))
+        response = self.inference_pipeline(request.request, **kwargs)
         end = time.time()
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                    time_taken=end - start)
