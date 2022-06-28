@@ -36,9 +36,7 @@ def size_to_string(size, units=None, precision=2):
             return str(size)
 
 
-def _deploy_model(model,
-                  mii_configs=mii.constants.MII_CONFIGS_DEFAULT,
-                  enable_deepspeed=True):
+def _deploy_model(model, mii_configs, enable_deepspeed=True):
     name = model.name
     type = model.type
     task = model.task
@@ -51,7 +49,7 @@ def _deploy_model(model,
                enable_deepspeed=enable_deepspeed)
 
 
-def _kill_deployment(model, mii_configs=mii.constants.MII_CONFIGS_DEFAULT):
+def _kill_deployment(model, mii_configs={}):
     kill_cmd = [
         'pkill',
         '-f',
@@ -93,6 +91,12 @@ if __name__ == "__main__":
                         type=int,
                         help="number of iterations to run",
                         default=20)
+    parser.add_argument(
+        "-t",
+        "--data_type",
+        type=str,
+        default="fp32",
+        help="data type used for inference, either fp32 or fp16, default is fp32")
     parser.add_argument("--disable_deepspeed", action='store_true')
     parser.add_argument("--reuse_output", action='store_true')
 
@@ -120,6 +124,7 @@ if __name__ == "__main__":
 
     num_iters = args.num_iters
     enable_deepspeed = not args.disable_deepspeed
+    data_type = 'fp32' if args.data_type == 'fp32' else 'fp16'
 
     def get_line(name, path):
         with open(path) as f:
@@ -146,7 +151,12 @@ if __name__ == "__main__":
         f"Benchmarking {model_index}: {model.name}, {model.type}, {model.task}, {size_to_string(model.size/4)} with enable_deepspeed={enable_deepspeed}"
     )
 
-    _deploy_model(model, enable_deepspeed=enable_deepspeed)
+    _deploy_model(model,
+                  mii_configs={
+                      'dtype': data_type,
+                      'enable_cuda_graph': True
+                  },
+                  enable_deepspeed=enable_deepspeed)
 
     time_takens = []
     for i in range(num_iters):

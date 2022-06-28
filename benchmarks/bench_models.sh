@@ -13,20 +13,20 @@ DATA_TYPE="fp32"
 MODEL_FILE="sampled_models_$MODEL_TYPE.json"
 OUTPUT_FILE="output_${MODEL_TYPE}_${DATA_TYPE}.csv"
 
-# MODEL_NAME="klue/bert-base"
-# python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE
-# pkill -9 python
-# python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE --disable_deepspeed --reuse_output
-# pkill -9 python
+MODEL_NAME="roberta-large"
+python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE
+pkill -9 python
+python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE --disable_deepspeed --reuse_output
+pkill -9 python
 
-# exit 0
+exit 0
 
 for i in $(seq $START $END)
 do
     echo "benchmarking model $i"
-    python bench_models.py --model_index $i --model_file $MODEL_FILE --output_file $OUTPUT_FILE --reuse_output
+    python bench_models.py --model_index $i --data_type $DATA_TYPE --model_file $MODEL_FILE --output_file $OUTPUT_FILE --reuse_output
     pkill -9 python
     sleep 2
-    python bench_models.py --model_index $i --model_file $MODEL_FILE --output_file $OUTPUT_FILE --disable_deepspeed --reuse_output
+    python bench_models.py --model_index $i --data_type $DATA_TYPE --model_file $MODEL_FILE --output_file $OUTPUT_FILE --disable_deepspeed --reuse_output
     pkill -9 python
 done
