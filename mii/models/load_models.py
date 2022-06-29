@@ -5,11 +5,20 @@ import os
 import mii
 import torch
 import deepspeed
+from deepspeed.runtime.zero.constants import *
+from pathlib import Path
+
+
+def check_zero_ds_config(config):
+    config_zero = config.get(ZERO_OPTIMIZATION, {})
+    stage = config_zero.get(ZERO_OPTIMIZATION_STAGE, None)
+    if stage != ZERO_OPTIMIZATION_WEIGHTS:
+        assert False, "DeepSpeed ZeRO inference is only supported for ZeRO 3 optimization stage"
 
 
 def hf_provider(model_path, model_name, task_name, mii_config):
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
-    os.environ['TRANSFORMERS_CACHE'] = model_path
+    os.environ['TRANSFORMERS_CACHE'] = str(Path(model_path).resolve())
     from transformers import pipeline
     inference_pipeline = pipeline(task_name,
                                   model=model_name,
@@ -32,7 +41,14 @@ def eleutherai_provider(model_path, model_name, task_name, mii_config):
     return NeoXPipeline(config)
 
 
-def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_config):
+def load_models(task_name,
+                model_name,
+                model_path,
+                ds_optimize,
+                ds_zero,
+                provider,
+                mii_config,
+                ds_config_path=None):
     global generator
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 
@@ -68,5 +84,16 @@ def load_models(task_name, model_name, model_path, ds_optimize, provider, mii_co
             replace_method='auto',
             enable_cuda_graph=mii_config.enable_cuda_graph,
             args=args)
+    elif ds_zero:
+        assert os.path.exists(ds_config_path), '{ds_config_path} does not exist'
+        import json
+        ds_config = json.load(open(ds_config_path, "r"))
+        check_zero_ds_config(ds_config)
+
+        # initialise Deepspeed ZeRO and store only the engine object
+        ds_engine = deepspeed.initialize(model=inference_pipeline.model,
+                                         config_params=ds_config)[0]
+        ds_engine.module.eval()  # inference
+        inference_pipeline.model = ds_engine.module
 
     return inference_pipeline

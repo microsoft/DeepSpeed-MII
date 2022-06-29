@@ -17,50 +17,67 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
     def __init__(self, inference_pipeline):
         self.inference_pipeline = inference_pipeline
 
+    def _unpack_proto_query_kwargs(self, query_kwargs):
+        query_kwargs = {
+            k: getattr(v,
+                       v.WhichOneof("oneof_values"))
+            for k,
+            v in query_kwargs.items()
+        }
+        return query_kwargs
+
     def GeneratorReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
-        response = self.inference_pipeline(request.request,
-                                           do_sample=True,
-                                           min_length=50)
+        response = self.inference_pipeline(request.request, **query_kwargs)
         end = time.time()
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                    time_taken=end - start)
 
     def ClassificationReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
-        response = self.inference_pipeline(request.request, return_all_scores=True)
+        response = self.inference_pipeline(request.request,
+                                           return_all_scores=True,
+                                           **query_kwargs)
         end = time.time()
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                    time_taken=end - start)
 
     def QuestionAndAnswerReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
         response = self.inference_pipeline(question=request.question,
-                                           context=request.context)
+                                           context=request.context,
+                                           **query_kwargs)
         end = time.time()
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                    time_taken=end - start)
 
     def FillMaskReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
-        response = self.inference_pipeline(request.request)
+        response = self.inference_pipeline(request.request, **query_kwargs)
         end = time.time()
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                    time_taken=end - start)
 
     def TokenClassificationReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
-        response = self.inference_pipeline(request.request)
+        response = self.inference_pipeline(request.request, **query_kwargs)
         end = time.time()
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                    time_taken=end - start)
 
     def ConversationalReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
         conv = Conversation(text=request.text,
                             conversation_id=request.conversation_id,
                             past_user_inputs=request.past_user_inputs,
-                            generated_responses=request.generated_responses)
+                            generated_responses=request.generated_responses,
+                            **query_kwargs)
         self.inference_pipeline(conv)
         end = time.time()
         return modelresponse_pb2.ConversationReply(

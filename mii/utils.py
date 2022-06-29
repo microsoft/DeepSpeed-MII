@@ -5,6 +5,8 @@ import sys
 import os
 import logging
 import importlib
+import mii
+from pathlib import Path
 
 from huggingface_hub import HfApi
 
@@ -89,6 +91,12 @@ def check_if_task_and_model_is_supported(task, model_name):
     assert model_name in supported_models, f"{task} only supports {supported_models}"
 
 
+def check_if_task_and_model_is_valid(task, model_name):
+    task_name = get_task_name(task)
+    valid_task_models = _get_hf_models_by_type(None, task_name)
+    assert model_name in valid_task_models, f"{task_name} only supports {valid_task_models}"
+
+
 def get_model_path():
     aml_model_dir = os.getenv('AZUREML_MODEL_DIR')
     if aml_model_dir is not None:
@@ -109,7 +117,7 @@ def is_aml():
 
 
 def set_model_path(model_path):
-    os.environ['MII_MODEL_DIR'] = model_path
+    os.environ['MII_MODEL_DIR'] = str(Path(model_path).resolve())
 
 
 def mii_cache_path():
@@ -165,6 +173,23 @@ subprocess.run([sys.executable] + install_cmd.split(" "), env=env)
 
 def setup_task():
     return get_model_path(), not is_aml(), is_aml()
+
+
+dtype_proto_field = {
+    str: "svalue",
+    int: "ivalue",
+    float: "fvalue",
+    bool: "bvalue",
+}
+
+
+def kwarg_dict_to_proto(kwarg_dict):
+    def get_proto_value(value):
+        proto_value = mii.modelresponse_pb2.Value()
+        setattr(proto_value, dtype_proto_field[type(value)], value)
+        return proto_value
+
+    return {k: get_proto_value(v) for k, v in kwarg_dict.items()}
 
 
 log_levels = {

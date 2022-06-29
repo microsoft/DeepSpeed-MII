@@ -2,6 +2,7 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import os
+import torch
 
 import mii
 from mii import utils
@@ -23,12 +24,20 @@ else:
 ENV_NAME = "MII-Image"
 
 
-def create_score_file(deployment_name, task, model_name, ds_optimize, mii_configs):
+def create_score_file(deployment_name,
+                      task,
+                      model_name,
+                      ds_optimize,
+                      ds_zero,
+                      ds_config,
+                      mii_configs):
     config_dict = {}
     config_dict[mii.constants.TASK_NAME_KEY] = mii.get_task_name(task)
     config_dict[mii.constants.MODEL_NAME_KEY] = model_name
     config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
     config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs.dict()
+    config_dict[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
+    config_dict[mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
 
     if len(mii.__path__) > 1:
         logger.warning(
@@ -128,6 +137,8 @@ def deploy(task_name,
            aks_deploy_config=None,
            force_register_model=False,
            enable_deepspeed=True,
+           enable_zero=False,
+           ds_config=None,
            mii_configs={}):
     """Deploy a task using specified model. For usage examples see:
 
@@ -182,7 +193,8 @@ def deploy(task_name,
             It is created using `deploy_configuration` method of AKSWebService Class: https://docs.microsoft.com/en-us/python/api/azureml-core/azureml.core.webservice.akswebservice?view=azure-ml-py
 
         enable_deepspeed: Optional: Defaults to True. Use this flag to enable or disable DeepSpeed-Inference optimizations
-
+        enable_zero: Optional: Defaults to False. Use this flag to enable or disable DeepSpeed-ZeRO inference
+        ds_config: Optional: Defaults to None. Use this to specify the DeepSpeed configuration when enabling DeepSpeed-ZeRO inference
         force_register_model: Optional: Defaults to False. For AML deployments, set it to True if you want to re-register your model
             with the same ``aml_model_tags`` using checkpoints from ``local_model_path``.
 
@@ -197,13 +209,27 @@ def deploy(task_name,
     """
     # parse and validate mii config
     mii_configs = mii.config.MIIConfig(**mii_configs)
+    if enable_zero:
+        if ds_config.get("fp16", {}).get("enabled", False):
+            assert (mii_configs.torch_dtype() == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
+        else:
+            assert (mii_configs.torch_dtype() == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
+    assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
     task = mii.get_task(task_name)
-    mii.check_if_task_and_model_is_supported(task, model_name)
+    mii.check_if_task_and_model_is_valid(task, model_name)
+    if enable_deepspeed:
+        mii.check_if_task_and_model_is_supported(task, model_name)
 
     logger.info(f"*************DeepSpeed Optimizations: {enable_deepspeed}*************")
 
-    create_score_file(deployment_name, task, model_name, enable_deepspeed, mii_configs)
+    create_score_file(deployment_name,
+                      task,
+                      model_name,
+                      enable_deepspeed,
+                      enable_zero,
+                      ds_config,
+                      mii_configs)
 
     if deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, local_model_path=local_model_path)
