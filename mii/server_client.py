@@ -70,7 +70,7 @@ class MIIServerClient():
 
         # This is true in two cases
         # i) If its multi-GPU
-        # ii) It its a local deployment without AML
+        # ii) It is a local deployment
         self.use_grpc_server = True if (self.num_gpus > 1) else use_grpc_server
         self.initialize_service = initialize_service
         self.initialize_grpc_client = initialize_grpc_client
