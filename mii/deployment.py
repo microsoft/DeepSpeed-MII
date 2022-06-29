@@ -2,6 +2,7 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import os
+import torch
 
 import mii
 from mii import utils
@@ -12,12 +13,20 @@ import pprint
 import inspect
 
 
-def create_score_file(deployment_name, task, model_name, ds_optimize, mii_configs):
+def create_score_file(deployment_name,
+                      task,
+                      model_name,
+                      ds_optimize,
+                      ds_zero,
+                      ds_config,
+                      mii_configs):
     config_dict = {}
     config_dict[mii.constants.TASK_NAME_KEY] = mii.get_task_name(task)
     config_dict[mii.constants.MODEL_NAME_KEY] = model_name
     config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
     config_dict[mii.constants.MII_CONFIGS_KEY] = mii_configs.dict()
+    config_dict[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
+    config_dict[mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
 
     if len(mii.__path__) > 1:
         logger.warning(
@@ -43,6 +52,8 @@ def deploy(task_name,
            deployment_name,
            local_model_path=None,
            enable_deepspeed=True,
+           enable_zero=False,
+           ds_config=None,
            mii_configs={}):
     """Deploy a task using specified model. For usage examples see:
 
@@ -68,6 +79,11 @@ def deploy(task_name,
 
         enable_deepspeed: Optional: Defaults to True. Use this flag to enable or disable DeepSpeed-Inference optimizations
 
+        enable_zero: Optional: Defaults to False. Use this flag to enable or disable DeepSpeed-ZeRO inference
+        ds_config: Optional: Defaults to None. Use this to specify the DeepSpeed configuration when enabling DeepSpeed-ZeRO inference
+        force_register_model: Optional: Defaults to False. For AML deployments, set it to True if you want to re-register your model
+            with the same ``aml_model_tags`` using checkpoints from ``local_model_path``.
+
         mii_configs: Optional: Dictionary specifying optimization and deployment configurations that should override defaults in ``mii.config.MIIConfig``.
             mii_config is future looking to support extensions in optimization strategies supported by DeepSpeed Inference as we extend mii.
             As of now, it can be used to set tensor-slicing degree using 'tensor_parallel' and port number for deployment using 'port_number'.
@@ -77,13 +93,27 @@ def deploy(task_name,
     """
     # parse and validate mii config
     mii_configs = mii.config.MIIConfig(**mii_configs)
+    if enable_zero:
+        if ds_config.get("fp16", {}).get("enabled", False):
+            assert (mii_configs.torch_dtype() == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
+        else:
+            assert (mii_configs.torch_dtype() == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
+    assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
     task = mii.get_task(task_name)
-    mii.check_if_task_and_model_is_supported(task, model_name)
+    mii.check_if_task_and_model_is_valid(task, model_name)
+    if enable_deepspeed:
+        mii.check_if_task_and_model_is_supported(task, model_name)
 
     logger.info(f"*************DeepSpeed Optimizations: {enable_deepspeed}*************")
 
-    create_score_file(deployment_name, task, model_name, enable_deepspeed, mii_configs)
+    create_score_file(deployment_name,
+                      task,
+                      model_name,
+                      enable_deepspeed,
+                      enable_zero,
+                      ds_config,
+                      mii_configs)
 
     assert deployment_type == DeploymentType.LOCAL, "MII currently supports only local deployment"
     return _deploy_local(deployment_name, local_model_path=local_model_path)
