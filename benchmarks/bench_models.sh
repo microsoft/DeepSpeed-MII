@@ -9,17 +9,17 @@ TOTAL_MODELS=34
 START=0
 END=$(($TOTAL_MODELS-1))
 
-DATA_TYPE="fp32"
+DATA_TYPE="fp16"
 MODEL_FILE="sampled_models_$MODEL_TYPE.json"
 OUTPUT_FILE="output_${MODEL_TYPE}_${DATA_TYPE}.csv"
 
-MODEL_NAME="roberta-large"
-python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE
-pkill -9 python
-python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE --disable_deepspeed --reuse_output
-pkill -9 python
+# MODEL_NAME="roberta-large"
+# python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE
+# pkill -9 python
+# python bench_models.py --model_name $MODEL_NAME --model_file $MODEL_FILE --disable_deepspeed --reuse_output
+# pkill -9 python
 
-exit 0
+# exit 0
 
 for i in $(seq $START $END)
 do

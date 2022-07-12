@@ -200,7 +200,7 @@ if __name__ == "__main__":
             time_takens.append(result.time_taken)
         else:
             generator = mii.mii_query_handle(model.name + "_deployment")
-            result = generator.query({'query': input})
+            result = generator.query({'query': input}, do_sample=True, min_length=25, max_length=25)
             if i < 1: continue  # warmup
             time_takens.append(result.time_taken)
 
