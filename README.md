@@ -9,7 +9,7 @@
  <img src="docs/images/mii-dark.svg#gh-dark-mode-only" width="400px">
 </div>
 
-Model Implementations for Inference (MII) is a new open-source python library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementation of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can deployed on-premise or on Azure through AML with just a few lines of code while achieving a latency and cost reduction of up to Nx
+Model Implementations for Inference (MII) is a new open-source python library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementation of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can deployed on-premise with just a few lines of code while achieving a latency and cost reduction of up to Nx
 
 TODO: add figure showing latency reductions across many models w. MII over baseline
 
@@ -32,25 +32,13 @@ For a full set of models and tasks supported by MII, please see here (TODO: add 
 #### Local deployments
 `pip install .[local]` will install all dependencies required for a local deployment.
 
-#### Azure deployments
-`pip install .[azure]` will install all python-based dependencies required for a local deployment.
-
-Azure local deployments require:
-* nvidia-docker
-
 ### Deploying with MII
 
-MII allows supported models to be deployed with just a few lines of code both on-premise and on Azure.
+MII allows supported models to be deployed with just a few lines of code on-premise
 
 #### On-Premises Deployment
 
 TODO: add example code for local deployment
-
-#### Azure Deployment
-
-Azure-Local Deployment
-
-Azure-on-AKS-Deployment
 
 
 ## Contributing

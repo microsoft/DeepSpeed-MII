@@ -4,9 +4,6 @@ import enum
 #TODO naming..
 class DeploymentType(enum.Enum):
     LOCAL = 1
-    #expose GPUs
-    AML_LOCAL = 2
-    AML_ON_AKS = 3
 
 
 MII_CONFIGS_KEY = 'mii_configs'
@@ -64,6 +61,8 @@ MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
 
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
+ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
+DEEPSPEED_CONFIG_KEY = 'ds_config'
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"

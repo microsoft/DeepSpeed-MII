@@ -17,7 +17,6 @@ install_requires = fetch_requirements('requirements/requirements.txt')
 extras_require = {
     "dev": fetch_requirements('requirements/requirements-dev.txt'),
     "local": fetch_requirements('requirements/requirements-local.txt'),
-    "azure": fetch_requirements('requirements/requirements-azure.txt')
 }
 
 
