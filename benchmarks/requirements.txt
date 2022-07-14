@@ -1,0 +1,5 @@
+dataclasses_json==0.5.7
+huggingface_hub==0.8.1
+marshmallow==3.17.0
+requests==2.26.0
+transformers==4.20.1
