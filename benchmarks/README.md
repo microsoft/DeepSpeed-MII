@@ -14,6 +14,9 @@ See requirements.txt
 
 ### How to run
 
+you need to install `Deepspeed-MII` before using this benchmark code.
+
+
 * Set `MODEL_TYPE` and `TOTAL_MODELS` to what model type and the number of model to evaluate (the total number of models for each type is the last word of MODEL_TYPE), then run
 
 ```
