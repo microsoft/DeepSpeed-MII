@@ -201,7 +201,9 @@ class MIIServerClient():
                 server_args_str += f" --ds-config {ds_config_path}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             logger.info(f"multi-gpu deepspeed launch: {cmd}")
-            process = subprocess.Popen(cmd)
+            mii_env = os.environ.copy()
+            mii_env["TRANSFORMERS_CACHE"] = model_path
+            process = subprocess.Popen(cmd, env=mii_env)
         return process
 
     def _initialize_grpc_client(self):
