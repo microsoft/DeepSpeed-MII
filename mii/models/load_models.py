@@ -47,6 +47,7 @@ class BloomPipeline(object):
 
     def __call__(self, inputs, min_length=20, do_sample=False, **kwargs):
         local_rank = int(os.getenv('LOCAL_RANK', '0'))
+        torch.cuda.set_device(local_rank)
         from deepspeed.inference.engine import InferenceEngine
         if isinstance(self.model, InferenceEngine):
             self.model = self.model.module
@@ -150,7 +151,7 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
         "wall_clock_breakdown": False
     }
     dschf = HfDeepSpeedConfig(ds_config)
-    model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.half)
+    model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
     ds_engine = deepspeed.initialize(model=model, config_params=ds_config)[0]
     ds_engine.module.eval()
@@ -210,6 +211,7 @@ def load_models(task_name,
         raise ValueError(f"Unknown model provider {provider}")
 
     if ds_optimize:
+        '''
         inference_pipeline.model = deepspeed.init_inference(
             inference_pipeline.model,
             mp_size=world_size,
@@ -221,6 +223,13 @@ def load_models(task_name,
             replace_method='auto',
             enable_cuda_graph=mii_config.enable_cuda_graph,
             args=args)
+        '''
+        inference_pipeline.model = deepspeed.init_inference(
+                inference_pipeline.model,
+                mp_size=world_size,
+                dtype=torch.half,
+                checkpoint=checkpoint,
+                replace_with_kernel_inject=True)
     elif ds_zero:
         assert os.path.exists(ds_config_path), '{ds_config_path} does not exist'
         import json
@@ -232,5 +241,4 @@ def load_models(task_name,
                                          config_params=ds_config)[0]
         ds_engine.module.eval()  # inference
         inference_pipeline.model = ds_engine.module
-
     return inference_pipeline
