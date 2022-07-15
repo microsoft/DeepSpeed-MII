@@ -136,47 +136,19 @@ def write_checkponts_json(model_name):
 # TODO: This function is a hack for the Bloom models and will be replaced with a LargeModel provider code path
 def load_hf_llm(model_path, model_name, task_name, mii_config):
     from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
-    from transformers.deepspeed import HfDeepSpeedConfig
     from transformers import pipeline
-    from deepspeed.runtime.zero.partition_parameters import ZeroParamStatus
     import torch.distributed as dist
+    from .ongpu import OnGPU
+
+    deepspeed.init_distributed('nccl')
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     world_size = int(os.getenv('WORLD_SIZE', '1'))
+
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     config = AutoConfig.from_pretrained(model_name)
-    model_hidden_size = config.hidden_size
-    ds_config = {
-        "fp16": {
-            "enabled": True,
-        },
-        "bf16": {
-            "enabled": False,
-        },
-        "zero_optimization": {
-            "stage": 3,
-            "overlap_comm": True,
-            "contiguous_gradients": True,
-            "reduce_bucket_size": model_hidden_size * model_hidden_size,
-            "stage3_prefetch_bucket_size": 0.9 * model_hidden_size * model_hidden_size,
-            "stage3_param_persistence_threshold": 0
-        },
-        "steps_per_print": 2000,
-        "train_batch_size": 1 * world_size,
-        "train_micro_batch_size_per_gpu": 1,
-        "wall_clock_breakdown": False
-    }
-    dschf = HfDeepSpeedConfig(ds_config)
-    model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
+    with OnGPU(dtype=torch.float16, enabled=True):
+        model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
-    ds_engine = deepspeed.initialize(model=model, config_params=ds_config)[0]
-    ds_engine.module.eval()
-    model = ds_engine.module
-    ds_engine.destroy()
-    for p in ds_engine.parameters():
-        if hasattr(p, "ds_tensor"):
-            p.ds_tensor = torch.empty(0, dtype=p.dtype, device=p.device)
-            p.ds_status = ZeroParamStatus.NOT_AVAILABLE
-    del ds_engine
     if local_rank == 0:
         write_checkponts_json(model_name)
     dist.barrier()
@@ -205,15 +177,14 @@ def load_models(task_name,
                                              model_name,
                                              task_name,
                                              mii_config)
-            training_mp_size = world_size
             checkpoint = "checkpoints.json"
         else:
             inference_pipeline = hf_provider(model_path,
                                              model_name,
                                              task_name,
                                              mii_config)
-            training_mp_size = 1
             checkpoint = None
+        training_mp_size = 1
         mpu = None
         args = None
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
