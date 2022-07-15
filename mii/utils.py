@@ -84,7 +84,8 @@ def _get_supported_models_name(task):
         raise ValueError(f"Task {task} not supported")
     if task_name == TEXT_GENERATION_NAME:
         api = HfApi()
-        supported_models.extend([m.modelId for m in api.list_models() if "bigscience/bloom" in m.modelId])
+        supported_models.extend(
+            [m.modelId for m in api.list_models() if "bigscience/bloom" in m.modelId])
 
     return supported_models
 

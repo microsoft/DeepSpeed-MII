@@ -40,6 +40,12 @@ def eleutherai_provider(model_path, model_name, task_name, mii_config):
     return NeoXPipeline(config)
 
 
+'''
+TODO: The following class and functions are non-optimal (i.e., hacky) solutions
+to getting the Bloom models working and will be refactored in a future PR
+'''
+
+
 class BloomPipeline(object):
     def __init__(self, model, tokenizer):
         self.model = model
@@ -51,13 +57,19 @@ class BloomPipeline(object):
         from deepspeed.inference.engine import InferenceEngine
         if isinstance(self.model, InferenceEngine):
             self.model = self.model.module
-        tokens = self.tokenizer.batch_encode_plus([inputs], return_tensors="pt", padding=True)
+        tokens = self.tokenizer.batch_encode_plus([inputs],
+                                                  return_tensors="pt",
+                                                  padding=True)
         for t in tokens:
             if torch.is_tensor(tokens[t]):
                 tokens[t] = tokens[t].to(f'cuda:{local_rank}')
-        greedy_output = self.model.generate(**tokens, min_length=min_length, max_length=min_length, do_sample=do_sample)
+        greedy_output = self.model.generate(**tokens,
+                                            min_length=min_length,
+                                            max_length=min_length,
+                                            do_sample=do_sample)
         outputs = self.tokenizer.batch_decode(greedy_output, skip_special_tokens=True)
         return outputs[0]
+
 
 def get_checkpoint_files(pretrained_model_name_or_path):
     from transformers.utils import WEIGHTS_NAME, WEIGHTS_INDEX_NAME, cached_path, hf_bucket_url, is_offline_mode
@@ -70,10 +82,16 @@ def get_checkpoint_files(pretrained_model_name_or_path):
     local_files_only = False
 
     filename = WEIGHTS_NAME
-    archive_file = hf_bucket_url(pretrained_model_name_or_path, filename=filename, revision=revision)
+    archive_file = hf_bucket_url(pretrained_model_name_or_path,
+                                 filename=filename,
+                                 revision=revision)
 
     try:
-        resolved_archive_file = cached_path(archive_file, cache_dir=cache_dir, local_files_only=local_files_only,)
+        resolved_archive_file = cached_path(
+            archive_file,
+            cache_dir=cache_dir,
+            local_files_only=local_files_only,
+        )
         return [resolved_archive_file]
 
     except (EntryNotFoundError, FileNotFoundError):
@@ -102,6 +120,7 @@ def get_checkpoint_files(pretrained_model_name_or_path):
 
         return resolved_archive_file
 
+
 def write_checkponts_json(model_name):
     import io
     import json
@@ -110,11 +129,7 @@ def write_checkponts_json(model_name):
 
         checkpoint_files = get_checkpoint_files(model_name)
 
-        data = {
-            "type": "BLOOM-176B",
-            "checkpoints": checkpoint_files,
-            "version": 1.0
-        }
+        data = {"type": "BLOOM-176B", "checkpoints": checkpoint_files, "version": 1.0}
         json.dump(data, f)
 
 
@@ -186,13 +201,19 @@ def load_models(task_name,
         if "bigscience/bloom" in model_name:
             assert mii_config.torch_dtype() == torch.half, "Bloom models only support fp16"
             assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
-            inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
+            inference_pipeline = load_hf_llm(model_path,
+                                             model_name,
+                                             task_name,
+                                             mii_config)
             training_mp_size = world_size
             checkpoint = "checkpoints.json"
         else:
-            inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)
+            inference_pipeline = hf_provider(model_path,
+                                             model_name,
+                                             task_name,
+                                             mii_config)
             training_mp_size = 1
-            checkpoint=None
+            checkpoint = None
         mpu = None
         args = None
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
@@ -211,7 +232,6 @@ def load_models(task_name,
         raise ValueError(f"Unknown model provider {provider}")
 
     if ds_optimize:
-        '''
         inference_pipeline.model = deepspeed.init_inference(
             inference_pipeline.model,
             mp_size=world_size,
@@ -223,13 +243,6 @@ def load_models(task_name,
             replace_method='auto',
             enable_cuda_graph=mii_config.enable_cuda_graph,
             args=args)
-        '''
-        inference_pipeline.model = deepspeed.init_inference(
-                inference_pipeline.model,
-                mp_size=world_size,
-                dtype=torch.half,
-                checkpoint=checkpoint,
-                replace_with_kernel_inject=True)
     elif ds_zero:
         assert os.path.exists(ds_config_path), '{ds_config_path} does not exist'
         import json
