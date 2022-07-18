@@ -15,8 +15,7 @@ def fetch_requirements(path):
 install_requires = fetch_requirements('requirements/requirements.txt')
 
 extras_require = {
-    "dev": fetch_requirements('requirements/requirements-dev.txt'),
-    "local": fetch_requirements('requirements/requirements-local.txt'),
+    "dev": fetch_requirements('requirements/requirements-dev.txt')
 }
 
 

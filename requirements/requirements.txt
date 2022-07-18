@@ -4,3 +4,4 @@ grpcio-tools
 pydantic
 torch
 transformers
+deepspeed

@@ -27,14 +27,11 @@ MII supports a growing list of tasks such as text-generation, question-answering
 
 ### Installation
 
-#### Local deployments
-`pip install .[local]` will install all dependencies required for a local deployment.
+`pip install mii` will install all dependencies required for deployment.
 
 ### Deploying with MII
 
-MII allows supported models to be deployed with just a few lines of code on-premise
-
-#### On-Premises Deployment
+MII allows supported models to be deployed with just a few lines of code on-premise.
 
 Several deployment and query examples can be found here: [examples/local](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/local)
 
@@ -49,11 +46,15 @@ mii.deploy(task='text-generation',
            mii_configs=mii_configs)
 ```
 
+This will deploy the model onto a single GPU and start the GRPC server that can later be queried.
+
 **Query**
 ```python
 generator = mii.mii_query_handle("bloom350m_deployment")
 result = generator.query({'query': "DeepSpeed is"}, do_sample=True)
 ```
+
+
 
 
 ## Contributing
