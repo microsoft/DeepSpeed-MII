@@ -138,7 +138,7 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
     from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
     from transformers import pipeline
     import torch.distributed as dist
-    from .ongpu import OnGPU
+    from deepspeed import OnDevice
 
     deepspeed.init_distributed('nccl')
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
@@ -146,7 +146,7 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     config = AutoConfig.from_pretrained(model_name)
-    with OnGPU(dtype=torch.float16, enabled=True):
+    with OnDevice(dtype=torch.float16, enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
     if local_rank == 0:
