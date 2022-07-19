@@ -76,16 +76,14 @@ def _get_supported_models_name(task):
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
             models = _get_hf_models_by_type(model_type, task_name)
+        elif provider == ModelProvider.HUGGING_FACE_LLM:
+            models = _get_hf_models_by_type(model_type, task_name)
         elif provider == ModelProvider.ELEUTHER_AI:
             if task_name == TEXT_GENERATION_NAME:
                 models = [model_type]
         supported_models.extend(models)
     if not supported_models:
         raise ValueError(f"Task {task} not supported")
-    if task_name == TEXT_GENERATION_NAME:
-        api = HfApi()
-        supported_models.extend(
-            [m.modelId for m in api.list_models() if "bigscience/bloom" in m.modelId])
 
     return supported_models
 

@@ -29,14 +29,17 @@ CONVERSATIONAL_NAME = 'conversational'
 class ModelProvider(enum.Enum):
     HUGGING_FACE = 1
     ELEUTHER_AI = 2
+    HUGGING_FACE_LLM = 3
 
 
 MODEL_PROVIDER_NAME_HF = "hugging-face"
 MODEL_PROVIDER_NAME_EA = "eleuther-ai"
+MODEL_PROVIDER_NAME_HF_LLM = "hugging-face-llm"
 
 MODEL_PROVIDER_MAP = {
     MODEL_PROVIDER_NAME_HF: ModelProvider.HUGGING_FACE,
-    MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI
+    MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI,
+    MODEL_PROVIDER_NAME_HF_LLM: ModelProvider.HUGGING_FACE_LLM,
 }
 
 SUPPORTED_MODEL_TYPES = {
@@ -46,6 +49,7 @@ SUPPORTED_MODEL_TYPES = {
     'gpt_neo': ModelProvider.HUGGING_FACE,
     'gptj': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
+    'bloom': ModelProvider.HUGGING_FACE_LLM,
 }
 
 SUPPORTED_TASKS = [

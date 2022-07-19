@@ -169,24 +169,12 @@ def load_models(task_name,
 
     #TODO: pass in mii_config to fetch dtype, training_mp_size, and other params
 
+    checkpoint = None
+    mpu = None
+    args = None
+    training_mp_size = 1
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
-        if "bigscience/bloom" in model_name:
-            assert mii_config.torch_dtype() == torch.half, "Bloom models only support fp16"
-            assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
-            inference_pipeline = load_hf_llm(model_path,
-                                             model_name,
-                                             task_name,
-                                             mii_config)
-            checkpoint = "checkpoints.json"
-        else:
-            inference_pipeline = hf_provider(model_path,
-                                             model_name,
-                                             task_name,
-                                             mii_config)
-            checkpoint = None
-        training_mp_size = 1
-        mpu = None
-        args = None
+        inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         assert mii_config.torch_dtype() == torch.half, "gpt-neox only support fp16"
         assert mii_config.enable_cuda_graph == False, "Provider EleutherAI not supported with Cuda Graphs"
@@ -198,7 +186,11 @@ def load_models(task_name,
                                                  mii_config)
         training_mp_size = 2
         args = inference_pipeline.neox_args
-        checkpoint = None
+    elif provider == mii.constants.ModelProvider.HUGGING_FACE_LLM:
+        assert mii_config.torch_dtype() == torch.half, "Bloom models only support fp16"
+        assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
+        inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
+        checkpoint = "checkpoints.json"
     else:
         raise ValueError(f"Unknown model provider {provider}")
 
