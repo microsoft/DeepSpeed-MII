@@ -6,9 +6,9 @@ import mii
 
 
 def validate_config(config):
-    if (config.model_name in ['bert-base-uncased']) and (config.mii_configs['dtype']
-                                                         == 'fp16'):
-        pytest.skip(f"Model f{config.model_name} not supported for FP16")
+    if (config.model in ['bert-base-uncased']) and (config.mii_config['dtype']
+                                                    == 'fp16'):
+        pytest.skip(f"Model f{config.model} not supported for FP16")
 
 
 ''' These fixtures provide default values for the deployment config '''
@@ -63,12 +63,12 @@ def deployment_config(task_name: str,
                       enable_deepspeed: bool,
                       enable_zero: bool,
                       ds_config: dict):
-    config = SimpleNamespace(task_name=task_name,
-                             model_name=model_name,
+    config = SimpleNamespace(task=task_name,
+                             model=model_name,
                              deployment_type=mii.DeploymentType.LOCAL,
                              deployment_name=model_name + "_deployment",
                              local_model_path=".cache/models/" + model_name,
-                             mii_configs=mii_configs,
+                             mii_config=mii_configs,
                              enable_deepspeed=enable_deepspeed,
                              enable_zero=enable_zero,
                              ds_config=ds_config)

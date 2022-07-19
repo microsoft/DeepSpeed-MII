@@ -9,36 +9,57 @@
  <img src="docs/images/mii-dark.svg#gh-dark-mode-only" width="400px">
 </div>
 
-Model Implementations for Inference (MII) is a new open-source python library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementation of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can deployed on-premise with just a few lines of code while achieving a latency and cost reduction of up to Nx
-
-TODO: add figure showing latency reductions across many models w. MII over baseline
+Model Implementations for Inference (MII) is library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementations of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can be deployed on-premise with just a few lines of code.
 
 ## How does MII work?
 
-Under-the-hood MII is powered by DeepSpeed-Inference. Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize thoughput. It does so using one of many pre-specified model injection policies, that allows DeepSpeed-Inference to identify the underlying pytorch model architecture and replace it with an optimized implementation. This injection can replace a single GPU module with multi-GPU variations enabling models to run on single GPU device, or seamlessly scale to tens of GPUs for dense models and hundreds of GPUs for sparse models for lower latency and higher throughput.
+Under-the-hood MII is powered by DeepSpeed-Inference. Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize thoughput. It does so using one of many pre-specified model injection policies, that allows DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation. This injection can replace a single GPU module with multi-GPU variations enabling models to run on single GPU device, or seamlessly scale to tens of GPUs for dense models and hundreds of GPUs for sparse models for lower latency and higher throughput.
 
-MII makes the expansive set of optimizations in DeepSpeed-Inference easily accessible to its users by automatically integrating them to thousands of popular transformer models. For a full set of optimizations in DeepSpeed-Inference please see here (TODO: cite ds-inference paper or blog)
+MII makes the expansive set of optimizations in DeepSpeed-Inference easily accessible to its users by automatically integrating them to thousands of popular transformer models. For a full set of optimizations in DeepSpeed-Inference please see our paper: [DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale](https://arxiv.org/abs/2207.00032]).
 
 ## Supported Models and Tasks
 
 MII supports a growing list of tasks such as text-generation, question-answering, text-classification, etc, across thousands of transformer models available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. It supports dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
 
-For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)
+<!--For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)-->
 
 ## Getting Started with MII
 
 ### Installation
 
-#### Local deployments
-`pip install .[local]` will install all dependencies required for a local deployment.
+`pip install mii` will install all dependencies required for deployment.
 
 ### Deploying with MII
 
-MII allows supported models to be deployed with just a few lines of code on-premise
+MII allows supported models to be deployed with just a few lines of code on-premise.
 
-#### On-Premises Deployment
+Several deployment and query examples can be found here: [examples/local](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/local)
 
-TODO: add example code for local deployment
+As an example here is a deployment of the [bigscience/bloom-350m](https://huggingface.co/bigscience/bloom-350m) model from Hugging Face:
+
+**Deployment**
+```python
+mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
+mii.deploy(task='text-generation',
+           model="bigscience/bloom-350m",
+           deployment_name="bloom350m_deployment",
+           mii_configs=mii_configs)
+```
+
+This will deploy the model onto a single GPU and start the GRPC server that can later be queried.
+
+**Query**
+```python
+generator = mii.mii_query_handle("bloom350m_deployment")
+result = generator.query({'query': "DeepSpeed is"}, do_sample=True)
+print(result)
+```
+
+## Supported Models
+MII model support will continue to grow over time. Currently we support the following Hugging Face Transformers model families:
+
+* [gpt2](https://huggingface.co/models?other=gpt2)
+* ..
 
 
 ## Contributing
