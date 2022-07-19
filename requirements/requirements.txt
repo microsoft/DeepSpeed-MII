@@ -1,7 +1,7 @@
 asyncio
+deepspeed
 grpcio
 grpcio-tools
 pydantic
 torch
 transformers
-deepspeed
