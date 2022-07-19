@@ -42,10 +42,10 @@ As an example here is a deployment of the [bigscience/bloom-350m](https://huggin
 **Deployment**
 ```python
 mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
-mii.deploy(task='text-generation',
+mii.deploy(task="text-generation",
            model="bigscience/bloom-350m",
            deployment_name="bloom350m_deployment",
-           mii_configs=mii_configs)
+           mii_config=mii_configs)
 ```
 
 This will deploy the model onto a single GPU and start the GRPC server that can later be queried.
@@ -53,8 +53,13 @@ This will deploy the model onto a single GPU and start the GRPC server that can 
 **Query**
 ```python
 generator = mii.mii_query_handle("bloom350m_deployment")
-result = generator.query({'query': "DeepSpeed is"}, do_sample=True)
+result = generator.query({"query": "DeepSpeed is"}, do_sample=True)
 print(result)
+```
+
+**Shutdown Deployment**
+```python
+mii.terminate("bloom350m_deployment")
 ```
 
 ## Supported Models
@@ -67,7 +72,6 @@ MII model support will continue to grow over time, check back for updates! Curre
 * [roberta](https://huggingface.co/models?other=roberta)
 * [bert](https://huggingface.co/models?other=bert)
 <!-- * [gpt_neox](https://huggingface.co/models?other=gpt_neox) -->
-
 
 ## Contributing
 

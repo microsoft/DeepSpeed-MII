@@ -87,11 +87,11 @@ def local_deployment(deployment_config, expected_failure):
         with pytest.raises(expected_failure) as excinfo:
             mii.deploy(**deployment_config.__dict__)
         yield excinfo
-        mii.terminate_local_server(deployment_config.deployment_name)
+        mii.terminate(deployment_config.deployment_name)
     else:
         mii.deploy(**deployment_config.__dict__)
         yield deployment_config
-        mii.terminate_local_server(deployment_config.deployment_name)
+        mii.terminate(deployment_config.deployment_name)
 
 
 ''' Unit tests '''

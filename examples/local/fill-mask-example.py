@@ -7,9 +7,4 @@ name = "bert-base-uncased"
 
 print(f"Deploying {name}...")
 
-mii.deploy('fill-mask',
-           name,
-           mii.DeploymentType.LOCAL,
-           deployment_name=name + "_deployment",
-           local_model_path=".cache/models/" + name,
-           enable_deepspeed=True)
+mii.deploy(task='fill-mask', model=name, deployment_name=name + "_deployment")

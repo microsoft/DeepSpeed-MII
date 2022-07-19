@@ -4,7 +4,7 @@ import psutil
 import mii
 
 
-def terminate_local_server(deployment_name):
+def terminate(deployment_name):
     mii.utils.logger.info(f"Terminating server for {deployment_name}")
     generator = mii.mii_query_handle(deployment_name)
     try:

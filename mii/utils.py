@@ -77,6 +77,8 @@ def _get_supported_models_name(task):
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
             models = _get_hf_models_by_type(model_type, task_name)
+        elif provider == ModelProvider.HUGGING_FACE_LLM:
+            models = _get_hf_models_by_type(model_type, task_name)
         elif provider == ModelProvider.ELEUTHER_AI:
             if task_name == TEXT_GENERATION_NAME:
                 models = [model_type]

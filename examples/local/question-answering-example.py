@@ -1,22 +1,9 @@
 import mii
 
-mii_configs = {'tensor_parallel': 1, 'port_number': 50050}
+mii_config = {'tensor_parallel': 1, 'port_number': 50050}
 
 name = "deepset/roberta-large-squad2"
-mii.deploy("question-answering",
-           name,
-           mii.DeploymentType.LOCAL,
+mii.deploy(task="question-answering",
+           model=name,
            deployment_name=name + "-qa-deployment",
-           local_model_path=".cache/models/" + name,
-           mii_configs=mii_configs,
-           enable_deepspeed=True)
-
-mii_configs['port_number'] = 50051
-
-mii.deploy("question-answering",
-           name,
-           mii.DeploymentType.LOCAL,
-           deployment_name=name + "-qa-deployment2",
-           local_model_path=".cache/models/" + name,
-           mii_configs=mii_configs,
-           enable_deepspeed=False)
+           mii_config=mii_config)
