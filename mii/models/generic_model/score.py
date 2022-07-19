@@ -22,6 +22,7 @@ def init():
     assert model_name is not None, "The model name should be set before calling init"
     assert task is not None, "The task name should be set before calling init"
 
+    global model
     model = mii.MIIServerClient(task,
                                 model_name,
                                 model_path,
@@ -40,7 +41,7 @@ def run(request):
 
     response = model.query(request_dict)
     end = time.time()
-    response += f"\n Query Run Time: {end-start} secs"
+    print(f"\n Query Run Time: {end-start} secs")
     return response
 
 

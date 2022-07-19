@@ -145,12 +145,13 @@ class MIIServerClient():
                             mii_configs):
         process = None
         if not self.use_grpc_server:
-            self.model = mii.load_models(mii.get_task_name(self.task),
-                                         model_name,
-                                         model_path,
-                                         ds_optimize,
-                                         ds_zero,
-                                         ds_config)
+            self.model = mii.load_models(task_name=mii.get_task_name(self.task),
+                                         model_name=model_name,
+                                         model_path=model_path,
+                                         ds_optimize=ds_optimize,
+                                         ds_zero=ds_zero,
+                                         ds_config_path=ds_config,
+                                         mii_config=mii_configs)
         else:
             if self._is_socket_open(self.port_number):
                 raise RuntimeError(

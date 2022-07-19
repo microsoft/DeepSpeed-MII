@@ -117,8 +117,12 @@ def deploy(task,
                       ds_config,
                       mii_config)
 
-    assert deployment_type == DeploymentType.LOCAL, "MII currently supports only local deployment"
-    return _deploy_local(deployment_name, local_model_path=local_model_path)
+    if deployment_type == DeploymentType.AML:
+        print(f"Score file created at {utils.generated_score_path(deployment_name)}")
+    elif deployment_type == DeploymentType.LOCAL:
+        return _deploy_local(deployment_name, local_model_path=local_model_path)
+    else:
+        raise Exception(f"Unknown deployment type: {deployment_type}")
 
 
 def _deploy_local(deployment_name, local_model_path=None):

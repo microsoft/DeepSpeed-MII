@@ -101,12 +101,20 @@ def check_if_task_and_model_is_valid(task, model_name):
 
 
 def get_model_path():
+    aml_model_dir = os.getenv('AZUREML_MODEL_DIR')
+    if aml_model_dir is not None:
+        return aml_model_dir
+
     mii_model_dir = os.getenv('MII_MODEL_DIR')
 
     if mii_model_dir is not None:
         return mii_model_dir
 
     assert False, "MII_MODEL_DIR must be set. Current value is None"
+
+
+def is_aml():
+    return os.getenv('AZUREML_MODEL_DIR') is not None
 
 
 def set_model_path(model_path):
@@ -168,7 +176,9 @@ subprocess.run([sys.executable] + install_cmd.split(" "), env=env)
 
 
 def setup_task():
-    return get_model_path(), True, False
+    # The second value returned here is hard-coded for now as we want to always
+    # run grpc server on AML, originally was "not is_aml()"
+    return get_model_path(), True, is_aml()
 
 
 dtype_proto_field = {

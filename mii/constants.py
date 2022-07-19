@@ -4,6 +4,7 @@ import enum
 #TODO naming..
 class DeploymentType(enum.Enum):
     LOCAL = 1
+    AML = 2
 
 
 MII_CONFIGS_KEY = 'mii_configs'
