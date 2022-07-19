@@ -29,7 +29,7 @@ MII supports a growing list of tasks such as text-generation, question-answering
 
 ### Installation
 
-`pip install mii` will install all dependencies required for deployment.
+`pip install .` will install all dependencies required for deployment. A PyPI release of MII is coming soon.
 
 ### Deploying with MII
 
