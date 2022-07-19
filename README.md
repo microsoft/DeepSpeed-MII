@@ -63,9 +63,13 @@ mii.terminate("bloom350m_deployment")
 ## Supported Models
 MII model support will continue to grow over time. Currently we support the following Hugging Face Transformers model families:
 
+* [roberta](https://huggingface.co/models?other=roberta)
 * [gpt2](https://huggingface.co/models?other=gpt2)
-* ..
-
+* [bert](https://huggingface.co/models?other=bert)
+* [gpt_neo](https://huggingface.co/models?other=gpt_neo)
+* [gptj](https://huggingface.co/models?other=gptj)
+* [gpt-neox](https://huggingface.co/models?other=gpt-neox)
+* [bloom](https://huggingface.co/models?other=bloom)
 
 ## Contributing
 
