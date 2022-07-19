@@ -173,6 +173,8 @@ class MIIServerClient():
             #XXX: fetch model provider based on model name in a more general way
             if model_name == "gpt-neox":
                 provider = mii.constants.MODEL_PROVIDER_NAME_EA
+            elif "bigscience/bloom" in model_name:
+                provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
             else:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF
             server_args_str += f" --provider {provider}"
