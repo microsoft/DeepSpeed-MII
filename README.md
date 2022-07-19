@@ -55,7 +55,11 @@ result = generator.query({'query': "DeepSpeed is"}, do_sample=True)
 print(result)
 ```
 
+## Supported Models
+MII model support will continue to grow over time. Currently we support the following Hugging Face Transformers model families:
 
+* [gpt2](https://huggingface.co/models?other=gpt2)
+* ..
 
 
 ## Contributing
