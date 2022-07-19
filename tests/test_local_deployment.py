@@ -6,9 +6,9 @@ import mii
 
 
 def validate_config(config):
-    if (config.model_name in ['bert-base-uncased']) and (config.mii_configs['dtype']
-                                                         == 'fp16'):
-        pytest.skip(f"Model f{config.model_name} not supported for FP16")
+    if (config.model in ['bert-base-uncased']) and (config.mii_config['dtype']
+                                                    == 'fp16'):
+        pytest.skip(f"Model f{config.model} not supported for FP16")
 
 
 ''' These fixtures provide default values for the deployment config '''
