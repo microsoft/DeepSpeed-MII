@@ -56,10 +56,15 @@ print(result)
 ```
 
 ## Supported Models
-MII model support will continue to grow over time. Currently we support the following Hugging Face Transformers model families:
+MII model support will continue to grow over time, check back for updates! Currently we support the following Hugging Face Transformers model families:
 
+* [bloom](https://huggingface.co/models?other=bloom)
+* [gpt_neo](https://huggingface.co/models?other=gpt_neo)
+* [gptj](https://huggingface.co/models?other=gptj)
 * [gpt2](https://huggingface.co/models?other=gpt2)
-* ..
+* [roberta](https://huggingface.co/models?other=roberta)
+* [bert](https://huggingface.co/models?other=bert)
+<!-- * [gpt_neox](https://huggingface.co/models?other=gpt_neox) -->
 
 
 ## Contributing
