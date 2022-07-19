@@ -110,7 +110,7 @@ def get_model_path():
 def set_model_path(model_path):
     if model_path is None:
         model_path = MII_MODEL_PATH_DEFAULT
-        os.makedirs(model_path, exist_ok=True)
+    os.makedirs(model_path, exist_ok=True)
     os.environ['MII_MODEL_DIR'] = str(Path(model_path).resolve())
 
 
