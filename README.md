@@ -11,6 +11,8 @@
 
 Model Implementations for Inference (MII) is library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementations of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can be deployed on-premise with just a few lines of code.
 
+**Note: MII is currently in a pre-release phase, this repo will be actively updated over the next several weeks with additional features, performance breakdowns, comparisons to other frameworks, etc.**
+
 ## How does MII work?
 
 Under-the-hood MII is powered by DeepSpeed-Inference. Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize thoughput. It does so using one of many pre-specified model injection policies, that allows DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation. This injection can replace a single GPU module with multi-GPU variations enabling models to run on single GPU device, or seamlessly scale to tens of GPUs for dense models and hundreds of GPUs for sparse models for lower latency and higher throughput.
