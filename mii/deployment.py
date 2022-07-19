@@ -46,33 +46,33 @@ def create_score_file(deployment_name,
         fd.write("\n")
 
 
-def deploy(task_name,
-           model_name,
-           deployment_type,
+def deploy(task,
+           model,
            deployment_name,
+           deployment_type=DeploymentType.LOCAL,
            local_model_path=None,
            enable_deepspeed=True,
            enable_zero=False,
            ds_config=None,
-           mii_configs={}):
+           mii_config={}):
     """Deploy a task using specified model. For usage examples see:
 
         mii/examples/local/text-generation-example.py
 
 
     Arguments:
-        task_name: Name of the machine learning task to be deployed.Currently MII supports the following list of tasks
+        task: Name of the machine learning task to be deployed.Currently MII supports the following list of tasks
             ``['text-generation', 'question-answering']``
 
-        model_name: Name of a supported model for the task. Models in MII are sourced from multiple open-source projects
+        model: Name of a supported model for the task. Models in MII are sourced from multiple open-source projects
             such as Huggingface Transformer, FairSeq, EluetherAI etc. For the list of supported models for each task, please
             see here [TODO].
+
+        deployment_name: Name of the deployment. Used as an identifier for posting queries for ``LOCAL`` deployment.
 
         deployment_type: One of the ``enum mii.DeploymentTypes: [LOCAL]``.
             *``LOCAL`` uses a grpc server to create a local deployment, and query the model must be done by creating a query handle using
               `mii.mii_query_handle` and posting queries using ``mii_request_handle.query`` API,
-
-        deployment_name: Name of the deployment. Used as an identifier for posting queries for ``LOCAL`` deployment.
 
         local_model_path: Optional: Local folder where the model checkpoints are available.
             This should be provided if you want to use your own checkpoint instead of the default open-source checkpoints for the supported models for `LOCAL` deployment.
@@ -80,11 +80,13 @@ def deploy(task_name,
         enable_deepspeed: Optional: Defaults to True. Use this flag to enable or disable DeepSpeed-Inference optimizations
 
         enable_zero: Optional: Defaults to False. Use this flag to enable or disable DeepSpeed-ZeRO inference
+
         ds_config: Optional: Defaults to None. Use this to specify the DeepSpeed configuration when enabling DeepSpeed-ZeRO inference
+
         force_register_model: Optional: Defaults to False. For AML deployments, set it to True if you want to re-register your model
             with the same ``aml_model_tags`` using checkpoints from ``local_model_path``.
 
-        mii_configs: Optional: Dictionary specifying optimization and deployment configurations that should override defaults in ``mii.config.MIIConfig``.
+        mii_config: Optional: Dictionary specifying optimization and deployment configurations that should override defaults in ``mii.config.MIIConfig``.
             mii_config is future looking to support extensions in optimization strategies supported by DeepSpeed Inference as we extend mii.
             As of now, it can be used to set tensor-slicing degree using 'tensor_parallel' and port number for deployment using 'port_number'.
     Returns:
@@ -92,28 +94,28 @@ def deploy(task_name,
 
     """
     # parse and validate mii config
-    mii_configs = mii.config.MIIConfig(**mii_configs)
+    mii_config = mii.config.MIIConfig(**mii_config)
     if enable_zero:
         if ds_config.get("fp16", {}).get("enabled", False):
-            assert (mii_configs.torch_dtype() == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
+            assert (mii_config.torch_dtype() == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
         else:
-            assert (mii_configs.torch_dtype() == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
+            assert (mii_config.torch_dtype() == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
     assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
-    task = mii.get_task(task_name)
-    mii.check_if_task_and_model_is_valid(task, model_name)
+    task = mii.get_task(task)
+    mii.check_if_task_and_model_is_valid(task, model)
     if enable_deepspeed:
-        mii.check_if_task_and_model_is_supported(task, model_name)
+        mii.check_if_task_and_model_is_supported(task, model)
 
     logger.info(f"*************DeepSpeed Optimizations: {enable_deepspeed}*************")
 
     create_score_file(deployment_name,
                       task,
-                      model_name,
+                      model,
                       enable_deepspeed,
                       enable_zero,
                       ds_config,
-                      mii_configs)
+                      mii_config)
 
     assert deployment_type == DeploymentType.LOCAL, "MII currently supports only local deployment"
     return _deploy_local(deployment_name, local_model_path=local_model_path)

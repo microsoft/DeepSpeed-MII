@@ -1,4 +1,5 @@
 asyncio
+deepspeed
 grpcio
 grpcio-tools
 pydantic

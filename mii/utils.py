@@ -12,7 +12,8 @@ from huggingface_hub import HfApi
 
 from mii.constants import CONVERSATIONAL_NAME, FILL_MASK_NAME, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
     MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
-    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TOKEN_CLASSIFICATION_NAME, SUPPORTED_MODEL_TYPES, ModelProvider
+    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TOKEN_CLASSIFICATION_NAME, SUPPORTED_MODEL_TYPES, \
+    ModelProvider, MII_MODEL_PATH_DEFAULT
 
 from mii.constants import Tasks
 
@@ -107,6 +108,9 @@ def get_model_path():
 
 
 def set_model_path(model_path):
+    if model_path is None:
+        model_path = MII_MODEL_PATH_DEFAULT
+    os.makedirs(model_path, exist_ok=True)
     os.environ['MII_MODEL_DIR'] = str(Path(model_path).resolve())
 
 
