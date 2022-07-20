@@ -9,6 +9,8 @@ def validate_config(config):
     if (config.model in ['bert-base-uncased']) and (config.mii_config['dtype']
                                                     == 'fp16'):
         pytest.skip(f"Model f{config.model} not supported for FP16")
+    elif config.mii_config['dtype'] == "fp32" and "bloom" in config.model:
+        pytest.skip('bloom does not support fp32')
 
 
 ''' These fixtures provide default values for the deployment config '''
@@ -131,7 +133,15 @@ def local_deployment(deployment_config, expected_failure):
             "text-generation",
             "distilgpt2",
             {
-                "query": "DeepSpeed is the greatest"
+                "query": ["DeepSpeed is the greatest"]
+            },
+        ),
+        (
+            "text-generation",
+            "bigscience/bloom-350m",
+            {
+                "query": ["DeepSpeed is the greatest",
+                          'Seattle is']
             },
         ),
         ("token-classification",

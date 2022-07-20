@@ -71,7 +71,13 @@ class BloomPipeline(object):
                                             max_length=min_length,
                                             do_sample=do_sample)
         outputs = self.tokenizer.batch_decode(greedy_output, skip_special_tokens=True)
-        return outputs
+
+        # construct output to align w. HF pipeline
+        output_dicts = []
+        for output in outputs:
+            output_dicts.append([{'generated_text': output}])
+
+        return output_dicts
 
 
 def get_checkpoint_files(pretrained_model_name_or_path):

@@ -16,8 +16,8 @@ class ModelResponseStub(object):
         """
         self.GeneratorReply = channel.unary_unary(
             '/modelresponse.ModelResponse/GeneratorReply',
-            request_serializer=modelresponse__pb2.SingleStringRequest.SerializeToString,
-            response_deserializer=modelresponse__pb2.SingleStringReply.FromString,
+            request_serializer=modelresponse__pb2.MultiStringRequest.SerializeToString,
+            response_deserializer=modelresponse__pb2.MultiStringReply.FromString,
         )
         self.ClassificationReply = channel.unary_unary(
             '/modelresponse.ModelResponse/ClassificationReply',
@@ -92,8 +92,8 @@ def add_ModelResponseServicer_to_server(servicer, server):
         'GeneratorReply':
         grpc.unary_unary_rpc_method_handler(
             servicer.GeneratorReply,
-            request_deserializer=modelresponse__pb2.SingleStringRequest.FromString,
-            response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
+            request_deserializer=modelresponse__pb2.MultiStringRequest.FromString,
+            response_serializer=modelresponse__pb2.MultiStringReply.SerializeToString,
         ),
         'ClassificationReply':
         grpc.unary_unary_rpc_method_handler(
@@ -150,8 +150,8 @@ class ModelResponse(object):
             request,
             target,
             '/modelresponse.ModelResponse/GeneratorReply',
-            modelresponse__pb2.SingleStringRequest.SerializeToString,
-            modelresponse__pb2.SingleStringReply.FromString,
+            modelresponse__pb2.MultiStringRequest.SerializeToString,
+            modelresponse__pb2.MultiStringReply.FromString,
             options,
             channel_credentials,
             insecure,

@@ -24,7 +24,7 @@ package modelresponse;
 // The greeting service definition.
 service ModelResponse {
   // Sends a greeting
-  rpc GeneratorReply (SingleStringRequest) returns (SingleStringReply) {}
+  rpc GeneratorReply (MultiStringRequest) returns (MultiStringReply) {}
   rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
   rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
   rpc FillMaskReply(SingleStringRequest) returns (SingleStringReply) {}
@@ -42,11 +42,21 @@ message Value {
 }
 
 message SingleStringRequest {
+  string request = 1;
+  map<string,Value> query_kwargs = 2;
+}
+
+message MultiStringRequest {
   repeated string request = 1;
   map<string,Value> query_kwargs = 2;
 }
 
 message SingleStringReply {
+  string response = 1;
+  float time_taken = 2;
+}
+
+message MultiStringReply {
   repeated string response = 1;
   float time_taken = 2;
 }

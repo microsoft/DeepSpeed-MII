@@ -29,10 +29,22 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
     def GeneratorReply(self, request, context):
         query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
-        response = self.inference_pipeline(request.request, **query_kwargs)
+
+        # unpack grpc list into py-list
+        request = [r for r in request.request]
+
+        batched_responses = self.inference_pipeline(request, **query_kwargs)
         end = time.time()
-        return modelresponse_pb2.SingleStringReply(response=response,
-                                                   time_taken=end - start)
+
+        # response is a list
+        text_responses = []
+        for response in batched_responses:
+            text = response[0]['generated_text']
+            text_responses.append(text)
+
+        val = modelresponse_pb2.MultiStringReply(response=text_responses,
+                                                 time_taken=end - start)
+        return val
 
     def ClassificationReply(self, request, context):
         query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
