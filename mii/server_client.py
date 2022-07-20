@@ -240,8 +240,6 @@ class MIIServerClient():
             req = mii.modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
                                                            query_kwargs=proto_kwargs)
             response = await self.stubs[stub_id].GeneratorReply(req)
-            #    mii.modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
-            #                                              query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
             response = await self.stubs[stub_id].ClassificationReply(
