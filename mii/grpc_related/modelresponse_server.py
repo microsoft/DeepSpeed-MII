@@ -31,8 +31,6 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         start = time.time()
         response = self.inference_pipeline(request.request, **query_kwargs)
         end = time.time()
-        #if not isinstance(response, list):
-        #    response = [response]
         return modelresponse_pb2.SingleStringReply(response=response,
                                                    time_taken=end - start)
 
