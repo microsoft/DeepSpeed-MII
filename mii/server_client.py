@@ -234,6 +234,11 @@ class MIIServerClient():
     async def _request_async_response(self, stub_id, request_dict, query_kwargs):
         proto_kwargs = kwarg_dict_to_proto(query_kwargs)
         if self.task == mii.Tasks.TEXT_GENERATION:
+            # convert to batch of queries if they are not already
+            #if not isinstance(request_dict['query'], list):
+            #    request_dict['query'] = [request_dict['query']]
+            if not isinstance(request_dict['query'], list):
+                request_dict['query'] = [request_dict['query']]
             response = await self.stubs[stub_id].GeneratorReply(
                 mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
                                                           query_kwargs=proto_kwargs))
@@ -275,6 +280,9 @@ class MIIServerClient():
     def _request_response(self, request_dict, query_kwargs):
         start = time.time()
         if self.task == mii.Tasks.TEXT_GENERATION:
+            raise ValueError(f"request_dict={request_dict}")
+            if not isinstance(request_dict['query'], list):
+                request_dict['query'] = [request_dict['query']]
             response = self.model(request_dict['query'], **query_kwargs)
 
         elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
