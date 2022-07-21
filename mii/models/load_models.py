@@ -57,7 +57,10 @@ class BloomPipeline(object):
         from deepspeed.inference.engine import InferenceEngine
         if isinstance(self.model, InferenceEngine):
             self.model = self.model.module
-        tokens = self.tokenizer.batch_encode_plus([inputs],
+
+        # expand proto list into py-list
+        inputs = [i for i in inputs]
+        tokens = self.tokenizer.batch_encode_plus(inputs,
                                                   return_tensors="pt",
                                                   padding=True)
         for t in tokens:
@@ -68,7 +71,13 @@ class BloomPipeline(object):
                                             max_length=min_length,
                                             do_sample=do_sample)
         outputs = self.tokenizer.batch_decode(greedy_output, skip_special_tokens=True)
-        return outputs[0]
+
+        # construct output to align w. HF pipeline
+        output_dicts = []
+        for output in outputs:
+            output_dicts.append([{'generated_text': output}])
+
+        return output_dicts
 
 
 def get_checkpoint_files(pretrained_model_name_or_path):
