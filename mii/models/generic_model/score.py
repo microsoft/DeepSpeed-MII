@@ -10,10 +10,6 @@ model = None
 
 
 def init():
-
-    #TODO set the parallelism degree somehow. On the azure kubernetes server we can set the gpu core
-    #but how do we do this in local deployment?
-    #os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
     model_path, use_grpc_server, initialize_grpc_client = mii.setup_task()
 
     model_name = configs[mii.constants.MODEL_NAME_KEY]
@@ -34,14 +30,17 @@ def init():
 
 
 def run(request):
-    start = time.time()
     global model
     request_dict = json.loads(request)
 
-    response = model.query(request_dict)
-    end = time.time()
-    response += f"\n Query Run Time: {end-start} secs"
-    return response
+    query_dict = request_dict.pop('query', None)
+    if query_dict is None:
+        return "Missing 'query' key in request"
 
+    response = model.query(query_dict, **request_dict)
+
+    if not isinstance(response.response, str):
+        response = [r for r in response.response]
+    return json.dumps({'responses': response})
 
 ### Auto-generated config will be appended below at run-time
