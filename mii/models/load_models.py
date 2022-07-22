@@ -51,7 +51,7 @@ class BloomPipeline(object):
         self.model = model
         self.tokenizer = tokenizer
 
-    def __call__(self, inputs, min_length=20, do_sample=False, **kwargs):
+    def __call__(self, inputs, **kwargs):
         local_rank = int(os.getenv('LOCAL_RANK', '0'))
         torch.cuda.set_device(local_rank)
         from deepspeed.inference.engine import InferenceEngine
@@ -67,9 +67,7 @@ class BloomPipeline(object):
             if torch.is_tensor(tokens[t]):
                 tokens[t] = tokens[t].to(f'cuda:{local_rank}')
         greedy_output = self.model.generate(**tokens,
-                                            min_length=min_length,
-                                            max_length=min_length,
-                                            do_sample=do_sample)
+                                            **kwargs)
         outputs = self.tokenizer.batch_decode(greedy_output, skip_special_tokens=True)
 
         # construct output to align w. HF pipeline

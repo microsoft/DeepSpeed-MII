@@ -6,5 +6,5 @@ name = "bigscience/bloom"
 mii.deploy(task='text-generation',
            model=name,
            deployment_name=name + "_deployment",
-           local_model_path="/tmp/huggingface/transformers/",
+           local_model_path="/data/bloom",
            mii_config=mii_configs)
