@@ -53,7 +53,7 @@ This will deploy the model onto a single GPU and start the GRPC server that can 
 **Query**
 ```python
 generator = mii.mii_query_handle("bloom350m_deployment")
-result = generator.query({"query": "DeepSpeed is", "do_sample": True})
+result = generator.query({"query": "DeepSpeed is", "do_sample": True, "max_new_tokens": 30})
 print(result)
 ```
 
