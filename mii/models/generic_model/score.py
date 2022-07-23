@@ -43,4 +43,5 @@ def run(request):
         response = [r for r in response.response]
     return json.dumps({'responses': response})
 
+
 ### Auto-generated config will be appended below at run-time

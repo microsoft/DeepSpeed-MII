@@ -66,8 +66,7 @@ class BloomPipeline(object):
         for t in tokens:
             if torch.is_tensor(tokens[t]):
                 tokens[t] = tokens[t].to(f'cuda:{local_rank}')
-        greedy_output = self.model.generate(**tokens,
-                                            **kwargs)
+        greedy_output = self.model.generate(**tokens, **kwargs)
         outputs = self.tokenizer.batch_decode(greedy_output, skip_special_tokens=True)
 
         # construct output to align w. HF pipeline
