@@ -155,7 +155,7 @@ class MIIServerClient():
         else:
             if self._is_socket_open(self.port_number):
                 raise RuntimeError(
-                    f"Server is already running on port {self.port_number}, please shutdown to use different port."
+                    f"Server is already running on port {self.port_number}, please shutdown or use different port."
                 )
 
             # serialize mii config
