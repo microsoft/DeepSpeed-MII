@@ -53,9 +53,11 @@ This will deploy the model onto a single GPU and start the GRPC server that can 
 **Query**
 ```python
 generator = mii.mii_query_handle("bloom350m_deployment")
-result = generator.query({"query": "DeepSpeed is"}, do_sample=True)
+result = generator.query({"query": "DeepSpeed is", "do_sample": True, "max_new_tokens": 30})
 print(result)
 ```
+
+The only required key is `"query"`, all other items will be passed to `generate` as kwargs. For Hugging Face provided models you can find all possible arguments in their [documentation for generate](https://huggingface.co/docs/transformers/v4.20.1/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate).
 
 **Shutdown Deployment**
 ```python
