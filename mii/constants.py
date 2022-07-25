@@ -62,6 +62,20 @@ SUPPORTED_TASKS = [
     CONVERSATIONAL_NAME
 ]
 
+REQUIRED_KEYS_PER_TASK = {
+    TEXT_GENERATION_NAME: ["query"],
+    TEXT_CLASSIFICATION_NAME: ["query"],
+    QUESTION_ANSWERING_NAME: ["context",
+                              "question"],
+    FILL_MASK_NAME: ["query"],
+    TOKEN_CLASSIFICATION_NAME: ["query"],
+    CONVERSATIONAL_NAME:
+    ['text',
+     'conversation_id',
+     'past_user_inputs',
+     'generated_responses']
+}
+
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
 

@@ -34,14 +34,14 @@ def run(request):
     global model
     request_dict = json.loads(request)
 
-    query_dict = request_dict.pop('query', None)
-    if query_dict is None:
-        return "Missing 'query' key in request"
+    query_dict = mii.extract_query_dict(configs[mii.constants.TASK_NAME_KEY],
+                                        request_dict)
 
     response = model.query(query_dict, **request_dict)
 
     if not isinstance(response.response, str):
         response = [r for r in response.response]
     return json.dumps({'responses': response})
+
 
 ### Auto-generated config will be appended below at run-time

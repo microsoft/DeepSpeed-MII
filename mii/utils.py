@@ -13,7 +13,7 @@ from huggingface_hub import HfApi
 from mii.constants import CONVERSATIONAL_NAME, FILL_MASK_NAME, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
     MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
     TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TOKEN_CLASSIFICATION_NAME, SUPPORTED_MODEL_TYPES, \
-    ModelProvider, MII_MODEL_PATH_DEFAULT
+    ModelProvider, MII_MODEL_PATH_DEFAULT, REQUIRED_KEYS_PER_TASK
 
 from mii.constants import Tasks
 
@@ -196,6 +196,17 @@ def kwarg_dict_to_proto(kwarg_dict):
         return proto_value
 
     return {k: get_proto_value(v) for k, v in kwarg_dict.items()}
+
+
+def extract_query_dict(task, request_dict):
+    required_keys = REQUIRED_KEYS_PER_TASK[task]
+    query_dict = {}
+    for key in required_keys:
+        value = request_dict.pop(key, None)
+        if value is None:
+            raise ValueError("Request for task: {task} is missing required key: {key}.")
+        query_dict[key] = value
+    return query_dict
 
 
 log_levels = {
