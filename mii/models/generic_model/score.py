@@ -12,6 +12,12 @@ model = None
 def init():
     model_path, use_grpc_server, initialize_grpc_client = mii.setup_task()
 
+    aml_model_path = configs[mii.constants.MII_CONFIGS_KEY].get(
+        mii.constants.AML_MODEL_PATH_KEY,
+        None)
+    if aml_model_path:
+        model_path = os.path.join(model_path, aml_model_path)
+
     model_name = configs[mii.constants.MODEL_NAME_KEY]
     task = configs[mii.constants.TASK_NAME_KEY]
 
