@@ -127,14 +127,17 @@ def get_checkpoint_files(pretrained_model_name_or_path):
         return resolved_archive_file
 
 
+def _bloom_ckpt_json():
+    mii_cache = mii.mii_cache_path()
+    return os.path.join(mii_cache, "bloom-checkpoints.json")
+
+
 def write_checkponts_json(model_name):
     import io
     import json
-    checkpoints_json = "checkpoints.json"
+    checkpoints_json = _bloom_ckpt_json()
     with io.open(checkpoints_json, 'w', encoding='utf-8') as f:
-
         checkpoint_files = get_checkpoint_files(model_name)
-
         data = {"type": "BLOOM-176B", "checkpoints": checkpoint_files, "version": 1.0}
         json.dump(data, f)
 
@@ -196,7 +199,7 @@ def load_models(task_name,
         assert mii_config.torch_dtype() == torch.half, "Bloom models only support fp16"
         assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
         inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
-        checkpoint = "checkpoints.json"
+        checkpoint = _bloom_ckpt_json()
     else:
         raise ValueError(f"Unknown model provider {provider}")
 
