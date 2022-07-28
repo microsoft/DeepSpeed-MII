@@ -3,7 +3,6 @@ Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import os
 import mii
-from pathlib import Path
 import torch
 import deepspeed
 from deepspeed.runtime.config import DeepSpeedConfig

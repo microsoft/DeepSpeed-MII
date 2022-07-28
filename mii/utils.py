@@ -1,19 +1,27 @@
-'''
+"""
 Copyright 2022 The Microsoft DeepSpeed Team
-'''
+"""
 import sys
 import os
 import logging
 import importlib
 import mii
-from pathlib import Path
 
 from huggingface_hub import HfApi
 
-from mii.constants import CONVERSATIONAL_NAME, FILL_MASK_NAME, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT, MII_DEBUG_MODE, \
-    MII_DEBUG_MODE_DEFAULT, MII_DEBUG_DEPLOY_KEY, MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT, \
-    TEXT_GENERATION_NAME, TEXT_CLASSIFICATION_NAME, QUESTION_ANSWERING_NAME, TOKEN_CLASSIFICATION_NAME, SUPPORTED_MODEL_TYPES, \
-    ModelProvider, MII_MODEL_PATH_DEFAULT, REQUIRED_KEYS_PER_TASK
+from mii.constants import (
+    CONVERSATIONAL_NAME,
+    FILL_MASK_NAME,
+    MII_CACHE_PATH,
+    MII_CACHE_PATH_DEFAULT,
+    TEXT_GENERATION_NAME,
+    TEXT_CLASSIFICATION_NAME,
+    QUESTION_ANSWERING_NAME,
+    TOKEN_CLASSIFICATION_NAME,
+    SUPPORTED_MODEL_TYPES,
+    ModelProvider,
+    REQUIRED_KEYS_PER_TASK,
+)
 
 from mii.constants import Tasks
 
@@ -65,11 +73,11 @@ def get_task(task_name):
 def _get_hf_models_by_type(model_type, task=None):
     api = HfApi()
     models = api.list_models(filter=model_type)
-    return [m.modelId for m in models
-            ] if task is None else [m.modelId for m in models if m.pipeline_tag == task]
+    return ([m.modelId for m in models]
+            if task is None else [m.modelId for m in models if m.pipeline_tag == task])
 
 
-#TODO read this from a file containing list of files supported for each task
+# TODO read this from a file containing list of files supported for each task
 def _get_supported_models_name(task):
     supported_models = []
     task_name = get_task_name(task)
@@ -97,7 +105,9 @@ def check_if_task_and_model_is_supported(task, model_name):
 def check_if_task_and_model_is_valid(task, model_name):
     task_name = get_task_name(task)
     valid_task_models = _get_hf_models_by_type(None, task_name)
-    assert model_name in valid_task_models, f"{task_name} only supports {valid_task_models}"
+    assert (
+        model_name in valid_task_models
+    ), f"{task_name} only supports {valid_task_models}"
 
 
 def full_model_path(model_path):
@@ -120,7 +130,7 @@ def full_model_path(model_path):
 
 
 def is_aml():
-    return os.getenv('AZUREML_MODEL_DIR') is not None
+    return os.getenv("AZUREML_MODEL_DIR") is not None
 
 
 def set_model_path(model_path):
@@ -136,7 +146,7 @@ def mii_cache_path():
 
 def import_score_file(deployment_name):
     spec = importlib.util.spec_from_file_location(
-        'score',
+        "score",
         os.path.join(mii_cache_path(),
                      deployment_name,
                      "score.py"))

@@ -1,14 +1,11 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
-import os
 import torch
 
 import mii
-from mii import utils
 from mii.constants import DeploymentType, MII_MODEL_PATH_DEFAULT
-from mii.utils import logger, log_levels
-from mii.models.utils import download_model_and_get_path
+from mii.utils import logger
 
 
 def deploy(task,
