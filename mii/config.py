@@ -24,6 +24,10 @@ class MIIConfig(BaseModel):
                 raise ValueError(
                     "please unset 'base_dir' it will be set w.r.t. the deployment 'model_path'"
                 )
+            for k in ['checkpoints', 'parallelization', 'version', 'type']:
+                if value.get(k, ''):
+                    raise ValueError(f"Missing key={k} in checkpoint_dict")
+
         return value
 
     @staticmethod

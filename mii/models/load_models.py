@@ -23,7 +23,6 @@ def load_models(task_name,
     #TODO: pass in mii_config to fetch dtype, training_mp_size, and other params
 
     checkpoint = None
-    checkpoint_path = None
     mpu = None
     args = None
     training_mp_size = 1
