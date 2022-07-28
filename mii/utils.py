@@ -100,17 +100,17 @@ def check_if_task_and_model_is_valid(task, model_name):
     assert model_name in valid_task_models, f"{task_name} only supports {valid_task_models}"
 
 
-def get_model_path():
+def aml_model_path(model_path):
     aml_model_dir = os.getenv('AZUREML_MODEL_DIR')
-    if aml_model_dir is not None:
+
+    # AML local deployments this will be None
+    if aml_model_dir is None and model_path is None:
+        return mii.constants.MII_MODEL_PATH_DEFAULT
+
+    if model_path:
+        return os.path.join(aml_model_dir, model_path)
+    else:
         return aml_model_dir
-
-    mii_model_dir = os.getenv('MII_MODEL_DIR')
-
-    if mii_model_dir is not None:
-        return mii_model_dir
-
-    assert False, "MII_MODEL_DIR must be set. Current value is None"
 
 
 def is_aml():
@@ -118,10 +118,7 @@ def is_aml():
 
 
 def set_model_path(model_path):
-    if model_path is None:
-        model_path = MII_MODEL_PATH_DEFAULT
     os.makedirs(model_path, exist_ok=True)
-    os.environ['MII_MODEL_DIR'] = str(Path(model_path).resolve())
 
 
 def mii_cache_path():
@@ -142,45 +139,6 @@ def import_score_file(deployment_name):
     return score
 
 
-def generated_score_path(deployment_name):
-    score_path = os.path.join(mii_cache_path(), deployment_name)
-    if not os.path.isdir(score_path):
-        os.makedirs(score_path)
-    return os.path.join(score_path, "score.py")
-
-
-def debug_score_preamble():
-    preamble = ""
-    debug_mode_enabled = int(os.environ.get(MII_DEBUG_MODE, MII_DEBUG_MODE_DEFAULT))
-    if not debug_mode_enabled:
-        return preamble
-
-    deploy_key = os.environ.get(MII_DEBUG_DEPLOY_KEY)
-    debug_branch = os.environ.get(MII_DEBUG_BRANCH, MII_DEBUG_BRANCH_DEFAULT)
-    key_path = "/tmp/mii_deploy_key"
-
-    preamble = f"""
-import subprocess, os, sys
-deploy_key = '''{deploy_key}'''
-with open('{key_path}', 'w') as fd:
-    fd.write(deploy_key)
-    fd.write("\\n")
-subprocess.run(['chmod', '600', '{key_path}'])
-env = os.environ.copy()
-env["GIT_SSH_COMMAND"]="ssh -i {key_path} -o StrictHostKeyChecking=no"
-install_cmd = "-m pip install git+ssh://git@github.com/microsoft/DeepSpeed-MII.git@{debug_branch}"
-subprocess.run([sys.executable] + install_cmd.split(" "), env=env)
-
-"""
-    return preamble
-
-
-def setup_task():
-    # The second value returned here is hard-coded for now as we want to always
-    # run grpc server on AML, originally was "not is_aml()"
-    return get_model_path(), True, is_aml()
-
-
 dtype_proto_field = {
     str: "svalue",
     int: "ivalue",
@@ -191,7 +149,7 @@ dtype_proto_field = {
 
 def kwarg_dict_to_proto(kwarg_dict):
     def get_proto_value(value):
-        proto_value = mii.modelresponse_pb2.Value()
+        proto_value = mii.grpc_related.proto.modelresponse_pb2.Value()
         setattr(proto_value, dtype_proto_field[type(value)], value)
         return proto_value
 

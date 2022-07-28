@@ -78,7 +78,7 @@ REQUIRED_KEYS_PER_TASK = {
 
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
-AML_MODEL_PATH_KEY = 'aml_model_path'
+MODEL_PATH_KEY = 'model_path'
 
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'

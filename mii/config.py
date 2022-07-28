@@ -8,9 +8,6 @@ class MIIConfig(BaseModel):
     dtype: str = "float"
     enable_cuda_graph: bool = False
 
-    # Relative model path, at deployment is appended to AZUREML_MODEL_DIR
-    aml_model_path: str = ""
-
     @validator('dtype')
     def dtype_valid(cls, value):
         # parse dtype value to determine torch dtype

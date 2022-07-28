@@ -10,13 +10,15 @@ model = None
 
 
 def init():
-    model_path, use_grpc_server, initialize_grpc_client = mii.setup_task()
+    # In AML deployments both the GRPC client and server are used in the same process
+    initialize_grpc_client = mii.utils.is_aml()
 
-    aml_model_path = configs[mii.constants.MII_CONFIGS_KEY].get(
-        mii.constants.AML_MODEL_PATH_KEY,
-        None)
-    if aml_model_path:
-        model_path = os.path.join(model_path, aml_model_path)
+    # XXX: Always run grpc server, originally was "not is_aml()"
+    use_grpc_server = True
+
+    model_path = configs[mii.constants.MODEL_PATH_KEY]
+    if mii.utils.is_aml():
+        model_path = mii.utils.aml_model_path(model_path=model_path)
 
     model_name = configs[mii.constants.MODEL_NAME_KEY]
     task = configs[mii.constants.TASK_NAME_KEY]
@@ -40,8 +42,8 @@ def run(request):
     global model
     request_dict = json.loads(request)
 
-    query_dict = mii.extract_query_dict(configs[mii.constants.TASK_NAME_KEY],
-                                        request_dict)
+    query_dict = mii.utils.extract_query_dict(configs[mii.constants.TASK_NAME_KEY],
+                                              request_dict)
 
     response = model.query(query_dict, **request_dict)
 
