@@ -64,7 +64,7 @@ def load_models(task_name,
             args=args)
     elif ds_zero:
         ds_config = DeepSpeedConfig(ds_config_path)
-        assert config.zero_optimization_stage == ZeroStageEnum.weights, "DeepSpeed ZeRO inference is only supported for ZeRO-3"
+        assert ds_config.zero_optimization_stage == ZeroStageEnum.weights, "DeepSpeed ZeRO inference is only supported for ZeRO-3"
 
         # initialise Deepspeed ZeRO and store only the engine object
         ds_engine = deepspeed.initialize(model=inference_pipeline.model,

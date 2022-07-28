@@ -1,6 +1,5 @@
 import os
 import mii
-import copy
 import torch
 import deepspeed
 from deepspeed.inference.engine import InferenceEngine
