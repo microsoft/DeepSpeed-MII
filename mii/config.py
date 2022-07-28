@@ -1,5 +1,5 @@
 import torch
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, validator
 
 
 class MIIConfig(BaseModel):

@@ -1,3 +1,4 @@
+# flake8: noqa
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
