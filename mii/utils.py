@@ -121,12 +121,10 @@ def full_model_path(model_path):
             return os.path.join(aml_model_dir, model_path)
         else:
             return aml_model_dir
+    elif model_path:
+        return model_path
     else:
-        # no aml path is set
-        if model_path:
-            return model_path
-        else:
-            return mii.constants.MII_MODEL_PATH_DEFAULT
+        return mii.constants.MII_MODEL_PATH_DEFAULT
 
 
 def is_aml():
