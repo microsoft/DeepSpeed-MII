@@ -8,8 +8,6 @@ repos:
     rev: v4.0.1
     hooks:
     -   id: check-case-conflict
-    -   id: check-json
-    -   id: check-symlinks
     -   id: check-yaml
     -   id: destroyed-symlinks
     -   id: end-of-file-fixer

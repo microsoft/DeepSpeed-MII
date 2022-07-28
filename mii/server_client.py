@@ -2,7 +2,6 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import asyncio
-from readline import write_history_file
 import torch
 import sys
 import subprocess
@@ -13,7 +12,6 @@ import json
 from pathlib import Path
 import mii
 import base64
-import json
 from mii.utils import logger, kwarg_dict_to_proto
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 
@@ -300,7 +298,7 @@ class MIIServerClient():
             response = self.model(["", request_dict['query']], **query_kwargs)
 
         else:
-            raise NotSupportedError(f"task is not supported: {self.task}")
+            raise NotImplementedError(f"task is not supported: {self.task}")
         end = time.time()
         return f"{response}" + f"\n Model Execution Time: {end-start} seconds"
 

@@ -1,5 +1,4 @@
 import pytest
-import functools
 from types import SimpleNamespace
 
 import mii
