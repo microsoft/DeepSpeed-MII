@@ -17,9 +17,7 @@ def init():
     # XXX: Always run grpc server, originally was "not is_aml()"
     use_grpc_server = True
 
-    model_path = configs[mii.constants.MODEL_PATH_KEY]
-    if mii.utils.is_aml():
-        model_path = mii.utils.aml_model_path(model_path=model_path)
+    model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
 
     model_name = configs[mii.constants.MODEL_NAME_KEY]
     task = configs[mii.constants.TASK_NAME_KEY]

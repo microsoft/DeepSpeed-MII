@@ -7,12 +7,24 @@ class MIIConfig(BaseModel):
     port_number: int = 50050
     dtype: str = "float"
     enable_cuda_graph: bool = False
+    checkpoint_dict: dict = None
 
     @validator('dtype')
     def dtype_valid(cls, value):
         # parse dtype value to determine torch dtype
         MIIConfig._torch_dtype(value)
         return value.lower()
+
+    @validator('checkpoint_dict')
+    def checkpoint_dict_valid(cls, value):
+        if not (isinstance(value, dict) or value is None):
+            raise ValueError(f"checkpoint_dict should be dict or None")
+        if isinstance(value, dict):
+            if value.get('base_dir', ''):
+                raise ValueError(
+                    "please unset 'base_dir' it will be set w.r.t. the deployment 'model_path'"
+                )
+        return value
 
     @staticmethod
     def _torch_dtype(value):

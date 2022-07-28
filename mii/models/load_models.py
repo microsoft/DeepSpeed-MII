@@ -6,14 +6,8 @@ import mii
 from pathlib import Path
 import torch
 import deepspeed
-from deepspeed.runtime.zero.constants import *
-
-
-def check_zero_ds_config(config):
-    config_zero = config.get(ZERO_OPTIMIZATION, {})
-    stage = config_zero.get(ZERO_OPTIMIZATION_STAGE, None)
-    if stage != ZERO_OPTIMIZATION_WEIGHTS:
-        assert False, "DeepSpeed ZeRO inference is only supported for ZeRO 3 optimization stage"
+from deepspeed.runtime.config import DeepSpeedConfig
+from deepspeed.runtime.zero.config import ZeroStageEnum
 
 
 def load_models(task_name,
@@ -49,11 +43,11 @@ def load_models(task_name,
         training_mp_size = 2
         args = inference_pipeline.neox_args
     elif provider == mii.constants.ModelProvider.HUGGING_FACE_LLM:
-        from mii.models.providers.llm import load_hf_llm, _bloom_ckpt_json
+        from mii.models.providers.llm import load_hf_llm
         assert mii_config.torch_dtype() == torch.half, "Bloom models only support fp16"
         assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
         inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
-        checkpoint = _bloom_ckpt_json()
+        checkpoint = inference_pipeline.checkpoint_dict
     else:
         raise ValueError(f"Unknown model provider {provider}")
 
@@ -70,10 +64,8 @@ def load_models(task_name,
             enable_cuda_graph=mii_config.enable_cuda_graph,
             args=args)
     elif ds_zero:
-        assert os.path.exists(ds_config_path), '{ds_config_path} does not exist'
-        import json
-        ds_config = json.load(open(ds_config_path, "r"))
-        check_zero_ds_config(ds_config)
+        ds_config = DeepSpeedConfig(ds_config_path)
+        assert config.zero_optimization_stage == ZeroStageEnum.weights, "DeepSpeed ZeRO inference is only supported for ZeRO-3"
 
         # initialise Deepspeed ZeRO and store only the engine object
         ds_engine = deepspeed.initialize(model=inference_pipeline.model,

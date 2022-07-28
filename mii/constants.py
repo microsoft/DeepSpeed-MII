@@ -83,6 +83,7 @@ MODEL_PATH_KEY = 'model_path'
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'
+CHECKPOINT_KEY = "checkpoint"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"

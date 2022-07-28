@@ -1,5 +1,6 @@
 import os
 import mii
+import copy
 import torch
 import deepspeed
 from deepspeed.inference.engine import InferenceEngine
@@ -16,9 +17,10 @@ to getting the Bloom models working and will be refactored in a future PR
 
 
 class BloomPipeline(object):
-    def __init__(self, model, tokenizer):
+    def __init__(self, model, tokenizer, checkpoint_dict):
         self.model = model
         self.tokenizer = tokenizer
+        self.checkpoint_dict = checkpoint_dict
 
     def __call__(self, inputs, **kwargs):
         local_rank = int(os.getenv('LOCAL_RANK', '0'))
@@ -91,24 +93,16 @@ def get_checkpoint_files(pretrained_model_name_or_path):
         return resolved_archive_file
 
 
-def _bloom_ckpt_json():
-    mii_cache = mii.utils.mii_cache_path()
-    return os.path.join(mii_cache, "bloom-checkpoints.json")
-
-
-def write_checkponts_json(model_name):
-    import io
-    import json
-    checkpoints_json = _bloom_ckpt_json()
-    with io.open(checkpoints_json, 'w', encoding='utf-8') as f:
+def create_checkpoint_dict(model_name, model_path, mii_config):
+    if mii_config.checkpoint_dict:
+        base_dir = mii.utils.full_model_path(model_path)
+        mii_config.checkpoint_dict['base_dir'] = base_dir
+        return mii_config.checkpoint_dict
+    else:
+        raise ValueError
         checkpoint_files = get_checkpoint_files(model_name)
-        #checkpoint_files = ['/data/bloom-mp/bloom-mp_04.pt', '/data/bloom-mp/bloom-mp_02.pt', '/data/bloom-mp/bloom-mp_07.pt', '/data/bloom-mp/bloom-mp_05.pt', '/data/bloom-mp/bloom-mp_00.pt', '/data/bloom-mp/bloom-mp_01.pt', '/data/bloom-mp/bloom-mp_03.pt', '/data/bloom-mp/bloom-mp_06.pt']
-        data = {
-            "type": "BLOOM-176B",
-            "checkpoints": checkpoint_files,
-            "version": 1.0
-        }  #, "parallelization": "tp"}
-        json.dump(data, f)
+        data = {"type": "BLOOM", "checkpoints": checkpoint_files, "version": 1.0}
+        return data
 
 
 # TODO: This function is a hack for the Bloom models and will be replaced with a LargeModel provider code path
@@ -122,8 +116,9 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
     with OnDevice(dtype=torch.float16, enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
-    if local_rank == 0:
-        write_checkponts_json(model_name)
+    checkpoint_dict = create_checkpoint_dict(model_name, model_path, mii_config)
     torch.distributed.barrier()
-    inference_pipeline = BloomPipeline(model=model, tokenizer=tokenizer)
+    inference_pipeline = BloomPipeline(model=model,
+                                       tokenizer=tokenizer,
+                                       checkpoint_dict=checkpoint_dict)
     return inference_pipeline
