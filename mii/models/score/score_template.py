@@ -1,3 +1,4 @@
+# flake8: noqa
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
@@ -10,7 +11,13 @@ model = None
 
 
 def init():
-    model_path, use_grpc_server, initialize_grpc_client = mii.setup_task()
+    # In AML deployments both the GRPC client and server are used in the same process
+    initialize_grpc_client = mii.utils.is_aml()
+
+    # XXX: Always run grpc server, originally was "not is_aml()"
+    use_grpc_server = True
+
+    model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
 
     model_name = configs[mii.constants.MODEL_NAME_KEY]
     task = configs[mii.constants.TASK_NAME_KEY]
@@ -34,14 +41,14 @@ def run(request):
     global model
     request_dict = json.loads(request)
 
-    query_dict = request_dict.pop('query', None)
-    if query_dict is None:
-        return "Missing 'query' key in request"
+    query_dict = mii.utils.extract_query_dict(configs[mii.constants.TASK_NAME_KEY],
+                                              request_dict)
 
     response = model.query(query_dict, **request_dict)
 
     if not isinstance(response.response, str):
         response = [r for r in response.response]
     return json.dumps({'responses': response})
+
 
 ### Auto-generated config will be appended below at run-time

@@ -1,5 +1,4 @@
 import pytest
-import functools
 from types import SimpleNamespace
 
 import mii
@@ -69,7 +68,7 @@ def deployment_config(task_name: str,
                              model=model_name,
                              deployment_type=mii.DeploymentType.LOCAL,
                              deployment_name=model_name + "_deployment",
-                             local_model_path=".cache/models/" + model_name,
+                             model_path=".cache/models/" + model_name,
                              mii_config=mii_configs,
                              enable_deepspeed=enable_deepspeed,
                              enable_zero=enable_zero,
