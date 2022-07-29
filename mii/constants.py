@@ -4,6 +4,7 @@ import enum
 #TODO naming..
 class DeploymentType(enum.Enum):
     LOCAL = 1
+    AML = 2
 
 
 MII_CONFIGS_KEY = 'mii_configs'
@@ -61,12 +62,28 @@ SUPPORTED_TASKS = [
     CONVERSATIONAL_NAME
 ]
 
+REQUIRED_KEYS_PER_TASK = {
+    TEXT_GENERATION_NAME: ["query"],
+    TEXT_CLASSIFICATION_NAME: ["query"],
+    QUESTION_ANSWERING_NAME: ["context",
+                              "question"],
+    FILL_MASK_NAME: ["query"],
+    TOKEN_CLASSIFICATION_NAME: ["query"],
+    CONVERSATIONAL_NAME:
+    ['text',
+     'conversation_id',
+     'past_user_inputs',
+     'generated_responses']
+}
+
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
+MODEL_PATH_KEY = 'model_path'
 
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'
+CHECKPOINT_KEY = "checkpoint"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"
