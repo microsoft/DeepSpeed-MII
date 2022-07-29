@@ -1,5 +1,4 @@
 import os
-import mii
 import torch
 import deepspeed
 from deepspeed.inference.engine import InferenceEngine
@@ -94,8 +93,7 @@ def get_checkpoint_files(pretrained_model_name_or_path):
 
 def create_checkpoint_dict(model_name, model_path, mii_config):
     if mii_config.checkpoint_dict:
-        base_dir = mii.utils.full_model_path(model_path)
-        mii_config.checkpoint_dict['base_dir'] = base_dir
+        mii_config.checkpoint_dict['base_dir'] = model_path
         return mii_config.checkpoint_dict
     else:
         raise ValueError

@@ -13,7 +13,6 @@ mii_configs = {
     }
 }
 name = "bigscience/bloom"
-#name = "bigscience/bloom-1b3"
 
 mii.deploy(task='text-generation',
            model=name,

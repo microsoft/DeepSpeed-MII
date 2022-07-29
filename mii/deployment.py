@@ -4,8 +4,10 @@ Copyright 2022 The Microsoft DeepSpeed Team
 import torch
 
 import mii
-from mii.constants import DeploymentType, MII_MODEL_PATH_DEFAULT
-from mii.utils import logger
+
+from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT
+from .utils import logger
+from .models.score import create_score_file, generated_score_path
 
 
 def deploy(task,
@@ -77,19 +79,17 @@ def deploy(task,
     elif model_path is None and deployment_type == DeploymentType.AML:
         model_path = None
 
-    mii.models.score.create_score_file(deployment_name=deployment_name,
-                                       task=task,
-                                       model_name=model,
-                                       ds_optimize=enable_deepspeed,
-                                       ds_zero=enable_zero,
-                                       ds_config=ds_config,
-                                       mii_config=mii_config,
-                                       model_path=model_path)
+    create_score_file(deployment_name=deployment_name,
+                      task=task,
+                      model_name=model,
+                      ds_optimize=enable_deepspeed,
+                      ds_zero=enable_zero,
+                      ds_config=ds_config,
+                      mii_config=mii_config,
+                      model_path=model_path)
 
     if deployment_type == DeploymentType.AML:
-        print(
-            f"Score file created at {mii.models.score.generated_score_path(deployment_name)}"
-        )
+        print(f"Score file created at {generated_score_path(deployment_name)}")
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     else:

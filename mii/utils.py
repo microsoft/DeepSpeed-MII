@@ -112,7 +112,6 @@ def check_if_task_and_model_is_valid(task, model_name):
 
 def full_model_path(model_path):
     aml_model_dir = os.environ.get('AZUREML_MODEL_DIR', None)
-
     if aml_model_dir:
         # (potentially) append relative model_path w. aml path
         assert os.path.isabs(aml_model_dir), f"AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path"
