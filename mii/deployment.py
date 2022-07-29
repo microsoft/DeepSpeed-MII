@@ -74,6 +74,8 @@ def deploy(task,
     # In local deployments use default path if no model path set
     if model_path is None and deployment_type == DeploymentType.LOCAL:
         model_path = MII_MODEL_PATH_DEFAULT
+    elif model_path is None and deployment_type == DeploymentType.AML:
+        model_path = None
 
     mii.models.score.create_score_file(deployment_name=deployment_name,
                                        task=task,
@@ -95,5 +97,4 @@ def deploy(task,
 
 
 def _deploy_local(deployment_name, model_path):
-    mii.utils.set_model_path(model_path)
     mii.utils.import_score_file(deployment_name).init()

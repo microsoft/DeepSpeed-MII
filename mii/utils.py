@@ -131,10 +131,6 @@ def is_aml():
     return os.getenv("AZUREML_MODEL_DIR") is not None
 
 
-def set_model_path(model_path):
-    os.makedirs(model_path, exist_ok=True)
-
-
 def mii_cache_path():
     cache_path = os.environ.get(MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT)
     if not os.path.isdir(cache_path):
