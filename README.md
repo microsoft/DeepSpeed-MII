@@ -28,8 +28,8 @@ MII model support will continue to grow over time, check back for updates! Curre
 model family | size range | ~model count
 ------ | ------ | ------
 [bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 40
-[gpt_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 240
 [gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 80
+[gpt_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 240
 [gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 6,500
 [roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 3,200
 [bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 10,000
