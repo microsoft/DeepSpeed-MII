@@ -96,7 +96,6 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
         mii_config.checkpoint_dict['base_dir'] = model_path
         return mii_config.checkpoint_dict
     else:
-        raise ValueError
         checkpoint_files = get_checkpoint_files(model_name)
         data = {"type": "BLOOM", "checkpoints": checkpoint_files, "version": 1.0}
         return data
