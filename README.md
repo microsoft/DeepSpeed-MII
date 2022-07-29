@@ -21,7 +21,20 @@ MII makes the expansive set of optimizations in DeepSpeed-Inference easily acces
 
 ## Supported Models and Tasks
 
-MII supports a growing list of tasks such as text-generation, question-answering, text-classification, etc, across thousands of transformer models available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. It supports dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
+MII supports a growing list of tasks such as text-generation, question-answering, text-classification, across thousands of transformer models available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. It supports dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
+
+MII model support will continue to grow over time, check back for updates! Currently we support the following Hugging Face Transformers model families:
+
+model family | size range | ~model count
+------ | ------ | ------
+[bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 40
+[gpt_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 240
+[gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 80
+[gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 6,500
+[roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 3,200
+[bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 10,000
+
+<!-- * [gpt_neox](https://huggingface.co/models?other=gpt_neox) -->
 
 <!--For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)-->
 
@@ -63,17 +76,6 @@ The only required key is `"query"`, all other items outside the dictionary will 
 ```python
 mii.terminate("bloom350m_deployment")
 ```
-
-## Supported Models
-MII model support will continue to grow over time, check back for updates! Currently we support the following Hugging Face Transformers model families:
-
-* [bloom](https://huggingface.co/models?other=bloom)
-* [gpt_neo](https://huggingface.co/models?other=gpt_neo)
-* [gptj](https://huggingface.co/models?other=gptj)
-* [gpt2](https://huggingface.co/models?other=gpt2)
-* [roberta](https://huggingface.co/models?other=roberta)
-* [bert](https://huggingface.co/models?other=bert)
-<!-- * [gpt_neox](https://huggingface.co/models?other=gpt_neox) -->
 
 ## Contributing
 
