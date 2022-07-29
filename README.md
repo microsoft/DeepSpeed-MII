@@ -21,7 +21,7 @@ MII makes the expansive set of optimizations in DeepSpeed-Inference easily acces
 
 ## Supported Models and Tasks
 
-MII supports a growing list of tasks such as text-generation, question-answering, text-classification, across thousands of transformer models available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. It supports dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
+MII currently supports over 20,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
 
 MII model support will continue to grow over time, check back for updates! Currently we support the following Hugging Face Transformers model families:
 
