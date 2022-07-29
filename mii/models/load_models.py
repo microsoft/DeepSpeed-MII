@@ -3,6 +3,7 @@ Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import os
 import mii
+import json
 import torch
 import deepspeed
 from deepspeed.runtime.config import DeepSpeedConfig
@@ -63,11 +64,13 @@ def load_models(task_name,
             args=args)
     elif ds_zero:
         ds_config = DeepSpeedConfig(ds_config_path)
+        #TODO: don't read ds-config from disk, we should pass this around as a dict instead
+        ds_config_dict = json.load(open(ds_config_path, 'r'))
         assert ds_config.zero_optimization_stage == ZeroStageEnum.weights, "DeepSpeed ZeRO inference is only supported for ZeRO-3"
 
         # initialise Deepspeed ZeRO and store only the engine object
         ds_engine = deepspeed.initialize(model=inference_pipeline.model,
-                                         config_params=ds_config)[0]
+                                         config_params=ds_config_dict)[0]
         ds_engine.module.eval()  # inference
         inference_pipeline.model = ds_engine.module
     return inference_pipeline
