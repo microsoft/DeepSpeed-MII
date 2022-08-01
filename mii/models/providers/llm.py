@@ -108,10 +108,10 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 
-    mii_cache_path = mii_cache_path()
+    cache_path = mii_cache_path()
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=mii_cache_path)
-    config = AutoConfig.from_pretrained(model_name, cache_dir=mii_cache_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_path)
+    config = AutoConfig.from_pretrained(model_name, cache_dir=cache_path)
     with OnDevice(dtype=torch.float16, enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
