@@ -102,6 +102,15 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
         return data
 
 
+def _attempt_load(load_fn, model_name, cache_path):
+    try:
+        value = load_fn(model_name)
+    except OSError:
+        print(f'Attempted load but failed, retrying using cache_dir={cache_path}')
+        value = load_fn(model_name, cache_dir=cache_path)
+    return value
+
+
 # TODO: This function is a hack for the Bloom models and will be replaced with a LargeModel provider code path
 def load_hf_llm(model_path, model_name, task_name, mii_config):
     deepspeed.init_distributed('nccl')
@@ -110,8 +119,14 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
 
     cache_path = mii_cache_path()
 
+    # Attempt to load, if default path is read-only and does not have tokenizer/config HF will raise an OSError
+    tokenizer = _attempt_load(AutoTokenizer.from_pretrained, model_name, cache_path)
+    config = _attempt_load(AutoConfig.from_pretrained, model_name, cache_path)
+
     tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_path)
+
     config = AutoConfig.from_pretrained(model_name, cache_dir=cache_path)
+
     with OnDevice(dtype=torch.float16, enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
