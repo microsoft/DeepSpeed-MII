@@ -29,6 +29,7 @@ jobs:
 
       - name: Install MII
         run: |
+          pip install git+https://github.com/microsoft/deepspeed.git
           pip install .[dev]
 
       - name: Formatting checks
