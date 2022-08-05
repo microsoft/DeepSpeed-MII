@@ -4,7 +4,7 @@ Copyright 2022 The Microsoft DeepSpeed Team
 from deepspeed.module_inject.base_policy import InjectBasePolicy
 
 
-class BLOOMLayerPolicy(DSPolicy):
+class BLOOMLayerPolicy(InjectBasePolicy):
     _orig_layer_class = None
 
     def __init__(self, client_module, inference=True):

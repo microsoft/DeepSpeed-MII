@@ -2,6 +2,7 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import torch
+from packaging import version as pkg_version
 from deepspeed.module_inject.base_policy import InjectBasePolicy
 
 

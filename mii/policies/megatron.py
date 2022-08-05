@@ -1,11 +1,12 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
+import torch
 from packaging import version as pkg_version
 from deepspeed.module_inject.base_policy import InjectBasePolicy
 
 
-class MegatronLayerPolicy(DSPolicy):
+class MegatronLayerPolicy(InjectBasePolicy):
     _orig_layer_class = None
     version = 0
     moe_type = 'standard'
