@@ -1,14 +1,20 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
-import mii.policies
+from .bert import HFBertLayerPolicy
+from .gpt_neo import HFGPTNEOLayerPolicy
+from .gpt_neox import GPTNEOXLayerPolicy
+from .gptj import HFGPTJLayerPolicy
+from .megatron import MegatronLayerPolicy
+from .gpt2 import HFGPT2LayerPolicy
+from .bloom import BLOOMLayerPolicy
 
-supported_models = [
-    mii.policies.HFBertLayerPolicy,
-    mii.policies.HFGPTNEOLayerPolicy,
-    mii.policies.GPTNEOXLayerPolicy,
-    mii.policies.HFGPTJLayerPolicy,
-    mii.policies.MegatronLayerPolicy,
-    mii.policies.HFGPT2LayerPolicy,
-    mii.policies.BLOOMLayerPolicy
+replace_policies = [
+    HFBertLayerPolicy,
+    HFGPTNEOLayerPolicy,
+    GPTNEOXLayerPolicy,
+    HFGPTJLayerPolicy,
+    MegatronLayerPolicy,
+    HFGPT2LayerPolicy,
+    BLOOMLayerPolicy
 ]
