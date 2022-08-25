@@ -1,3 +1,4 @@
+# flake8: noqa
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
@@ -10,11 +11,13 @@ model = None
 
 
 def init():
+    # In AML deployments both the GRPC client and server are used in the same process
+    initialize_grpc_client = mii.utils.is_aml()
 
-    #TODO set the parallelism degree somehow. On the azure kubernetes server we can set the gpu core
-    #but how do we do this in local deployment?
-    #os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
-    model_path, use_grpc_server, initialize_grpc_client = mii.setup_task()
+    # XXX: Always run grpc server, originally was "not is_aml()"
+    use_grpc_server = True
+
+    model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
 
     model_name = configs[mii.constants.MODEL_NAME_KEY]
     task = configs[mii.constants.TASK_NAME_KEY]
@@ -22,6 +25,7 @@ def init():
     assert model_name is not None, "The model name should be set before calling init"
     assert task is not None, "The task name should be set before calling init"
 
+    global model
     model = mii.MIIServerClient(task,
                                 model_name,
                                 model_path,
@@ -34,14 +38,17 @@ def init():
 
 
 def run(request):
-    start = time.time()
     global model
     request_dict = json.loads(request)
 
-    response = model.query(request_dict)
-    end = time.time()
-    response += f"\n Query Run Time: {end-start} secs"
-    return response
+    query_dict = mii.utils.extract_query_dict(configs[mii.constants.TASK_NAME_KEY],
+                                              request_dict)
+
+    response = model.query(query_dict, **request_dict)
+
+    if not isinstance(response.response, str):
+        response = [r for r in response.response]
+    return json.dumps({'responses': response})
 
 
 ### Auto-generated config will be appended below at run-time

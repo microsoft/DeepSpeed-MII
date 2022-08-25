@@ -8,8 +8,4 @@ name = "roberta-large-mnli"
 
 print(f"Deploying {name}...")
 
-mii.deploy('text-classification',
-           name,
-           mii.DeploymentType.LOCAL,
-           deployment_name=name + "_deployment",
-           local_model_path=".cache/models/" + name)
+mii.deploy(task='text-classification', model=name, deployment_name=name + "_deployment")

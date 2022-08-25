@@ -1,14 +1,15 @@
 import pytest
-import functools
 from types import SimpleNamespace
 
 import mii
 
 
 def validate_config(config):
-    if (config.model_name in ['bert-base-uncased']) and (config.mii_configs['dtype']
-                                                         == 'fp16'):
-        pytest.skip(f"Model f{config.model_name} not supported for FP16")
+    if (config.model in ['bert-base-uncased']) and (config.mii_config['dtype']
+                                                    == 'fp16'):
+        pytest.skip(f"Model f{config.model} not supported for FP16")
+    elif config.mii_config['dtype'] == "fp32" and "bloom" in config.model:
+        pytest.skip('bloom does not support fp32')
 
 
 ''' These fixtures provide default values for the deployment config '''
@@ -63,12 +64,12 @@ def deployment_config(task_name: str,
                       enable_deepspeed: bool,
                       enable_zero: bool,
                       ds_config: dict):
-    config = SimpleNamespace(task_name=task_name,
-                             model_name=model_name,
+    config = SimpleNamespace(task=task_name,
+                             model=model_name,
                              deployment_type=mii.DeploymentType.LOCAL,
                              deployment_name=model_name + "_deployment",
-                             local_model_path=".cache/models/" + model_name,
-                             mii_configs=mii_configs,
+                             model_path=".cache/models/" + model_name,
+                             mii_config=mii_configs,
                              enable_deepspeed=enable_deepspeed,
                              enable_zero=enable_zero,
                              ds_config=ds_config)
@@ -87,11 +88,10 @@ def local_deployment(deployment_config, expected_failure):
         with pytest.raises(expected_failure) as excinfo:
             mii.deploy(**deployment_config.__dict__)
         yield excinfo
-        mii.terminate_local_server(deployment_config.deployment_name)
     else:
         mii.deploy(**deployment_config.__dict__)
         yield deployment_config
-        mii.terminate_local_server(deployment_config.deployment_name)
+        mii.terminate(deployment_config.deployment_name)
 
 
 ''' Unit tests '''
@@ -131,7 +131,15 @@ def local_deployment(deployment_config, expected_failure):
             "text-generation",
             "distilgpt2",
             {
-                "query": "DeepSpeed is the greatest"
+                "query": ["DeepSpeed is the greatest"]
+            },
+        ),
+        (
+            "text-generation",
+            "bigscience/bloom-350m",
+            {
+                "query": ["DeepSpeed is the greatest",
+                          'Seattle is']
             },
         ),
         ("token-classification",
@@ -230,6 +238,7 @@ def test_zero_config(local_deployment, query):
     ],
 )
 def test_zero_config_fail(local_deployment, query):
+    print(local_deployment)
     assert "MII Config Error" in str(local_deployment.value)
 
 

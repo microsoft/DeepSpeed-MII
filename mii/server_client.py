@@ -2,7 +2,6 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import asyncio
-from readline import write_history_file
 import torch
 import sys
 import subprocess
@@ -13,8 +12,8 @@ import json
 from pathlib import Path
 import mii
 import base64
-import json
 from mii.utils import logger, kwarg_dict_to_proto
+from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 
 
 def mii_query_handle(deployment_name):
@@ -63,7 +62,7 @@ class MIIServerClient():
 
         mii_configs = mii.config.MIIConfig(**mii_configs)
 
-        self.task = mii.get_task(task_name)
+        self.task = mii.utils.get_task(task_name)
 
         self.num_gpus = self._get_num_gpus(mii_configs)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
@@ -145,16 +144,18 @@ class MIIServerClient():
                             mii_configs):
         process = None
         if not self.use_grpc_server:
-            self.model = mii.load_models(mii.get_task_name(self.task),
-                                         model_name,
-                                         model_path,
-                                         ds_optimize,
-                                         ds_zero,
-                                         ds_config)
+            self.model = mii.models.load_models(task_name=mii.utils.get_task_name(
+                self.task),
+                                                model_name=model_name,
+                                                model_path=model_path,
+                                                ds_optimize=ds_optimize,
+                                                ds_zero=ds_zero,
+                                                ds_config_path=ds_config,
+                                                mii_config=mii_configs)
         else:
             if self._is_socket_open(self.port_number):
                 raise RuntimeError(
-                    f"Server is already running on port {self.port_number}, please shutdown to use different port."
+                    f"Server is already running on port {self.port_number}, please shutdown or use different port."
                 )
 
             # serialize mii config
@@ -167,12 +168,14 @@ class MIIServerClient():
 
             ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
-            server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
+            server_args_str = f"--task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
             server_args_str += " --ds-optimize" if ds_optimize else ""
 
             #XXX: fetch model provider based on model name in a more general way
             if model_name == "gpt-neox":
                 provider = mii.constants.MODEL_PROVIDER_NAME_EA
+            elif "bigscience/bloom" in model_name:
+                provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
             else:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF
             server_args_str += f" --provider {provider}"
@@ -201,15 +204,16 @@ class MIIServerClient():
                 server_args_str += f" --ds-config {ds_config_path}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
             logger.info(f"multi-gpu deepspeed launch: {cmd}")
-            process = subprocess.Popen(cmd)
+            mii_env = os.environ.copy()
+            mii_env["TRANSFORMERS_CACHE"] = model_path
+            process = subprocess.Popen(cmd, env=mii_env)
         return process
 
     def _initialize_grpc_client(self):
         channels = []
         for i in range(self.num_gpus):
             channel = grpc.aio.insecure_channel(f'localhost:{self.port_number + i}')
-            stub = mii.grpc_related.proto.modelresponse_pb2_grpc.ModelResponseStub(
-                channel)
+            stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
             channels.append(channel)
             self.stubs.append(stub)
 
@@ -230,33 +234,36 @@ class MIIServerClient():
     async def _request_async_response(self, stub_id, request_dict, query_kwargs):
         proto_kwargs = kwarg_dict_to_proto(query_kwargs)
         if self.task == mii.Tasks.TEXT_GENERATION:
-            response = await self.stubs[stub_id].GeneratorReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
-                                                          query_kwargs=proto_kwargs))
+            # convert to batch of queries if they are not already
+            if not isinstance(request_dict['query'], list):
+                request_dict['query'] = [request_dict['query']]
+            req = modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
+                                                       query_kwargs=proto_kwargs)
+            response = await self.stubs[stub_id].GeneratorReply(req)
 
         elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
             response = await self.stubs[stub_id].ClassificationReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
-                                                          query_kwargs=proto_kwargs))
+                modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
+                                                      query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.QUESTION_ANSWERING:
             response = await self.stubs[stub_id].QuestionAndAnswerReply(
-                mii.modelresponse_pb2.QARequest(question=request_dict['question'],
-                                                context=request_dict['context'],
-                                                query_kwargs=proto_kwargs))
+                modelresponse_pb2.QARequest(question=request_dict['question'],
+                                            context=request_dict['context'],
+                                            query_kwargs=proto_kwargs))
         elif self.task == mii.Tasks.FILL_MASK:
             response = await self.stubs[stub_id].FillMaskReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
-                                                          query_kwargs=proto_kwargs))
+                modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
+                                                      query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
             response = await self.stubs[stub_id].TokenClassificationReply(
-                mii.modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
-                                                          query_kwargs=proto_kwargs))
+                modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
+                                                      query_kwargs=proto_kwargs))
 
         elif self.task == mii.Tasks.CONVERSATIONAL:
             response = await self.stubs[stub_id].ConversationalReply(
-                mii.modelresponse_pb2.ConversationRequest(
+                modelresponse_pb2.ConversationRequest(
                     text=request_dict['text'],
                     conversation_id=request_dict['conversation_id']
                     if 'conversation_id' in request_dict else None,
@@ -293,7 +300,7 @@ class MIIServerClient():
             response = self.model(["", request_dict['query']], **query_kwargs)
 
         else:
-            raise NotSupportedError(f"task is not supported: {self.task}")
+            raise NotImplementedError(f"task is not supported: {self.task}")
         end = time.time()
         return f"{response}" + f"\n Model Execution Time: {end-start} seconds"
 

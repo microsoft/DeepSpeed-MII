@@ -1,6 +1,3 @@
-import os
-import grpc
-
 import mii
 
 name = "deepset/roberta-large-squad2"

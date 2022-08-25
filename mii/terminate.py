@@ -4,11 +4,11 @@ import psutil
 import mii
 
 
-def terminate_local_server(deployment_name):
+def terminate(deployment_name):
     mii.utils.logger.info(f"Terminating server for {deployment_name}")
     generator = mii.mii_query_handle(deployment_name)
     try:
-        generator.query({'query': None})
+        generator.query({'query': ''})
     except grpc.aio._call.AioRpcError as error:
         if error._code == grpc.StatusCode.UNAVAILABLE:
             mii.utils.logger.warn(f"Server for {deployment_name} not found")

@@ -4,6 +4,7 @@ import enum
 #TODO naming..
 class DeploymentType(enum.Enum):
     LOCAL = 1
+    AML = 2
 
 
 MII_CONFIGS_KEY = 'mii_configs'
@@ -29,14 +30,17 @@ CONVERSATIONAL_NAME = 'conversational'
 class ModelProvider(enum.Enum):
     HUGGING_FACE = 1
     ELEUTHER_AI = 2
+    HUGGING_FACE_LLM = 3
 
 
 MODEL_PROVIDER_NAME_HF = "hugging-face"
 MODEL_PROVIDER_NAME_EA = "eleuther-ai"
+MODEL_PROVIDER_NAME_HF_LLM = "hugging-face-llm"
 
 MODEL_PROVIDER_MAP = {
     MODEL_PROVIDER_NAME_HF: ModelProvider.HUGGING_FACE,
-    MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI
+    MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI,
+    MODEL_PROVIDER_NAME_HF_LLM: ModelProvider.HUGGING_FACE_LLM,
 }
 
 SUPPORTED_MODEL_TYPES = {
@@ -46,6 +50,7 @@ SUPPORTED_MODEL_TYPES = {
     'gpt_neo': ModelProvider.HUGGING_FACE,
     'gptj': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
+    'bloom': ModelProvider.HUGGING_FACE_LLM,
 }
 
 SUPPORTED_TASKS = [
@@ -57,12 +62,28 @@ SUPPORTED_TASKS = [
     CONVERSATIONAL_NAME
 ]
 
+REQUIRED_KEYS_PER_TASK = {
+    TEXT_GENERATION_NAME: ["query"],
+    TEXT_CLASSIFICATION_NAME: ["query"],
+    QUESTION_ANSWERING_NAME: ["context",
+                              "question"],
+    FILL_MASK_NAME: ["query"],
+    TOKEN_CLASSIFICATION_NAME: ["query"],
+    CONVERSATIONAL_NAME:
+    ['text',
+     'conversation_id',
+     'past_user_inputs',
+     'generated_responses']
+}
+
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
+MODEL_PATH_KEY = 'model_path'
 
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'
+CHECKPOINT_KEY = "checkpoint"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"
@@ -74,3 +95,5 @@ MII_DEBUG_DEPLOY_KEY = "MII_DEBUG_DEPLOY_KEY"
 
 MII_DEBUG_BRANCH = "MII_DEBUG_BRANCH"
 MII_DEBUG_BRANCH_DEFAULT = "main"
+
+MII_MODEL_PATH_DEFAULT = "/tmp/mii_models"

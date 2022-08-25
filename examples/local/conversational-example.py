@@ -7,10 +7,4 @@ name = "microsoft/DialoGPT-large"
 
 print(f"Deploying {name}...")
 
-mii.deploy(
-    task_name='conversational',
-    model_name=name,
-    deployment_type=mii.DeploymentType.LOCAL,
-    deployment_name=name + "_deployment",
-    local_model_path=".cache/models/" + name,
-)
+mii.deploy(task='conversational', model=name, deployment_name=name + "_deployment")
