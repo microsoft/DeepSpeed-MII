@@ -45,6 +45,6 @@ mii.deploy('text-generation',
            deployment_name=name + "_deployment",
            local_model_path=".cache/models/" + name,
            mii_configs=mii_configs,
-           enable_deepspeed=False,
-           enable_zero=True,
+           enable_deepspeed=True,
+           enable_zero=False,
            ds_config=ds_config)

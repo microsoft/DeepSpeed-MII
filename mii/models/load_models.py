@@ -5,7 +5,7 @@ import os
 import mii
 import torch
 import deepspeed
-from deepspeed.runtime.zero.constants import *
+from deepspeed.runtime.constants import *
 from pathlib import Path
 
 

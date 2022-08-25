@@ -165,7 +165,7 @@ class MIIServerClient():
             # bytes -> str
             b64_config_str = b64_config_bytes.decode()
 
-            ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
+            ds_launch_str = f"deepspeed --num_nodes 1 --num_gpus {self.num_gpus} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
             server_args_str += " --ds-optimize" if ds_optimize else ""
