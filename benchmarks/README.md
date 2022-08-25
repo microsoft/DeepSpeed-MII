@@ -10,7 +10,11 @@ The selected models are in the `sampled_xxx.json` files. The main logic for benc
 
 ### Dependencies
 
-See requirements.txt
+Install DeepSpeed-MII by following the top-level README.
+
+For other dependencies, see requirements.txt
+
+`pip install -r requirements.txt`
 
 ### How to run
 

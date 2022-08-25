@@ -36,20 +36,20 @@ def size_to_string(size, units=None, precision=2):
             return str(size)
 
 
-def _deploy_model(model, mii_configs, enable_deepspeed=True):
+def _deploy_model(model, mii_config, enable_deepspeed=True):
     name = model.name
     type = model.type
     task = model.task
     mii.deploy(task,
                name,
-               mii.DeploymentType.LOCAL,
                deployment_name=name + "_deployment",
-               local_model_path=".cache/models/" + name,
-               mii_configs=mii_configs,
+               deployment_type=mii.DeploymentType.LOCAL,
+               model_path=".cache/models/" + name,
+               mii_config=mii_config,
                enable_deepspeed=enable_deepspeed)
 
 
-def _kill_deployment(model, mii_configs={}):
+def _kill_deployment(model, mii_config={}):
     kill_cmd = [
         'pkill',
         '-f',
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     )
 
     _deploy_model(model,
-                  mii_configs={
+                  mii_config={
                       'dtype': data_type,
                       'enable_cuda_graph': True
                   },
