@@ -207,8 +207,8 @@ def size_to_string(size, units=None, precision=2):
 
 
 if __name__ == "__main__":
-    model_types = ["roberta", "gpt2", "bert", "gpt_neo", "gptj"]
-    # model_types = ["gpt2"]
+    # model_types = ["roberta", "gpt2", "bert", "gpt_neo", "gptj"]
+    model_types = ["opt"]
     tasks = [
         "question-answering",
         "text-generation",
@@ -220,7 +220,7 @@ if __name__ == "__main__":
     # model_list = _populate_model_list(model_types, tasks, write_file_path = "all_models.json")
     model_list = _populate_model_list(model_types,
                                       tasks,
-                                      read_file_path="all_models.json")
+                                      write_file_path="all_models_8_25_22.json")
 
     for mt in model_types:
         sampled_models, min_size, max_size = _sample_models(model_list, total=40, model_type=mt)
