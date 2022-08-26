@@ -8,4 +8,4 @@
 8, shibing624/code-autocomplete-distilgpt2-python, gpt2, 83.62 M, 334495744, text-generation, https://huggingface.co/shibing624/code-autocomplete-distilgpt2-python, 139807, True, 0.04989591397737202, False, 0.09270023044786956, 1.8578721794716389
 9, geralt/MechDistilGPT2, gpt2, 83.62 M, 334495744, text-generation, https://huggingface.co/geralt/MechDistilGPT2, 386877, True, 0.049563859638414885, False, 0.08918453517713044, 1.7993864042825112
 10, gpt2, gpt2, 137.1 M, 548405248, text-generation, https://huggingface.co/gpt2, 36544539, True, 0.0777932091763145, False, 0.1593498430754009, 2.048377291059458
-11, gpt2-large, gpt2, 810.68 M, 3242700308, text-generation, https://huggingface.co/gpt2-large, 315417, True, 0.19590263617666145
+11, gpt2-large, gpt2, 810.68 M, 3242700308, text-generation, https://huggingface.co/gpt2-large, 315417, True, 0.19590263617666145, False, 0, 0
