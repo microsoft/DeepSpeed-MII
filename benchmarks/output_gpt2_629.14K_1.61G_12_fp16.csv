@@ -1,6 +1,5 @@
 0, skt/kogpt2-base-v2, gpt2, 128.45 M, 513802240, text-generation, https://huggingface.co/skt/kogpt2-base-v2, 15616, True, 0.05646039310254549, False, 0.11389926860207006, 2.01733042126012
 1, distilgpt2, gpt2, 88.08 M, 352321536, text-generation, https://huggingface.co/distilgpt2, 16139502, True, 0.050454716933401006, False, 0.09222126007080078, 1.827802546044022
-, False, 0.04327864395944696, 0.02367796458819716
 3, sberbank-ai/rugpt3large_based_on_gpt2, gpt2, 786.52 M, 3146063544, text-generation, https://huggingface.co/sberbank-ai/rugpt3large_based_on_gpt2, 16137, True, 0.11495846196224815, False, 0.24924551813225998, 2.168135462825791
 4, mrm8488/distilgpt2-finetuned-wsb-tweets, gpt2, 83.62 M, 334495744, text-generation, https://huggingface.co/mrm8488/distilgpt2-finetuned-wsb-tweets, 458576, True, 0.04986212128087094, False, 0.09294763364289936, 1.8640930480941593
 5, gpt2-xl, gpt2, 1.61 G, 6431713525, text-generation, https://huggingface.co/gpt2-xl, 55573, True, 0.25813811703732137, False, 0.5912741861845318, 2.2905342030485403
