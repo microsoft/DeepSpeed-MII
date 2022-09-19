@@ -1,0 +1,31 @@
+$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
+name: <deployment-name>
+endpoint_name: <endpoint-name>
+model:
+    path: <model-path>
+model_mount_path: /var/azureml-model
+code_configuration:
+  code: code
+  scoring_script: score.py
+environment: azureml:<environment-name>:<version>
+environment_variables:
+  AML_APP_ROOT: /var/azureml-model/code
+  WORKER_TIMEOUT: 2400
+  AZUREML_LOG_LEVEL: DEBUG
+  LOG_IO: 1
+instance_type: Standard_ND96amsr_A100_v4
+request_settings:
+  request_timeout_ms: 90000
+liveness_probe:
+  initial_delay: 300
+  timeout: 1
+  period: 60
+  success_threshold: 1
+  failure_threshold: 40
+readiness_probe:
+  initial_delay: 300
+  timeout: 1
+  period: 60
+  success_threshold: 1
+  failure_threshold: 40
+instance_count: 1

@@ -2,6 +2,9 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import torch
+import subprocess
+import os
+import yaml
 
 import mii
 
@@ -77,7 +80,7 @@ def deploy(task,
     if model_path is None and deployment_type == DeploymentType.LOCAL:
         model_path = MII_MODEL_PATH_DEFAULT
     elif model_path is None and deployment_type == DeploymentType.AML:
-        model_path = None
+        model_path = MII_MODEL_PATH_DEFAULT
 
     create_score_file(deployment_name=deployment_name,
                       task=task,
@@ -90,6 +93,7 @@ def deploy(task,
 
     if deployment_type == DeploymentType.AML:
         print(f"Score file created at {generated_score_path(deployment_name)}")
+        _deploy_aml(deployment_name, model_path, model)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     else:
@@ -98,3 +102,79 @@ def deploy(task,
 
 def _deploy_local(deployment_name, model_path):
     mii.utils.import_score_file(deployment_name).init()
+
+
+def _replace_yaml_strs(yaml, replace_dict):
+    for key in yaml:
+        if isinstance(yaml[key], dict):
+            yaml[key] = _replace_yaml_strs(yaml[key], replace_dict)
+        elif isinstance(yaml[key], str):
+            for var, val in replace_dict.items():
+                yaml[key] = yaml[key].replace(var, val)
+    return yaml
+
+
+def _fill_template_yaml(template_file, output_file, replace_dict):
+    with open(template_file, "r") as f:
+        yaml_data = yaml.safe_load(f)
+    yaml_data = _replace_yaml_strs(yaml_data, replace_dict)
+    with open(output_file, "w") as f:
+        yaml.dump(yaml_data, f)
+
+
+def _deploy_aml(deployment_name, model_path, model_name):
+    # Test azure-cli login
+    try:
+        acr_name = subprocess.check_output(
+            ["az",
+             "ml",
+             "workspace",
+             "show",
+             "--query",
+             "container_registry"],
+            text=True)
+        acr_name = acr_name.strip().replace('"', '').rsplit('/', 1)[-1]
+    except subprocess.CalledProcessError as e:
+        print("\n", "-" * 30, "\n")
+        print("Unable to obtain ACR name from Azure-CLI. Please verify that you:")
+        print("\t- Have Azure-CLI installed")
+        print("\t- Are logged in to an active account on Azure-CLI")
+        print("\t- Have Azure-CLI ML plugin installed")
+        print("\n", "-" * 30, "\n")
+        raise (e)
+
+    # Values
+    output_dir = deployment_name
+    version = "1"
+    endpoint_name = deployment_name + "_endpoint"
+    environment_name = deployment_name + "_environment"
+    image_name = deployment_name + "_image"
+    replace_dict = {
+        "<deployment-name>": deployment_name,
+        "<model-path>": model_path,
+        "<model-name>": model_name,
+        "<version>": version,
+        "<endpoint-name>": endpoint_name,
+        "<environment-name>": environment_name,
+        "<image-name>": image_name,
+        "<acr-name>": acr_name,
+    }
+
+    # Make output dir
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Fill templates
+    for template_type in ["deployment", "endpoint", "environment"]:
+        template_file = f"mii/aml_environment/{template_type}_template.yml"
+        output_file = os.path.join(output_dir, f"{template_type}.yml")
+        _fill_template_yaml(template_file, output_file, replace_dict)
+
+    deploy_script =\
+f"""az acr build -r {acr_name} --build-arg no-cache=True -t "{image_name}:{version}" build
+az ml environment create -f environment.yml
+az ml online-endpoint create -n "{endpoint_name}" -f endpoint.yml
+az ml online-deployment create -n "{deployment_name}" -f deployment.yml
+az ml online-endpoint update -n "{endpoint_name}"
+"""
+    with open(os.path.join(output_dir, "deploy.sh"), "w") as f:
+        f.write(deploy_script)
