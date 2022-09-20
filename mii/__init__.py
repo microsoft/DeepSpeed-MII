@@ -2,6 +2,7 @@ import grpc
 from .server_client import MIIServerClient, mii_query_handle
 from .deployment import deploy
 from .terminate import terminate
+from .templates import *
 from .constants import DeploymentType, Tasks
 
 from .config import MIIConfig

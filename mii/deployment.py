@@ -104,22 +104,10 @@ def _deploy_local(deployment_name, model_path):
     mii.utils.import_score_file(deployment_name).init()
 
 
-def _replace_yaml_strs(yaml, replace_dict):
-    for key in yaml:
-        if isinstance(yaml[key], dict):
-            yaml[key] = _replace_yaml_strs(yaml[key], replace_dict)
-        elif isinstance(yaml[key], str):
-            for var, val in replace_dict.items():
-                yaml[key] = yaml[key].replace(var, val)
-    return yaml
-
-
-def _fill_template_yaml(template_file, output_file, replace_dict):
-    with open(template_file, "r") as f:
-        yaml_data = yaml.safe_load(f)
-    yaml_data = _replace_yaml_strs(yaml_data, replace_dict)
-    with open(output_file, "w") as f:
-        yaml.dump(yaml_data, f)
+def _fill_template(template, replace_dict):
+    for var, val in replace_dict.items():
+        template.replace(var, val)
+    return template
 
 
 def _deploy_aml(deployment_name, model_path, model_name):
@@ -160,21 +148,44 @@ def _deploy_aml(deployment_name, model_path, model_name):
         "<acr-name>": acr_name,
     }
 
-    # Make output dir
-    os.makedirs(output_dir, exist_ok=True)
+    # Make output dirs
+    os.makedirs(os.path.join(output_dir, "build", "runit", "gunicorn"), exist_ok=True)
 
-    # Fill templates
-    for template_type in ["deployment", "endpoint", "environment"]:
-        template_file = f"mii/aml_environment/{template_type}_template.yml"
+    # Fill yaml templates
+    template_dict = {
+        "deployment": mii.templates.deployment_template,
+        "endpoint": mii.templates.endpoint_template,
+        "environment": mii.templates.environment_template
+    }
+    for template_type, template in template_dict.items():
         output_file = os.path.join(output_dir, f"{template_type}.yml")
-        _fill_template_yaml(template_file, output_file, replace_dict)
+        yaml_data = _fill_template(template, replace_dict)
+        with open(output_file, "w") as f:
+            yaml.dump(yaml_data, f)
 
-    deploy_script =\
-f"""az acr build -r {acr_name} --build-arg no-cache=True -t "{image_name}:{version}" build
-az ml environment create -f environment.yml
-az ml online-endpoint create -n "{endpoint_name}" -f endpoint.yml
-az ml online-deployment create -n "{deployment_name}" -f deployment.yml
-az ml online-endpoint update -n "{endpoint_name}"
-"""
-    with open(os.path.join(output_dir, "deploy.sh"), "w") as f:
-        f.write(deploy_script)
+    # Fill deploy.sh
+    output_file = os.path.join(output_dir, "deploy.sh")
+    script_data = _fill_template(mii.templates.deploy_template, replace_dict)
+    with open(output_file, "w") as f:
+        f.write(script_data)
+
+    # Docker files
+    output_file = os.path.join(output_dir, "build", "Dockerfile")
+    with open(output_file, "w") as f:
+        f.write(mii.templates.dockerfile)
+
+    output_file = os.path.join(output_dir, "build", "gunicorn_app")
+    with open(output_file, "w") as f:
+        f.write(mii.templates.gunicorn)
+
+    output_file = os.path.join(output_dir, "build", "runit", "gunicorn", "run")
+    with open(output_file, "w") as f:
+        f.write(mii.templates.gunicorn_run)
+
+    output_file = os.path.join(output_dir, "build", "runit", "gunicorn", "finish")
+    with open(output_file, "w") as f:
+        f.write(mii.templates.gunicorn_finish)
+
+    output_file = os.path.join(output_dir, "build", "requirements.txt")
+    with open(output_file, "w") as f:
+        f.write(mii.templates.requirements)
