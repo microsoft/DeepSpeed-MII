@@ -26,23 +26,26 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         }
         return query_kwargs
 
-    def _get_model_time(self, model):
+    def _get_model_time(self, model, sum_times=False):
         model_times = model.model_times()
         if len(model_times) == 1:
             model_time = model_times[0]
         elif len(model_times) > 1:
-            model_time = model_times[-1]
+            if sum_times:
+                model_time = sum(model_times)
+            else:
+                model_time = model_times[-1]
         else:
             model_time = -1
         return model_time
 
     def GeneratorReply(self, request, context):
         query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
-        start = time.time()
 
         # unpack grpc list into py-list
         request = [r for r in request.request]
 
+        start = time.time()
         batched_responses = self.inference_pipeline(request, **query_kwargs)
         end = time.time()
 
@@ -52,8 +55,11 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
             text = response[0]['generated_text']
             text_responses.append(text)
 
+        model_time = self._get_model_time(self.inference_pipeline.model, sum_times=True)
+
         val = modelresponse_pb2.MultiStringReply(response=text_responses,
-                                                 time_taken=end - start)
+                                                 time_taken=end - start,
+                                                 model_time_taken=model_time)
         return val
 
     def ClassificationReply(self, request, context):

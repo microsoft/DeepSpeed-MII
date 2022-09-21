@@ -62,7 +62,7 @@ def load_models(task_name,
             replace_method='auto',
             enable_cuda_graph=mii_config.enable_cuda_graph,
             args=args)
-        inference_pipeline.model.model_profile_enabled = True
+        inference_pipeline.model.profile_model_time()
     elif ds_zero:
         ds_config = DeepSpeedConfig(ds_config_path)
         #TODO: don't read ds-config from disk, we should pass this around as a dict instead
