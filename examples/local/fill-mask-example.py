@@ -2,8 +2,7 @@ import mii
 
 # roberta
 name = "roberta-base"
-
-name = "bert-base-uncased"
+name = "bert-base-cased"
 
 print(f"Deploying {name}...")
 

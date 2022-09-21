@@ -26,6 +26,16 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         }
         return query_kwargs
 
+    def _get_model_time(self, model):
+        model_times = model.model_times()
+        if len(model_times) == 1:
+            model_time = model_times[0]
+        elif len(model_times) > 1:
+            model_time = model_times[-1]
+        else:
+            model_time = -1
+        return model_time
+
     def GeneratorReply(self, request, context):
         query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
@@ -63,16 +73,21 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
                                            context=request.context,
                                            **query_kwargs)
         end = time.time()
+        model_time = self._get_model_time(self.inference_pipeline.model)
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
-                                                   time_taken=end - start)
+                                                   time_taken=end - start,
+                                                   model_time_taken=model_time)
 
     def FillMaskReply(self, request, context):
         query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
         start = time.time()
         response = self.inference_pipeline(request.request, **query_kwargs)
         end = time.time()
+
+        model_time = self._get_model_time(self.inference_pipeline.model)
         return modelresponse_pb2.SingleStringReply(response=f"{response}",
-                                                   time_taken=end - start)
+                                                   time_taken=end - start,
+                                                   model_time_taken=model_time)
 
     def TokenClassificationReply(self, request, context):
         query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
