@@ -6,7 +6,7 @@ model:
     path: <model-path>
 model_mount_path: /var/azureml-model
 code_configuration:
-  code: code
+  code: <code-path>
   scoring_script: score.py
 environment: azureml:<environment-name>:<version>
 environment_variables:
@@ -56,7 +56,8 @@ inference_config:
 """
 
 deploy_template = \
-"""az acr build -r <acr-name> --build-arg no-cache=True -t "<image-name>:<version>" build
+"""TRANSFORMERS_CACHE=<model-path> python -c "model='<model-name>'; from transformers import AutoConfig, AutoTokenizer, AutoModel; AutoConfig.from_pretrained(model); AutoTokenizer.from_pretrained(model); AutoModel.from_pretrained(model)"
+az acr build -r <acr-name> --build-arg no-cache=True -t "<image-name>:<version>" build
 az ml environment create -f environment.yml
 az ml online-endpoint create -n "<endpoint-name>" -f endpoint.yml
 az ml online-deployment create -n "<deployment-name>" -f deployment.yml

@@ -137,6 +137,13 @@ def mii_cache_path():
     return cache_path
 
 
+def mii_aml_output_path(deployment_name):
+    output_path = os.path.join(os.getcwd(), f"{deployment_name}_aml")
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path, exist_ok=True)
+    return output_path
+
+
 def import_score_file(deployment_name):
     spec = importlib.util.spec_from_file_location(
         "score",

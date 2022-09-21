@@ -5,12 +5,13 @@ import torch
 import subprocess
 import os
 import yaml
+import string
 
 import mii
 
 from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT
 from .utils import logger
-from .models.score import create_score_file, generated_score_path
+from .models.score import create_score_file
 
 
 def deploy(task,
@@ -69,6 +70,12 @@ def deploy(task,
             assert (mii_config.torch_dtype() == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
     assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
+    # aml only allows certain characters for deployment names
+    if deployment_type == DeploymentType.AML:
+        allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
+                            string.digits + '-')
+        assert set(deployment_name) <= allowed_chars, "AML deployment names can only contain a-z, A-Z, 0-9, and '-'"
+
     task = mii.utils.get_task(task)
     mii.utils.check_if_task_and_model_is_valid(task, model)
     if enable_deepspeed:
@@ -80,9 +87,10 @@ def deploy(task,
     if model_path is None and deployment_type == DeploymentType.LOCAL:
         model_path = MII_MODEL_PATH_DEFAULT
     elif model_path is None and deployment_type == DeploymentType.AML:
-        model_path = MII_MODEL_PATH_DEFAULT
+        model_path = os.path.join(MII_MODEL_PATH_DEFAULT, model)
 
     create_score_file(deployment_name=deployment_name,
+                      deployment_type=deployment_type,
                       task=task,
                       model_name=model,
                       ds_optimize=enable_deepspeed,
@@ -92,7 +100,6 @@ def deploy(task,
                       model_path=model_path)
 
     if deployment_type == DeploymentType.AML:
-        print(f"Score file created at {generated_score_path(deployment_name)}")
         _deploy_aml(deployment_name, model_path, model)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
@@ -106,7 +113,7 @@ def _deploy_local(deployment_name, model_path):
 
 def _fill_template(template, replace_dict):
     for var, val in replace_dict.items():
-        template.replace(var, val)
+        template = template.replace(var, val)
     return template
 
 
@@ -132,23 +139,29 @@ def _deploy_aml(deployment_name, model_path, model_name):
         raise (e)
 
     # Values
-    output_dir = deployment_name
+    #TODO Assert deployment name has only [A-Za-z0-9] (and "-")
+    output_dir = mii.utils.mii_aml_output_path(deployment_name)
+    code_path = os.path.join(output_dir, "code")
+    model_path = os.path.join(output_dir, "model")
     version = "1"
-    endpoint_name = deployment_name + "_endpoint"
-    environment_name = deployment_name + "_environment"
-    image_name = deployment_name + "_image"
+    endpoint_name = deployment_name + "-endpoint"
+    environment_name = deployment_name + "-environment"
+    image_name = deployment_name + "-image"
     replace_dict = {
         "<deployment-name>": deployment_name,
-        "<model-path>": model_path,
         "<model-name>": model_name,
+        "<acr-name>": acr_name,
+        "<code-path>": code_path,
+        "<model-path>": model_path,
         "<version>": version,
         "<endpoint-name>": endpoint_name,
         "<environment-name>": environment_name,
         "<image-name>": image_name,
-        "<acr-name>": acr_name,
     }
 
     # Make output dirs
+    os.makedirs(code_path, exist_ok=True)
+    os.makedirs(model_path, exist_ok=True)
     os.makedirs(os.path.join(output_dir, "build", "runit", "gunicorn"), exist_ok=True)
 
     # Fill yaml templates
@@ -161,7 +174,7 @@ def _deploy_aml(deployment_name, model_path, model_name):
         output_file = os.path.join(output_dir, f"{template_type}.yml")
         yaml_data = _fill_template(template, replace_dict)
         with open(output_file, "w") as f:
-            yaml.dump(yaml_data, f)
+            yaml.dump(yaml.safe_load(yaml_data), f)
 
     # Fill deploy.sh
     output_file = os.path.join(output_dir, "deploy.sh")

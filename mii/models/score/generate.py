@@ -5,9 +5,11 @@ import os
 import mii
 import pprint
 from mii.utils import logger
+from mii.constants import DeploymentType
 
 
 def create_score_file(deployment_name,
+                      deployment_type,
                       task,
                       model_name,
                       ds_optimize,
@@ -38,13 +40,16 @@ def create_score_file(deployment_name,
     source_with_config = f"{score_src}\n"
     source_with_config += f"configs = {pprint.pformat(config_dict, indent=4)}"
 
-    with open(generated_score_path(deployment_name), "w") as fd:
+    with open(generated_score_path(deployment_name, deployment_type), "w") as fd:
         fd.write(source_with_config)
         fd.write("\n")
 
 
-def generated_score_path(deployment_name):
-    score_path = os.path.join(mii.utils.mii_cache_path(), deployment_name)
+def generated_score_path(deployment_name, deployment_type):
+    if deployment_type == DeploymentType.LOCAL:
+        score_path = os.path.join(mii.utils.mii_cache_path(), deployment_name)
+    elif deployment_type == DeploymentType.AML:
+        score_path = os.path.join(mii.utils.mii_aml_output_path(deployment_name), "code")
     if not os.path.isdir(score_path):
         os.makedirs(score_path)
     return os.path.join(score_path, "score.py")
