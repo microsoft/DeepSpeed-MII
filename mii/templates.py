@@ -121,7 +121,7 @@ ENV PATH="/opt/miniconda/envs/amlenv/bin:$AML_APP_ROOT:$PATH" \
     PATH=$PATH:/usr/local/cuda/bin
 
 RUN /opt/miniconda/envs/amlenv/bin/pip install -r "$BUILD_DIR/requirements.txt" --extra-index-url https://download.pytorch.org/whl/cu113 && \
-    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/huggingface/transformers.git && \
+    /opt/miniconda/envs/amlenv/bin/pip install transformers==4.21.2 && \
     /opt/miniconda/envs/amlenv/bin/pip install azureml-inference-server-http && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/deepspeed.git && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git@aml-cache-path
