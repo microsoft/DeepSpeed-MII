@@ -87,7 +87,7 @@ def deploy(task,
     if model_path is None and deployment_type == DeploymentType.LOCAL:
         model_path = MII_MODEL_PATH_DEFAULT
     elif model_path is None and deployment_type == DeploymentType.AML:
-        model_path = os.path.join(MII_MODEL_PATH_DEFAULT, model)
+        model_path = "model"
 
     create_score_file(deployment_name=deployment_name,
                       deployment_type=deployment_type,
@@ -143,7 +143,7 @@ def _deploy_aml(deployment_name, model_path, model_name):
     output_dir = mii.utils.mii_aml_output_path(deployment_name)
     code_path = os.path.join(output_dir, "code")
     model_path = os.path.join(output_dir, "model")
-    version = "1"
+    version = "2"
     endpoint_name = deployment_name + "-endpoint"
     environment_name = deployment_name + "-environment"
     image_name = deployment_name + "-image"
