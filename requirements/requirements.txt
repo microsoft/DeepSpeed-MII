@@ -4,4 +4,4 @@ grpcio
 grpcio-tools
 pydantic
 torch
-transformers
+transformers==4.21.2

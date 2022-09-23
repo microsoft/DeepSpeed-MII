@@ -1,4 +1,4 @@
-deployment_template = \
+deployment = \
 """$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
 name: <deployment-name>
 endpoint_name: <endpoint-name>
@@ -32,13 +32,13 @@ readiness_probe:
 instance_count: 1
 """
 
-endpoint_template = \
+endpoint = \
 """$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineEndpoint.schema.json
 name: <endpoint-name>
 auth_mode: key
 """
 
-environment_template = \
+environment = \
 """$schema: https://azuremlschemas.azureedge.net/latest/environment.schema.json
 name: <environment-name>
 version: <version>
@@ -55,13 +55,12 @@ inference_config:
     port: 5001
 """
 
-deploy_template = \
+deploy = \
 """TRANSFORMERS_CACHE=<model-path> python -c "model='<model-name>'; from transformers import AutoConfig, AutoTokenizer, AutoModel; AutoConfig.from_pretrained(model); AutoTokenizer.from_pretrained(model); AutoModel.from_pretrained(model)"
 az acr build -r <acr-name> --build-arg no-cache=True -t "<image-name>:<version>" build
 az ml environment create -f environment.yml
 az ml online-endpoint create -n "<endpoint-name>" -f endpoint.yml
 az ml online-deployment create -n "<deployment-name>" -f deployment.yml
-az ml online-endpoint update -n "<endpoint-name>"
 """
 
 dockerfile = \

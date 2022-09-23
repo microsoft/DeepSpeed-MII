@@ -2,9 +2,6 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import torch
-import subprocess
-import os
-import yaml
 import string
 
 import mii
@@ -22,7 +19,8 @@ def deploy(task,
            enable_deepspeed=True,
            enable_zero=False,
            ds_config=None,
-           mii_config={}):
+           mii_config={},
+           version=1):
     """Deploy a task using specified model. For usage examples see:
 
         mii/examples/local/text-generation-example.py
@@ -57,6 +55,8 @@ def deploy(task,
         mii_config: Optional: Dictionary specifying optimization and deployment configurations that should override defaults in ``mii.config.MIIConfig``.
             mii_config is future looking to support extensions in optimization strategies supported by DeepSpeed Inference as we extend mii.
             As of now, it can be used to set tensor-slicing degree using 'tensor_parallel' and port number for deployment using 'port_number'.
+
+        version: Optional: Version to be set for AML deployment, useful if you want to deploy the same model with different settings.
     Returns:
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
@@ -100,7 +100,7 @@ def deploy(task,
                       model_path=model_path)
 
     if deployment_type == DeploymentType.AML:
-        _deploy_aml(deployment_name, model_path, model)
+        _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     else:
@@ -111,94 +111,13 @@ def _deploy_local(deployment_name, model_path):
     mii.utils.import_score_file(deployment_name).init()
 
 
-def _fill_template(template, replace_dict):
-    for var, val in replace_dict.items():
-        template = template.replace(var, val)
-    return template
-
-
-def _deploy_aml(deployment_name, model_path, model_name):
-    # Test azure-cli login
-    try:
-        acr_name = subprocess.check_output(
-            ["az",
-             "ml",
-             "workspace",
-             "show",
-             "--query",
-             "container_registry"],
-            text=True)
-        acr_name = acr_name.strip().replace('"', '').rsplit('/', 1)[-1]
-    except subprocess.CalledProcessError as e:
-        print("\n", "-" * 30, "\n")
-        print("Unable to obtain ACR name from Azure-CLI. Please verify that you:")
-        print("\t- Have Azure-CLI installed")
-        print("\t- Are logged in to an active account on Azure-CLI")
-        print("\t- Have Azure-CLI ML plugin installed")
-        print("\n", "-" * 30, "\n")
-        raise (e)
-
-    # Values
-    #TODO Assert deployment name has only [A-Za-z0-9] (and "-")
-    output_dir = mii.utils.mii_aml_output_path(deployment_name)
-    code_path = os.path.join(output_dir, "code")
-    model_path = os.path.join(output_dir, "model")
-    version = "2"
-    endpoint_name = deployment_name + "-endpoint"
-    environment_name = deployment_name + "-environment"
-    image_name = deployment_name + "-image"
-    replace_dict = {
-        "<deployment-name>": deployment_name,
-        "<model-name>": model_name,
-        "<acr-name>": acr_name,
-        "<code-path>": code_path,
-        "<model-path>": model_path,
-        "<version>": version,
-        "<endpoint-name>": endpoint_name,
-        "<environment-name>": environment_name,
-        "<image-name>": image_name,
-    }
-
-    # Make output dirs
-    os.makedirs(code_path, exist_ok=True)
-    os.makedirs(model_path, exist_ok=True)
-    os.makedirs(os.path.join(output_dir, "build", "runit", "gunicorn"), exist_ok=True)
-
-    # Fill yaml templates
-    template_dict = {
-        "deployment": mii.templates.deployment_template,
-        "endpoint": mii.templates.endpoint_template,
-        "environment": mii.templates.environment_template
-    }
-    for template_type, template in template_dict.items():
-        output_file = os.path.join(output_dir, f"{template_type}.yml")
-        yaml_data = _fill_template(template, replace_dict)
-        with open(output_file, "w") as f:
-            yaml.dump(yaml.safe_load(yaml_data), f)
-
-    # Fill deploy.sh
-    output_file = os.path.join(output_dir, "deploy.sh")
-    script_data = _fill_template(mii.templates.deploy_template, replace_dict)
-    with open(output_file, "w") as f:
-        f.write(script_data)
-
-    # Docker files
-    output_file = os.path.join(output_dir, "build", "Dockerfile")
-    with open(output_file, "w") as f:
-        f.write(mii.templates.dockerfile)
-
-    output_file = os.path.join(output_dir, "build", "gunicorn_app")
-    with open(output_file, "w") as f:
-        f.write(mii.templates.gunicorn)
-
-    output_file = os.path.join(output_dir, "build", "runit", "gunicorn", "run")
-    with open(output_file, "w") as f:
-        f.write(mii.templates.gunicorn_run)
-
-    output_file = os.path.join(output_dir, "build", "runit", "gunicorn", "finish")
-    with open(output_file, "w") as f:
-        f.write(mii.templates.gunicorn_finish)
-
-    output_file = os.path.join(output_dir, "build", "requirements.txt")
-    with open(output_file, "w") as f:
-        f.write(mii.templates.requirements)
+def _deploy_aml(deployment_name, model_name, version):
+    acr_name = mii.aml_related.utils.get_acr_name()
+    mii.aml_related.utils.generate_aml_scripts(acr_name=acr_name,
+                                               deployment_name=deployment_name,
+                                               model_name=model_name,
+                                               version=version)
+    print(
+        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_name)}"
+    )
+    print("Please run 'deploy.sh' to bring your deployment online")
