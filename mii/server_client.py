@@ -206,8 +206,6 @@ class MIIServerClient():
             logger.info(f"multi-gpu deepspeed launch: {cmd}")
             mii_env = os.environ.copy()
             mii_env["TRANSFORMERS_CACHE"] = model_path
-            print("MODEL_PATH", model_path)
-            print(os.listdir(model_path))
             process = subprocess.Popen(cmd, env=mii_env)
         return process
 

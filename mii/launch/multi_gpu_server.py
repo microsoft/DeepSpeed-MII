@@ -53,8 +53,6 @@ def main():
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     port = args.port + local_rank
 
-    print("MODEL_PATHH", args.model_path)
-    print(os.getenv("TRANFORMERS_CACHE", None))
     inference_pipeline = load_models(task_name=args.task_name,
                                      model_name=args.model,
                                      model_path=args.model_path,
