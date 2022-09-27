@@ -166,10 +166,13 @@ class MIIServerClient():
             # bytes -> str
             b64_config_str = b64_config_bytes.decode()
 
-            #TODO: will need worker hostfile support here for multi-node launching
+            #TODO: will need worker hostfile support here for multi-node launching, this force ignores a /job/hostfile
+            #      if one exists which is not compatible when passing localhost as a hostname.
+            worker_str = "-H /dev/null "
             # pin deepspeed launch to specific gpu id(s)
-            worker_str = f"-i localhost:{','.join(map(str, mii_configs.deploy_rank))}"
-            worker_str += f" --master_port {mii_configs.torch_dist_port + mii_configs.deploy_rank[0]}"
+            worker_str += f"-i localhost:{','.join(map(str, mii_configs.deploy_rank))} "
+            # adjust torch dist port depending on rank, otherwise multi-replica deployments will conflict
+            worker_str += f"--master_port {mii_configs.torch_dist_port + mii_configs.deploy_rank[0]}"
 
             ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
