@@ -17,7 +17,18 @@ class MIIConfig(BaseModel):
         MIIConfig._torch_dtype(value)
         return value.lower()
 
-    #TODO(jeff): validate tp == len(deploy_rank)
+    @validator("deploy_rank")
+    def TP_deploy_valid(cls, field_value, values):
+        if "tensor_parallel" not in values:
+            raise ValueError(
+                "'tensor_parallel' must be defined in the pydantic model before 'deploy_rank'"
+            )
+        rank_count = 1
+        if isinstance(field_value, list):
+            rank_count = len(field_value)
+        assert values["tensor_parallel"] == rank_count, \
+            f"{rank_count} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {values['tensor_parallel']}"
+        return field_value
 
     @validator('checkpoint_dict')
     def checkpoint_dict_valid(cls, value):
