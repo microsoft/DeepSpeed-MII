@@ -166,7 +166,12 @@ class MIIServerClient():
             # bytes -> str
             b64_config_str = b64_config_bytes.decode()
 
-            ds_launch_str = f"deepspeed --num_gpus {self.num_gpus} --no_local_rank --no_python"
+            if isinstance(mii_configs.deploy_rank, int):
+                worker_str = f"-i localhost:{mii_configs.deploy_rank} --master_port {29500 + mii_configs.deploy_rank}"
+            else:
+                worker_str = f"-i localhost:{','.join(map(str, mii_configs.deploy_rank))} --master_port {29500 + mii_configs.deploy_rank[0]}"
+
+            ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
             server_args_str = f"--task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
             server_args_str += " --ds-optimize" if ds_optimize else ""

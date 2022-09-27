@@ -1,5 +1,5 @@
 import torch
-from typing import Union
+from typing import Union, List
 from pydantic import BaseModel, validator
 
 
@@ -9,12 +9,15 @@ class MIIConfig(BaseModel):
     dtype: str = "float"
     enable_cuda_graph: bool = False
     checkpoint_dict: Union[dict, None] = None
+    deploy_rank: Union[int, List[int]] = 0
 
     @validator('dtype')
     def dtype_valid(cls, value):
         # parse dtype value to determine torch dtype
         MIIConfig._torch_dtype(value)
         return value.lower()
+
+    #TODO(jeff): validate tp == len(deploy_rank)
 
     @validator('checkpoint_dict')
     def checkpoint_dict_valid(cls, value):
