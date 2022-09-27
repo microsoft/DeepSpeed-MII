@@ -166,10 +166,10 @@ class MIIServerClient():
             # bytes -> str
             b64_config_str = b64_config_bytes.decode()
 
-            if isinstance(mii_configs.deploy_rank, int):
-                worker_str = f"-i localhost:{mii_configs.deploy_rank} --master_port {29500 + mii_configs.deploy_rank}"
-            else:
-                worker_str = f"-i localhost:{','.join(map(str, mii_configs.deploy_rank))} --master_port {29500 + mii_configs.deploy_rank[0]}"
+            #TODO: will need worker hostfile support here for multi-node launching
+            # pin deepspeed launch to specific gpu id(s)
+            worker_str = f"-i localhost:{','.join(map(str, mii_configs.deploy_rank))}"
+            worker_str += f" --master_port {mii_configs.torch_dist_port + mii_configs.deploy_rank[0]}"
 
             ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
             launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
