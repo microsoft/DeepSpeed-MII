@@ -50,14 +50,14 @@ MII allows supported models to be deployed with just a few lines of code on-prem
 
 Several deployment and query examples can be found here: [examples/local](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/local)
 
-As an example here is a deployment of the [bigscience/bloom-350m](https://huggingface.co/bigscience/bloom-350m) model from Hugging Face:
+As an example here is a deployment of the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model from Hugging Face:
 
 **Deployment**
 ```python
 mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
 mii.deploy(task="text-generation",
-           model="bigscience/bloom-350m",
-           deployment_name="bloom350m_deployment",
+           model="bigscience/bloom-560m",
+           deployment_name="bloom560m_deployment",
            mii_config=mii_configs)
 ```
 
@@ -65,7 +65,7 @@ This will deploy the model onto a single GPU and start the GRPC server that can 
 
 **Query**
 ```python
-generator = mii.mii_query_handle("bloom350m_deployment")
+generator = mii.mii_query_handle("bloom560m_deployment")
 result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30)
 print(result)
 ```
@@ -74,7 +74,7 @@ The only required key is `"query"`, all other items outside the dictionary will 
 
 **Shutdown Deployment**
 ```python
-mii.terminate("bloom350m_deployment")
+mii.terminate("bloom560m_deployment")
 ```
 
 ## Contributing
