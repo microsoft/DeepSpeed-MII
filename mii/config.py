@@ -31,7 +31,7 @@ class MIIConfig(BaseModel):
 
         # ensure deploy rank type is always list for easier consumption later
         if not isinstance(field_value, list):
-            field_value = list(field_value)
+            field_value = [field_value]
 
         # number of ranks provided must be equal to TP size, DP is handled outside MII currently
         assert values["tensor_parallel"] == len(field_value), \
