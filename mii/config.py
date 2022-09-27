@@ -1,5 +1,5 @@
 import torch
-from typing import Union
+from typing import Union, List
 from pydantic import BaseModel, validator
 
 
@@ -9,12 +9,34 @@ class MIIConfig(BaseModel):
     dtype: str = "float"
     enable_cuda_graph: bool = False
     checkpoint_dict: Union[dict, None] = None
+    deploy_rank: Union[int, List[int]] = -1
+    torch_dist_port: int = 29500
 
     @validator('dtype')
     def dtype_valid(cls, value):
         # parse dtype value to determine torch dtype
         MIIConfig._torch_dtype(value)
         return value.lower()
+
+    @validator("deploy_rank")
+    def deploy_valid(cls, field_value, values):
+        if "tensor_parallel" not in values:
+            raise ValueError(
+                "'tensor_parallel' must be defined in the pydantic model before 'deploy_rank'"
+            )
+
+        # if deploy rank is not given, default to align with TP value
+        if field_value == -1:
+            field_value = list(range(values["tensor_parallel"]))
+
+        # ensure deploy rank type is always list for easier consumption later
+        if not isinstance(field_value, list):
+            field_value = [field_value]
+
+        # number of ranks provided must be equal to TP size, DP is handled outside MII currently
+        assert values["tensor_parallel"] == len(field_value), \
+            f"{len(field_value)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {values['tensor_parallel']}"
+        return field_value
 
     @validator('checkpoint_dict')
     def checkpoint_dict_valid(cls, value):
