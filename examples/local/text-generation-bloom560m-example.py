@@ -1,7 +1,15 @@
 import mii
 
-mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
+rank = 0
+
+mii_config = {
+    "tensor_parallel": 1,
+    "dtype": "fp16",
+    "deploy_rank": rank,
+    "port_number": f"{50050 + rank}"
+}
+
 mii.deploy(task='text-generation',
-           model="bigscience/bloom-560m",
-           deployment_name="bloom560m_deployment",
-           mii_config=mii_configs)
+           model="EleutherAI/gpt-j-6B",
+           deployment_name=f"gptj_{rank}",
+           mii_config=mii_config)
