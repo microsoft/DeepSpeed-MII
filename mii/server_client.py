@@ -184,6 +184,8 @@ class MIIServerClient():
                 provider = mii.constants.MODEL_PROVIDER_NAME_EA
             elif "bigscience/bloom" in model_name:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
+            elif self.task == mii.constants.Tasks.TEXT_GENERATION:
+                provider = mii.constants.MODEL_PROVIDER_NAME_HF_NOPIPE
             else:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF
             server_args_str += f" --provider {provider}"

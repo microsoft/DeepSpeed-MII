@@ -30,6 +30,9 @@ def load_models(task_name,
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
         from mii.models.providers.huggingface import hf_provider
         inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)
+    elif provider == mii.constants.ModelProvider.HUGGING_FACE_NOPIPE:
+        from mii.models.providers.hf_no_pipe import hf_nopipe_provider
+        inference_pipeline = hf_nopipe_provider(model_path, model_name, task_name, mii_config)
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         from mii.models.providers.eleutherai import eleutherai_provider
         assert mii_config.torch_dtype() == torch.half, "gpt-neox only support fp16"
