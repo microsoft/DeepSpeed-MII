@@ -17,6 +17,7 @@ class Tasks(enum.Enum):
     FILL_MASK = 4
     TOKEN_CLASSIFICATION = 5
     CONVERSATIONAL = 6
+    TEXT2IMG = 7
 
 
 TEXT_GENERATION_NAME = 'text-generation'
@@ -25,22 +26,26 @@ QUESTION_ANSWERING_NAME = 'question-answering'
 FILL_MASK_NAME = 'fill-mask'
 TOKEN_CLASSIFICATION_NAME = 'token-classification'
 CONVERSATIONAL_NAME = 'conversational'
+TEXT2IMG_NAME = "text-to-image"
 
 
 class ModelProvider(enum.Enum):
     HUGGING_FACE = 1
     ELEUTHER_AI = 2
     HUGGING_FACE_LLM = 3
+    DIFFUSERS = 4
 
 
 MODEL_PROVIDER_NAME_HF = "hugging-face"
 MODEL_PROVIDER_NAME_EA = "eleuther-ai"
 MODEL_PROVIDER_NAME_HF_LLM = "hugging-face-llm"
+MODEL_PROVIDER_NAME_DIFFUSERS = "diffusers"
 
 MODEL_PROVIDER_MAP = {
     MODEL_PROVIDER_NAME_HF: ModelProvider.HUGGING_FACE,
     MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI,
     MODEL_PROVIDER_NAME_HF_LLM: ModelProvider.HUGGING_FACE_LLM,
+    MODEL_PROVIDER_NAME_DIFFUSERS: ModelProvider.DIFFUSERS
 }
 
 SUPPORTED_MODEL_TYPES = {
@@ -51,6 +56,7 @@ SUPPORTED_MODEL_TYPES = {
     'gptj': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
     'bloom': ModelProvider.HUGGING_FACE_LLM,
+    'stable-diffusion': ModelProvider.DIFFUSERS
 }
 
 SUPPORTED_TASKS = [
@@ -59,7 +65,8 @@ SUPPORTED_TASKS = [
     QUESTION_ANSWERING_NAME,
     FILL_MASK_NAME,
     TOKEN_CLASSIFICATION_NAME,
-    CONVERSATIONAL_NAME
+    CONVERSATIONAL_NAME,
+    TEXT2IMG_NAME
 ]
 
 REQUIRED_KEYS_PER_TASK = {
@@ -73,7 +80,8 @@ REQUIRED_KEYS_PER_TASK = {
     ['text',
      'conversation_id',
      'past_user_inputs',
-     'generated_responses']
+     'generated_responses'],
+    TEXT2IMG_NAME: ["query"]
 }
 
 MODEL_NAME_KEY = 'model_name'

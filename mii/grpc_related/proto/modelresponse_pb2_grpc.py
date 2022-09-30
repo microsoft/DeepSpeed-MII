@@ -6,8 +6,7 @@ import mii.grpc_related.proto.modelresponse_pb2 as modelresponse__pb2
 
 
 class ModelResponseStub(object):
-    """The greeting service definition.
-    """
+    """Missing associated documentation comment in .proto file."""
     def __init__(self, channel):
         """Constructor.
 
@@ -44,14 +43,17 @@ class ModelResponseStub(object):
             request_serializer=modelresponse__pb2.ConversationRequest.SerializeToString,
             response_deserializer=modelresponse__pb2.ConversationReply.FromString,
         )
+        self.Txt2ImgReply = channel.unary_unary(
+            '/modelresponse.ModelResponse/Txt2ImgReply',
+            request_serializer=modelresponse__pb2.MultiStringRequest.SerializeToString,
+            response_deserializer=modelresponse__pb2.ImageReply.FromString,
+        )
 
 
 class ModelResponseServicer(object):
-    """The greeting service definition.
-    """
+    """Missing associated documentation comment in .proto file."""
     def GeneratorReply(self, request, context):
-        """Sends a greeting
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -81,6 +83,12 @@ class ModelResponseServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ConversationalReply(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Txt2ImgReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -125,6 +133,12 @@ def add_ModelResponseServicer_to_server(servicer, server):
             request_deserializer=modelresponse__pb2.ConversationRequest.FromString,
             response_serializer=modelresponse__pb2.ConversationReply.SerializeToString,
         ),
+        'Txt2ImgReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.Txt2ImgReply,
+            request_deserializer=modelresponse__pb2.MultiStringRequest.FromString,
+            response_serializer=modelresponse__pb2.ImageReply.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler('modelresponse.ModelResponse',
                                                            rpc_method_handlers)
@@ -133,8 +147,7 @@ def add_ModelResponseServicer_to_server(servicer, server):
 
 # This class is part of an EXPERIMENTAL API.
 class ModelResponse(object):
-    """The greeting service definition.
-    """
+    """Missing associated documentation comment in .proto file."""
     @staticmethod
     def GeneratorReply(request,
                        target,
@@ -282,6 +295,32 @@ class ModelResponse(object):
             '/modelresponse.ModelResponse/ConversationalReply',
             modelresponse__pb2.ConversationRequest.SerializeToString,
             modelresponse__pb2.ConversationReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
+    @staticmethod
+    def Txt2ImgReply(request,
+                     target,
+                     options=(),
+                     channel_credentials=None,
+                     call_credentials=None,
+                     insecure=False,
+                     compression=None,
+                     wait_for_ready=None,
+                     timeout=None,
+                     metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modelresponse.ModelResponse/Txt2ImgReply',
+            modelresponse__pb2.MultiStringRequest.SerializeToString,
+            modelresponse__pb2.ImageReply.FromString,
             options,
             channel_credentials,
             insecure,

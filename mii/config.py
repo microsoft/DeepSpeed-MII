@@ -11,6 +11,7 @@ class MIIConfig(BaseModel):
     checkpoint_dict: Union[dict, None] = None
     deploy_rank: Union[int, List[int]] = -1
     torch_dist_port: int = 29500
+    hf_auth_token: str = None
 
     @validator('dtype')
     def dtype_valid(cls, value):

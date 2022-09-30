@@ -10,6 +10,7 @@ from .proto import modelresponse_pb2_grpc
 import sys
 import time
 
+from torch import autocast
 from transformers import Conversation
 
 
@@ -28,11 +29,11 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
 
     def GeneratorReply(self, request, context):
         query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
-        start = time.time()
 
         # unpack grpc list into py-list
         request = [r for r in request.request]
 
+        start = time.time()
         batched_responses = self.inference_pipeline(request, **query_kwargs)
         end = time.time()
 
@@ -44,6 +45,44 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
 
         val = modelresponse_pb2.MultiStringReply(response=text_responses,
                                                  time_taken=end - start)
+        return val
+
+    def Txt2ImgReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
+
+        # unpack grpc list into py-list
+        request = [r for r in request.request]
+
+        start = time.time()
+        with autocast("cuda"):
+            response = self.inference_pipeline(request, **query_kwargs)
+        end = time.time()
+
+        images_bytes = []
+        nsfw_content_detected = []
+        response_count = len(response.images)
+        for i in range(response_count):
+            img = response.images[i]
+            img_bytes = img.tobytes()
+            images_bytes.append(img_bytes)
+            nsfw_content_detected.append(response.nsfw_content_detected[i])
+        img_mode = response.images[0].mode
+        img_size_w, img_size_h = response.images[0].size
+
+        # assert type(img_bytes[0]) == bytes, f"img_bytes should be bytes: {type(img_bytes[0])}"
+
+        val = modelresponse_pb2.ImageReply(images=images_bytes,
+                                           nsfw_content_detected=nsfw_content_detected,
+                                           mode=img_mode,
+                                           size_w=img_size_w,
+                                           size_h=img_size_h,
+                                           time_taken=end - start)
+        # val = modelresponse_pb2.ImageReply(images=[b'0x2', b'0x1'],
+        #                                    nsfw_content_detected=[True, False],
+        #                                    mode="RGB",
+        #                                    size_w=512,
+        #                                    size_h=512,
+        #                                    time_taken=end-start)
         return val
 
     def ClassificationReply(self, request, context):

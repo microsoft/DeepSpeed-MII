@@ -184,6 +184,8 @@ class MIIServerClient():
                 provider = mii.constants.MODEL_PROVIDER_NAME_EA
             elif "bigscience/bloom" in model_name:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
+            elif self.task == mii.Tasks.TEXT2IMG:
+                provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
             else:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF
             server_args_str += f" --provider {provider}"
@@ -279,8 +281,17 @@ class MIIServerClient():
                     generated_responses=request_dict['generated_responses'],
                     query_kwargs=proto_kwargs))
 
+        elif self.task == mii.Tasks.TEXT2IMG:
+            # convert to batch of queries if they are not already
+            print(request_dict)
+            if not isinstance(request_dict['query'], list):
+                request_dict['query'] = [request_dict['query']]
+            req = modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
+                                                       query_kwargs=proto_kwargs)
+            response = await self.stubs[stub_id].Txt2ImgReply(req)
+
         else:
-            assert False, "unknown task"
+            raise ValueError(f"unknown task: {self.task}")
         return response
 
     def _request_response(self, request_dict, query_kwargs):
@@ -304,6 +315,9 @@ class MIIServerClient():
 
         elif self.task == mii.Tasks.CONVERSATIONAL:
             response = self.model(["", request_dict['query']], **query_kwargs)
+
+        elif self.task == mii.Tasks.TEXT2IMG:
+            response = self.model(request_dict['query'], **query_kwargs)
 
         else:
             raise NotImplementedError(f"task is not supported: {self.task}")

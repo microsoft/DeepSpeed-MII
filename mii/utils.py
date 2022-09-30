@@ -9,19 +9,18 @@ import mii
 
 from huggingface_hub import HfApi
 
-from mii.constants import (
-    CONVERSATIONAL_NAME,
-    FILL_MASK_NAME,
-    MII_CACHE_PATH,
-    MII_CACHE_PATH_DEFAULT,
-    TEXT_GENERATION_NAME,
-    TEXT_CLASSIFICATION_NAME,
-    QUESTION_ANSWERING_NAME,
-    TOKEN_CLASSIFICATION_NAME,
-    SUPPORTED_MODEL_TYPES,
-    ModelProvider,
-    REQUIRED_KEYS_PER_TASK,
-)
+from mii.constants import (CONVERSATIONAL_NAME,
+                           FILL_MASK_NAME,
+                           MII_CACHE_PATH,
+                           MII_CACHE_PATH_DEFAULT,
+                           TEXT_GENERATION_NAME,
+                           TEXT_CLASSIFICATION_NAME,
+                           QUESTION_ANSWERING_NAME,
+                           TOKEN_CLASSIFICATION_NAME,
+                           SUPPORTED_MODEL_TYPES,
+                           ModelProvider,
+                           REQUIRED_KEYS_PER_TASK,
+                           TEXT2IMG_NAME)
 
 from mii.constants import Tasks
 
@@ -45,6 +44,9 @@ def get_task_name(task):
     if task == Tasks.CONVERSATIONAL:
         return CONVERSATIONAL_NAME
 
+    if task == Tasks.TEXT2IMG:
+        return TEXT2IMG_NAME
+
     raise ValueError(f"Unknown Task {task}")
 
 
@@ -66,6 +68,9 @@ def get_task(task_name):
 
     if task_name == CONVERSATIONAL_NAME:
         return Tasks.CONVERSATIONAL
+
+    if task_name == TEXT2IMG_NAME:
+        return Tasks.TEXT2IMG
 
     assert False, f"Unknown Task {task_name}"
 
@@ -90,6 +95,8 @@ def _get_supported_models_name(task):
         elif provider == ModelProvider.ELEUTHER_AI:
             if task_name == TEXT_GENERATION_NAME:
                 models = [model_type]
+        elif provider == ModelProvider.DIFFUSERS:
+            models = _get_hf_models_by_type(model_type, task_name)
         supported_models.extend(models)
     if not supported_models:
         raise ValueError(f"Task {task} not supported")
@@ -99,6 +106,7 @@ def _get_supported_models_name(task):
 
 def check_if_task_and_model_is_supported(task, model_name):
     supported_models = _get_supported_models_name(task)
+    print(f"{model_name=}, {supported_models=}, {task=}")
     assert model_name in supported_models, f"{task} only supports {supported_models}"
 
 
