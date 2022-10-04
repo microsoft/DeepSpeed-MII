@@ -12,6 +12,7 @@ import time
 
 from torch import autocast
 from transformers import Conversation
+from mii.constants import GRPC_MAX_MSG_SIZE
 
 
 class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -131,7 +132,11 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
 
 
 def serve(inference_pipeline, port):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10),
+                         options=[('grpc.max_send_message_length',
+                                   GRPC_MAX_MSG_SIZE),
+                                  ('grpc.max_receive_message_length',
+                                   GRPC_MAX_MSG_SIZE)])
     modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(
         ModelResponse(inference_pipeline),
         server)
