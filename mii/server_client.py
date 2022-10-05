@@ -283,7 +283,6 @@ class MIIServerClient():
 
         elif self.task == mii.Tasks.TEXT2IMG:
             # convert to batch of queries if they are not already
-            print(request_dict)
             if not isinstance(request_dict['query'], list):
                 request_dict['query'] = [request_dict['query']]
             req = modelresponse_pb2.MultiStringRequest(request=request_dict['query'],

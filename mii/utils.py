@@ -106,7 +106,6 @@ def _get_supported_models_name(task):
 
 def check_if_task_and_model_is_supported(task, model_name):
     supported_models = _get_supported_models_name(task)
-    print(f"{model_name=}, {supported_models=}, {task=}")
     assert model_name in supported_models, f"{task} only supports {supported_models}"
 
 
