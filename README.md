@@ -17,7 +17,7 @@ Model Implementations for Inference (MII) is library from DeepSpeed, designed to
 
 Under-the-hood MII is powered by DeepSpeed-Inference. Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize thoughput. It does so using one of many pre-specified model injection policies, that allows DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation. This injection can replace a single GPU module with multi-GPU variations enabling models to run on single GPU device, or seamlessly scale to tens of GPUs for dense models and hundreds of GPUs for sparse models for lower latency and higher throughput.
 
-MII makes the expansive set of optimizations in DeepSpeed-Inference easily accessible to its users by automatically integrating them to thousands of popular transformer models. For a full set of optimizations in DeepSpeed-Inference please see our paper: [DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale](https://arxiv.org/abs/2207.00032]).
+MII makes the expansive set of optimizations in DeepSpeed-Inference easily accessible to its users by automatically integrating them to thousands of popular transformer models. For a full set of optimizations in DeepSpeed-Inference please see our paper: [DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale](https://arxiv.org/abs/2207.00032).
 
 ## Supported Models and Tasks
 
@@ -50,14 +50,14 @@ MII allows supported models to be deployed with just a few lines of code on-prem
 
 Several deployment and query examples can be found here: [examples/local](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/local)
 
-As an example here is a deployment of the [bigscience/bloom-350m](https://huggingface.co/bigscience/bloom-350m) model from Hugging Face:
+As an example here is a deployment of the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model from Hugging Face:
 
 **Deployment**
 ```python
 mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
 mii.deploy(task="text-generation",
-           model="bigscience/bloom-350m",
-           deployment_name="bloom350m_deployment",
+           model="bigscience/bloom-560m",
+           deployment_name="bloom560m_deployment",
            mii_config=mii_configs)
 ```
 
@@ -65,7 +65,7 @@ This will deploy the model onto a single GPU and start the GRPC server that can 
 
 **Query**
 ```python
-generator = mii.mii_query_handle("bloom350m_deployment")
+generator = mii.mii_query_handle("bloom560m_deployment")
 result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30)
 print(result)
 ```
@@ -74,7 +74,7 @@ The only required key is `"query"`, all other items outside the dictionary will 
 
 **Shutdown Deployment**
 ```python
-mii.terminate("bloom350m_deployment")
+mii.terminate("bloom560m_deployment")
 ```
 
 ## Contributing

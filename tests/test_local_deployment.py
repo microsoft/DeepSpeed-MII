@@ -136,7 +136,7 @@ def local_deployment(deployment_config, expected_failure):
         ),
         (
             "text-generation",
-            "bigscience/bloom-350m",
+            "bigscience/bloom-560m",
             {
                 "query": ["DeepSpeed is the greatest",
                           'Seattle is']
