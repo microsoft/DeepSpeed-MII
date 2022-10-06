@@ -213,11 +213,25 @@ class MIIServerClient():
                     )
                 server_args_str += f" --ds-config {ds_config_path}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
-            logger.info(f"multi-gpu deepspeed launch: {cmd}")
+            printable_config = f"task-name {mii.utils.get_task_name(self.task)} model {model_name} model-path {model_path} port {self.port_number} provider {provider}"
+            logger.info(f"MII using multi-gpu deepspeed launcher:\n" + self.print_helper(printable_config))
             mii_env = os.environ.copy()
             mii_env["TRANSFORMERS_CACHE"] = model_path
             process = subprocess.Popen(cmd, env=mii_env)
         return process
+
+    def print_helper(self, args):
+        # convert to list
+        args = args.split(" ")
+        # convert to dict
+        dct = {args[i]: args[i + 1] for i in range(0, len(args), 2)}
+        printable_string = ""
+        printable_string += " " + "-" * 60 + "\n"
+        for k,v in dct.items():
+            dots = "." * (29 - len(k))
+            printable_string += f" {k} {dots} {v} \n"
+        printable_string += " " + "-" * 60
+        return printable_string
 
     def _initialize_grpc_client(self):
         channels = []

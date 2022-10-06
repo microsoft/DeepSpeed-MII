@@ -22,6 +22,7 @@ if not args.query:
                model="CompVis/stable-diffusion-v1-4",
                deployment_name="sd_deploy",
                mii_config=mii_configs)
+    print("\nText to image model deployment complete! To use this deployment, run the following command: python txt2img-example.py --query\n")
 else:
     generator = mii.mii_query_handle("sd_deploy")
     result = generator.query({
