@@ -28,7 +28,6 @@ def load_models(task_name,
     args = None
     training_mp_size = 1
     kernel_inject = True
-    replace_pipeline_model = True
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
         from mii.models.providers.huggingface import hf_provider
         inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)

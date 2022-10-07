@@ -82,10 +82,14 @@ def deploy(task,
         mii.utils.check_if_task_and_model_is_supported(task, model)
 
     if enable_deepspeed:
-        logger.info(f"************* MII is using DeepSpeed Optimizations to accelerate your model *************")
+        logger.info(
+            f"************* MII is using DeepSpeed Optimizations to accelerate your model *************"
+        )
     else:
-        logger.info(f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************")
-    
+        logger.info(
+            f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
+        )
+
     # In local deployments use default path if no model path set
     if model_path is None and deployment_type == DeploymentType.LOCAL:
         model_path = MII_MODEL_PATH_DEFAULT
