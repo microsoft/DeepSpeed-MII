@@ -28,17 +28,18 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
 
     def _get_model_time(self, model, sum_times=False):
         model_times = []
-        if hasattr(model, "model_times"):
+        # Only grab model times if profiling was enabled/exists
+        if getattr(model, "model_profile_enabled", False):
             model_times = model.model_times()
 
-        if len(model_times) == 1:
-            model_time = model_times[0]
-        elif len(model_times) > 1:
+        if len(model_times) > 0:
             if sum_times:
                 model_time = sum(model_times)
             else:
+                # Unclear how to combine values, so just grab the most recent one
                 model_time = model_times[-1]
         else:
+            # no model times were captured
             model_time = -1
         return model_time
 
