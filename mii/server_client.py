@@ -183,6 +183,7 @@ class MIIServerClient():
             if model_name == "gpt-neox":
                 provider = mii.constants.MODEL_PROVIDER_NAME_EA
             elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
+                # Hack: bigscience/bloom is the 176b bloom model. Smaller bloom models can take the default HF provider path.
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
             else:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF
