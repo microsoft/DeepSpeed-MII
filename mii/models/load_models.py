@@ -52,6 +52,9 @@ def load_models(task_name,
     else:
         raise ValueError(f"Unknown model provider {provider}")
 
+    print(
+        f"> --------- MII Settings: {ds_optimize=}, replace_with_kernel_inject={mii_config.replace_with_kernel_inject}, enable_cuda_graph={mii_config.enable_cuda_graph} "
+    )
     if ds_optimize:
         inference_pipeline.model = deepspeed.init_inference(
             inference_pipeline.model,
