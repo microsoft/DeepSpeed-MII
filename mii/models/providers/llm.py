@@ -4,6 +4,7 @@ import torch
 import deepspeed
 from deepspeed.inference.engine import InferenceEngine
 from deepspeed import OnDevice
+from mii.utils import mii_cache_path
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from transformers.utils import WEIGHTS_NAME, WEIGHTS_INDEX_NAME, cached_path, hf_bucket_url
@@ -35,6 +36,7 @@ class BloomPipeline(object):
         for t in tokens:
             if torch.is_tensor(tokens[t]):
                 tokens[t] = tokens[t].to(f'cuda:{local_rank}')
+
         greedy_output = self.model.generate(**tokens, **kwargs)
         outputs = self.tokenizer.batch_decode(greedy_output, skip_special_tokens=True)
 
@@ -106,15 +108,32 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
         return data
 
 
+def _attempt_load(load_fn, model_name, cache_path, kwargs={}):
+    try:
+        value = load_fn(model_name, **kwargs)
+    except OSError:
+        print(f'Attempted load but failed, retrying using cache_dir={cache_path}')
+        value = load_fn(model_name, cache_dir=cache_path, **kwargs)
+    return value
+
+
 # TODO: This function is a hack for the Bloom models and will be replaced with a LargeModel provider code path
 def load_hf_llm(model_path, model_name, task_name, mii_config):
     deepspeed.init_distributed('nccl')
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    config = AutoConfig.from_pretrained(model_name)
-    with OnDevice(dtype=torch.float16, enabled=True):
+    cache_path = mii_cache_path()
+
+    tokenizer = _attempt_load(AutoTokenizer.from_pretrained,
+                              model_name,
+                              cache_path,
+                              kwargs={"padding_side": 'left'})
+    tokenizer.pad_token = tokenizer.eos_token
+
+    config = _attempt_load(AutoConfig.from_pretrained, model_name, cache_path)
+
+    with OnDevice(dtype=torch.float16, device='meta', enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
     checkpoint_dict = create_checkpoint_dict(model_name, model_path, mii_config)
