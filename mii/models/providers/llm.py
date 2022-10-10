@@ -101,6 +101,7 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
     elif os.path.isfile(os.path.join(model_path, "ds_inference_config.json")):
         with open(os.path.join(model_path, "ds_inference_config.json")) as f:
             data = json.load(f)
+        data["base_dir"] = model_path
         return data
     else:
         checkpoint_files = get_checkpoint_files(model_name)
