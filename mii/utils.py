@@ -73,8 +73,8 @@ def get_task(task_name):
 def _get_hf_models_by_type(model_type, task=None):
     api = HfApi()
     models = api.list_models(filter=model_type)
-    models = [[m.modelId for m in models]
-              if task is None else [m.modelId for m in models if m.pipeline_tag == task]]
+    models = ([m.modelId for m in models]
+              if task is None else [m.modelId for m in models if m.pipeline_tag == task])
     if task == TEXT_GENERATION_NAME:
         models.append("microsoft/bloom-deepspeed-inference-fp16")
     return models

@@ -44,7 +44,7 @@ model family | size range | ~model count
 
 `pip install .` will install all dependencies required for deployment. A PyPI release of MII is coming soon.
 
-### Deploying with MII
+### Deploying with MII (Locally)
 
 MII allows supported models to be deployed with just a few lines of code on-premise.
 
@@ -76,6 +76,61 @@ The only required key is `"query"`, all other items outside the dictionary will 
 ```python
 mii.terminate("bloom560m_deployment")
 ```
+
+### Deploying with MII (AML)
+
+MII allows supported models to be deployed with just a few lines of code onto AzureML resources. This deployment process is very similar to local deployments and we will modify the code from the local deployment example with the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model.
+
+Several other AML deployment examples can be found here: [examples/aml](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/aml)
+
+**Setup**
+
+To use MII on AML resources, you must have the Azure-CLI installed with an active login associated with your Azure resources. Follow the instructions below to get your local system ready for deploying on AML resources:
+
+1. Install Azure-CLI. Follow the official [installation instructions](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli#install).
+2. Run `az login` and follow the instructions to login to your Azure account. This account should be linked to the resources you plan to deploy on.
+3. Set the default subscription with `az account set --subscription <YOUR-SUBSCRIPTION-ID>`. You can find your subscription ID in the "overview" tab on your resource group page from the Azure web portal.
+4. Install the AML plugin for Azure-CLI with `az extension add --name ml`
+
+**Deployment**
+```python
+mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
+mii.deploy(task="text-generation",
+           model="bigscience/bloom-560m",
+           deployment_name="bloom560m-deployment",
+           deployment_type=mii.constants.AML_DEPLOYMENT,
+           mii_config=mii_configs)
+```
+
+
+This will generate the scripts and configuration files necessary to deploy the model on AML using a single GPU. You can find the generated output at `./bloom560m-deployment_aml/`
+
+When you are ready to run your deployment on AML resources, navigate to the newly created directory and run the deployment script:
+```bash
+cd ./bloom560m-deployment_aml/
+bash deploy.sh
+```
+
+This script may take several minutes to run as it does the following:
+- Downloads the model locally
+- Creates a Docker Image with MII for your deployment
+- Creates an AML online-endpoint for running queries
+- Uploads and registers the model to AML
+- Starts your deployment
+
+---
+📌 **Note:** Running the `mii.deploy` command will only generate the necessary scripts to launch an AML deployment. You must also run the generated `deploy.sh` script to run on AML resources.
+
+---
+
+**Query**
+Once the deployment is running on AML, you can run queries by navigating to the online-endpoint that was created for this deployment (i.e., `bloom-560m-deployment-endpoint`) from the [AML web portal](https://ml.azure.com/endpoints). Select the "Test" tab at the top of the endpoint page and type your query into the text-box:
+```
+{"query": ["DeepSpeed is", "Seattle is"], "do_sample"=True, "max_new_tokens"=30}
+```
+
+The only required key is `"query"`, all other items in the dictionary will be passed to `generate` as kwargs. For Hugging Face provided models you can find all possible arguments in their [documentation for generate](https://huggingface.co/docs/transformers/v4.20.1/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate).
+
 
 ## Contributing
 
