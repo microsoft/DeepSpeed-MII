@@ -98,10 +98,14 @@ mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
 mii.deploy(task="text-generation",
            model="bigscience/bloom-560m",
            deployment_name="bloom560m-deployment",
-           deployment_type=mii.constants.AML_DEPLOYMENT,
+           deployment_type=mii.constants.DeploymentType.AML,
            mii_config=mii_configs)
 ```
 
+---
+📌 **Note:** Running the `mii.deploy` with `deployment_type=mii.constants.DeploymentType.AML` will only generate the scripts to launch an AML deployment. You must also run the generated `deploy.sh` script to run on AML resources.
+
+---
 
 This will generate the scripts and configuration files necessary to deploy the model on AML using a single GPU. You can find the generated output at `./bloom560m-deployment_aml/`
 
@@ -119,7 +123,7 @@ This script may take several minutes to run as it does the following:
 - Starts your deployment
 
 ---
-📌 **Note:** Running the `mii.deploy` command will only generate the necessary scripts to launch an AML deployment. You must also run the generated `deploy.sh` script to run on AML resources.
+📌 **Note:** Large models (e.g., `bigscience/bloom`) may cause a timeout when trying to upload and register the model to AML. In these cases, it is required to manually upload models to Azure blob storage with [AzCopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10). Instructions and automation of this step will be added soon.
 
 ---
 
