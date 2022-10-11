@@ -9,7 +9,7 @@
  <img src="docs/images/mii-dark.svg#gh-dark-mode-only" width="400px">
 </div>
 
-![Text Generation Models](http://rasley.io/DeepSpeed/assets/images/mii/hero.png){: .align-center}
+![Text Generation Models](http://rasley.io/DeepSpeed/assets/images/mii/hero.png)
 
 The Deep Learning (DL) open-source community has seen tremendous growth in the last few months. Incredibly powerful text generation models such as the Bloom 176B, or image generation model such as Stable Diffusion are now available to anyone with access to a handful or even a single GPU through platforms such as Hugging Face. While open sourcing has democratized access to AI capabilities, their application is still restricted by two critical factors: inference latency and cost.
 
@@ -17,16 +17,16 @@ There has been significant progress in system optimizations for DL model inferen
 
 DeepSpeed-MII is a new open-source python library from DeepSpeed, aimed towards making low-latency, low-cost inference of powerful models not only feasible but also easily accessible.
 
-* MII offers access to highly optimized implementation of **thousands of widely used DL models.**
-* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, **MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x** (*Figures B and J*). Similarly, **it reduces the latency and cost of deploying Stable Diffusion by 1.9x.** (*Figure C*)
-* To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as *deepfusion* for transformers, automated *tensor-slicing* for multi-GPU inference, on-the-fly quantization with *ZeroQuant*, and several others (see below for more details).
-* With state-of-the-art performance, MII supports low-cost deployment of these models both on-premises and on Azure via AML with just a **few lines of codes**.
+* MII offers access to highly optimized implementation of thousands of widely used DL models.
+* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x. Similarly, it reduces the latency and cost of deploying Stable Diffusion by 1.9x.
+* To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as deepfusion for transformers, automated tensor-slicing for multi-GPU inference, on-the-fly quantization with ZeroQuant, and several others (see below for more details).
+* With state-of-the-art performance, MII supports low-cost deployment of these models both on-premises and on Azure via AML with just a few lines of codes.
 
 # How does MII work?
 
 ![Text Generation Models](http://rasley.io/DeepSpeed/assets/images/mii/mii-arch.png)
 
-*Figure A: MII Architecture, showing how MII automatically optimizes OSS models using DS-Inference before deploying them on-premises using GRPC, or on Microsoft Azure using AML Inference.*
+*MII Architecture, showing how MII automatically optimizes OSS models using DS-Inference before deploying them on-premises using GRPC, or on Microsoft Azure using AML Inference.*
 
 Under-the-hood MII is powered by [DeepSpeed-Inference](https://arxiv.org/abs/2207.00032). Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize throughput. It does so by using one of many pre-specified model injection policies, that allows MII and DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation (see *Figure A*). In doing so, MII makes the expansive set of optimizations in DeepSpeed-Inference automatically available for thousands of popular models that it supports.
 
