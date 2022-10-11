@@ -27,14 +27,14 @@ MII model support will continue to grow over time, check back for updates! Curre
 
 model family | size range | ~model count
 ------ | ------ | ------
-[bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 40
-[gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 80
-[gpt_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 240
-[gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 6,500
-[roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 3,200
-[bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 10,000
-
-<!-- * [gpt_neox](https://huggingface.co/models?other=gpt_neox) -->
+[bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 120
+[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 70
+[gpt\_neox](https://huggingface.co/models?other=gpt_neox) | 1.3B - 20B | 10
+[gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 110
+[gpt\_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 260
+[gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 7,100
+[roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 4,200
+[bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 12,500
 
 <!--For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)-->
 
