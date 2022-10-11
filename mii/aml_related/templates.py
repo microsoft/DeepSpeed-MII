@@ -55,8 +55,47 @@ inference_config:
     port: 5001
 """
 
+model_download = \
+"""import os
+import glob
+import shutil
+
+# Path and model params
+model_path = "<model-path>"
+tmp_download_path = "./tmp/"
+snapshot_rel_path = "*/snapshots/*/*"
+model = "<model-name>"
+
+# Must set cache location before loading transformers
+os.environ["TRANSFORMERS_CACHE"] = model_path
+
+from transformers import AutoConfig, AutoTokenizer, AutoModel
+from huggingface_hub import snapshot_download
+
+# Download config and tokenizer
+_ = AutoConfig.from_pretrained(model)
+_ = AutoTokenizer.from_pretrained(model)
+
+# Download model
+try:
+    _ = AutoModel.from_pretrained(model)
+except OSError:
+    # Sometimes the model cannot be downloaded and we need to grab the snapshot
+    snapshot_download(model, cache_dir=tmp_download_path)
+
+    # We need to resolve symlinks and move files to model_path dir
+    for f_path in glob.glob(os.path.join(tmp_download_path, snapshot_rel_path)):
+        f_name = os.path.basename(f_path)
+        real_file = os.path.realpath(f_path)
+        new_file = os.path.join(model_path, f_name)
+        os.rename(real_file, new_file)
+
+    shutil.rmtree(tmp_download_path)
+"""
+
 deploy = \
-"""TRANSFORMERS_CACHE=<model-path> python -c "model='<model-name>'; from transformers import AutoConfig, AutoTokenizer, AutoModel; AutoConfig.from_pretrained(model); AutoTokenizer.from_pretrained(model); AutoModel.from_pretrained(model)"
+"""set -e
+python3 model_download.py
 az acr build -r <acr-name> --build-arg no-cache=True -t "<image-name>:<version>" build
 az ml environment create -f environment.yml
 az ml online-endpoint create -n "<endpoint-name>" -f endpoint.yml
@@ -122,7 +161,7 @@ ENV PATH="/opt/miniconda/envs/amlenv/bin:$AML_APP_ROOT:$PATH" \
 RUN /opt/miniconda/envs/amlenv/bin/pip install -r "$BUILD_DIR/requirements.txt" --extra-index-url https://download.pytorch.org/whl/cu113 && \
     /opt/miniconda/envs/amlenv/bin/pip install azureml-inference-server-http && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/deepspeed.git && \
-    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git@aml-cache-path && \
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git && \
     /opt/miniconda/envs/amlenv/bin/pip install transformers==4.21.2
 
 

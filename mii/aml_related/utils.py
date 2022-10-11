@@ -111,6 +111,13 @@ def generate_aml_scripts(acr_name, deployment_name, model_name, version):
                      fill_template(mii.aml_related.templates.requirements,
                                    replace_dict))
 
+    # Model download script
+    write_out_script(
+        os.path.join(output_dir,
+                     "model_download.py"),
+        fill_template(mii.aml_related.templates.model_download,
+                      replace_dict))
+
     # Deployment script
     write_out_script(os.path.join(output_dir,
                                   "deploy.sh"),

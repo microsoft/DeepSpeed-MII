@@ -46,9 +46,10 @@ def run(request):
 
     response = model.query(query_dict, **request_dict)
 
+    time_taken = response.time_taken
     if not isinstance(response.response, str):
         response = [r for r in response.response]
-    return json.dumps({'responses': response})
+    return json.dumps({'responses': response, 'time': time_taken})
 
 
 ### Auto-generated config will be appended below at run-time

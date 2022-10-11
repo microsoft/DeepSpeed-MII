@@ -1,4 +1,5 @@
 import os
+import json
 import torch
 import deepspeed
 from deepspeed.inference.engine import InferenceEngine
@@ -97,6 +98,11 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
     if mii_config.checkpoint_dict:
         mii_config.checkpoint_dict['base_dir'] = model_path
         return mii_config.checkpoint_dict
+    elif os.path.isfile(os.path.join(model_path, "ds_inference_config.json")):
+        with open(os.path.join(model_path, "ds_inference_config.json")) as f:
+            data = json.load(f)
+        data["base_dir"] = model_path
+        return data
     else:
         checkpoint_files = get_checkpoint_files(model_name)
         data = {"type": "BLOOM", "checkpoints": checkpoint_files, "version": 1.0}
