@@ -9,15 +9,26 @@
  <img src="docs/images/mii-dark.svg#gh-dark-mode-only" width="400px">
 </div>
 
-Model Implementations for Inference (MII) is library from DeepSpeed, designed to make low-latency, low-cost inference of powerful transformer models not only feasible but also easily accessible. It does so by offering access to highly optimized implementations of thousands of widely used DL models. In fact, straight out-of-box, MII supported models can be deployed on-premise with just a few lines of code.
+![Text Generation Models](http://rasley.io/DeepSpeed/assets/images/mii/hero.png){: .align-center}
 
-**Note: MII is currently in a pre-release phase, this repo will be actively updated over the next several weeks with additional features, performance breakdowns, comparisons to other frameworks, etc.**
+The Deep Learning (DL) open-source community has seen tremendous growth in the last few months. Incredibly powerful text generation models such as the Bloom 176B, or image generation model such as Stable Diffusion are now available to anyone with access to a handful or even a single GPU through platforms such as Hugging Face. While open sourcing has democratized access to AI capabilities, their application is still restricted by two critical factors: inference latency and cost.
 
-## How does MII work?
+There has been significant progress in system optimizations for DL model inference that can drastically reduce both latency and cost, but those are not easily accessible. A main reason for this limited accessibility is that the DL model inference landscape is diverse with models varying in size, architecture, system performance characteristics, hardware requirements, etc. Identifying the appropriate set of system optimizations applicable to a given model and applying them correctly is often beyond the scope of most data scientists, making low latency and low-cost inference mostly inaccessible.
 
-Under-the-hood MII is powered by DeepSpeed-Inference. Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize thoughput. It does so using one of many pre-specified model injection policies, that allows DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation. This injection can replace a single GPU module with multi-GPU variations enabling models to run on single GPU device, or seamlessly scale to tens of GPUs for dense models and hundreds of GPUs for sparse models for lower latency and higher throughput.
+DeepSpeed-MII is a new open-source python library from DeepSpeed, aimed towards making low-latency, low-cost inference of powerful models not only feasible but also easily accessible.
 
-MII makes the expansive set of optimizations in DeepSpeed-Inference easily accessible to its users by automatically integrating them to thousands of popular transformer models. For a full set of optimizations in DeepSpeed-Inference please see our paper: [DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale](https://arxiv.org/abs/2207.00032).
+* MII offers access to highly optimized implementation of **thousands of widely used DL models.**
+* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, **MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x** (*Figures B and J*). Similarly, **it reduces the latency and cost of deploying Stable Diffusion by 1.9x.** (*Figure C*)
+* To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as *deepfusion* for transformers, automated *tensor-slicing* for multi-GPU inference, on-the-fly quantization with *ZeroQuant*, and several others (see below for more details).
+* With state-of-the-art performance, MII supports low-cost deployment of these models both on-premises and on Azure via AML with just a **few lines of codes**.
+
+# How does MII work?
+
+![Text Generation Models](http://rasley.io/DeepSpeed/assets/images/mii/mii-arch.png)
+
+*Figure A: MII Architecture, showing how MII automatically optimizes OSS models using DS-Inference before deploying them on-premises using GRPC, or on Microsoft Azure using AML Inference.*
+
+Under-the-hood MII is powered by [DeepSpeed-Inference](https://arxiv.org/abs/2207.00032). Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize throughput. It does so by using one of many pre-specified model injection policies, that allows MII and DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation (see *Figure A*). In doing so, MII makes the expansive set of optimizations in DeepSpeed-Inference automatically available for thousands of popular models that it supports.
 
 ## Supported Models and Tasks
 
