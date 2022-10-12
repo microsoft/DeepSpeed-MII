@@ -161,7 +161,58 @@ Once the deployment is running on AML, you can run queries by navigating to the 
 
 The only required key is `"query"`, all other items in the dictionary will be passed to `generate` as kwargs. For Hugging Face provided models you can find all possible arguments in their [documentation for generate](https://huggingface.co/docs/transformers/v4.20.1/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate).
 
-## Quantifying Cost and Latency Reduction with MII
+Inference workloads can be either latency critical, where the primary objective is to minimize latency, or cost sensitive, where the primary objective is to minimize cost. In this section, we quantify the benefits of using MII for both latency-critical and cost-sensitive scenarios.
+
+MII can work with two variations of DeepSpeed-Inference. The first, referred to as ds-public, contains most of the optimizations discussed above and is also available via our open-source DeepSpeed library. The second referred to as ds-azure, offers tighter integration with Azure, and is available via MII to all Microsoft Azure customers. We refer to MII running the two DeepSpeed-Inference variants as MII-Public and MII-Azure, respectively.
+
+Both MII-Public and MII-Azure offer significant latency and cost reduction compared to open-sourced PyTorch implementation (Baseline), however for certain generative workloads, they can have differentiated performance. Here, we quantify the latency and cost reduction for both variations.
+
+## Latency Critical Scenarios
+
+For latency-critical scenarios, where a small batch size of 1 is often used, MII can reduce the latency by up to 6x for a wide range of open-source models, across multiple tasks. More specifically, we show model latency reduction of [^overhead_details]:
+
+1. Up to 5.7x for multi-GPU inference for text generation using massive models such as Big Science Bloom, Facebook OPT, and EluetherAI NeoX (*Figure 2 (left)*)
+
+2. Up to 1.9x for image generation tasks model using Stable Diffusion (*Figure 2 (right)*)
+
+3. Up to 3x for relatively smaller text generation models (up to 7B parameters) based on OPT, BLOOM, and GPT architectures, running on a single GPU (*Figures 3 and 4*)
+
+4. Up to 9x for various text representation tasks like fill-mask, text classification, question answering, and token classification using RoBERTa- and BERT- based models (*Figures 5 and 6*).
+
+[ ![multi gpu latency](/assets/images/mii/llm-latency-sd-latency.png) ](/assets/images/mii/llm-latency-sd-latency-zoom.png){: .align-center}
+*Figure 2: (left) Best achievable latency for large models. MII-Azure (int8) offers 5.7X lower latency compared to Baseline for Bloom-176B. (right) Stable Diffusion text to image generation latency comparison.*
+
+<!--![multi gpu latency](/assets/images/mii/multi-gpu-latency.png){: .align-center}
+*Figure B: Best achievable latency for large models. MII-Azure (int8) offers 5.7X lower latency compared to Baseline for Bloom-176B*
+
+![stable diffusion](/assets/images/mii/sd-latency.png){: .align-center}
+*Figure C: Stable Diffusion text to image generation latency comparison*-->
+
+[ ![OPT and BLOOM Models](/assets/images/mii/opt-bloom.png) ](/assets/images/mii/opt-bloom.png){: .align-center}
+*Figure 3: Latency comparison for OPT and BLOOM models. MII-Azure is up to 2.8x faster than baseline.*
+
+[ ![GPT Models](/assets/images/mii/gpt.png) ](/assets/images/mii/gpt.png){: .align-center}
+*Figure 4: Latency comparison for GPT models. MII-Azure is up to 3x faster than baseline.*
+
+[ ![Roberta Models](/assets/images/mii/roberta.png) ](/assets/images/mii/roberta.png){: .align-center}
+*Figure 5: Latency comparison for RoBERTa models. MII offers up to 9x lower model latency and up to 3x lower end-to-end latency than baseline on several tasks and RoBERTa variants [^overhead_details].*
+
+[ ![Bert Models](/assets/images/mii/bert.png) ](/assets/images/mii/bert.png){: .align-center}
+*Figure 6: Latency comparison for BERT models. MII offers up to 8.9x lower model latency and up to 4.5x end-to-end latency across several tasks and BERT variants[^overhead_details].*
+
+[^overhead_details]: The end-to-end latency of an inference workload is comprised of two components: i) actual model execution, and ii) pre-/post-processing before and after the model execution. MII optimizes the actual model execution but leaves the pre-/post-processing pipeline for future optimizations. We notice that text representation tasks have significant pre-/post-processing overhead (*Figures G and H*). We plan to address those in a future update.
+
+## Cost Sensitive Scenarios
+
+MII can significantly reduce the inference cost of very expensive language models like Bloom, OPT, etc. To get the lowest cost, we use a large batch size that maximizes throughput for both baseline and MII. Here we look at the cost reduction from MII using two different metrics: i) tokens generated per second per GPU, and ii) dollars per million tokens generated.
+
+*Figures 7 and 8* show that MII-Public offers over 10x throughput improvement and cost reduction compared to the baseline, respectively. Furthermore, MII-Azure offers over 30x improvement in throughput and cost compared to the baseline.
+
+[ ![tput large models](/assets/images/mii/tput-llms.png) ](/assets/images/mii/tput-llms.png){: .align-center}
+*Figure 7: Throughput comparison per A100-80GB GPU for large models. MII-Public offers over 15x throughput improvement while MII-Azure offers over 40x throughput improvement.*
+
+[ ![azure cost](/assets/images/mii/azure-cost.png) ](/assets/images/mii/azure-cost.png){: .align-center}
+*Figure 8: Cost of generating 1 million tokens on Azure with different model types. MII-Azure reduces the cost of generation by over 40x.*
 
 ## Contributing
 
