@@ -62,7 +62,7 @@ model family | size range | ~model count
 
 MII can work with two variations of DeepSpeed-Inference. The first, referred to as ds-public, contains most of the DeepSpeed-Inference optimizations discussed here,  is also available via our open-source DeepSpeed library. The second referred to as ds-azure, offers tighter integration with Azure, and is available via MII to all Microsoft Azure customers. We refer to MII running the two DeepSpeed-Inference variants as MII-Public and MII-Azure, respectively.
 
-While both variants offers significant latency and cost reduction over the open-sourced Pytorch baseline, the latter, offers additional performance advantage for generation based workloads. The full latency and cost advantage comparision with Pytorch baseline and across these two versions is available [here](#quantifying-latency-and-cost-reduction).
+While both variants offers significant latency and cost reduction over the open-sourced PyTorch baseline, the latter, offers additional performance advantage for generation based workloads. The full latency and cost advantage comparison with PyTorch baseline and across these two versions is available [here](#quantifying-latency-and-cost-reduction).
 
 ## Getting Started with MII
 
