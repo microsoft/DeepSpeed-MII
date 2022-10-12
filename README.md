@@ -9,7 +9,8 @@
  <img src="docs/images/mii-dark.svg#gh-dark-mode-only" width="400px">
 </div>
 
-![Text Generation Models](docs/images/hero-dark.png)
+![hero dark](docs/images/hero-dark.png#gh-dark-mode-only)
+![hero light](docs/images/hero-transparent.png#gh-light-mode-only)
 
 The Deep Learning (DL) open-source community has seen tremendous growth in the last few months. Incredibly powerful text generation models such as the Bloom 176B, or image generation model such as Stable Diffusion are now available to anyone with access to a handful or even a single GPU through platforms such as Hugging Face. While open sourcing has democratized access to AI capabilities, their application is still restricted by two critical factors: inference latency and cost.
 
