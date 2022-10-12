@@ -9,6 +9,13 @@
  <img src="docs/images/mii-dark.svg#gh-dark-mode-only" width="400px">
 </div>
 
+## Latest News
+
+* [2022/10] [Announcing DeepSpeed Model Implementations for Inference (MII)](https://www.deepspeed.ai/2022/10/10/mii.html)
+
+
+# DeepSpeed MII (Model Implementations for Inference)
+
 ![hero dark](docs/images/hero-dark.png#gh-dark-mode-only)
 ![hero light](docs/images/hero-transparent.png#gh-light-mode-only)
 
@@ -19,8 +26,8 @@ There has been significant progress in system optimizations for DL model inferen
 DeepSpeed-MII is a new open-source python library from DeepSpeed, aimed towards making low-latency, low-cost inference of powerful models not only feasible but also easily accessible.
 
 * MII offers access to highly optimized implementation of thousands of widely used DL models.
-* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x. Similarly, it reduces the latency and cost of deploying Stable Diffusion by 1.9x. See [below](xyz), for an exhaustive latency and cost analysis of MII  .
-* To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as deepfusion for transformers, automated tensor-slicing for multi-GPU inference, on-the-fly quantization with ZeroQuant, and several others (see [here](xyz) for more details).
+* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x. Similarly, it reduces the latency and cost of deploying Stable Diffusion by 1.9x. See more details for [an exhaustive latency and cost analysis of MII](#latency-and-cost-analysis).
+* To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as deepfusion for transformers, automated tensor-slicing for multi-GPU inference, on-the-fly quantization with ZeroQuant, and several others (see our [blog post](https://www.deepspeed.ai/2022/10/10/mii.html) for more details).
 * With state-of-the-art performance, MII supports low-cost deployment of these models both on-premises and on Azure via AML with just a few lines of codes.
 
 # How does MII work?
@@ -55,7 +62,7 @@ model family | size range | ~model count
 
 MII can work with two variations of DeepSpeed-Inference. The first, referred to as ds-public, contains most of the DeepSpeed-Inference optimizations discussed here,  is also available via our open-source DeepSpeed library. The second referred to as ds-azure, offers tighter integration with Azure, and is available via MII to all Microsoft Azure customers. We refer to MII running the two DeepSpeed-Inference variants as MII-Public and MII-Azure, respectively.
 
-While both variants offers significant latency and cost reduction over the open-sourced Pytorch baseline, the latter, offers additional performance advantage for generation based workloads. The full latency and cost advantage comparision with Pytorch baseline and across these two versions is available [here](xyz).
+Both variants offers significant latency and cost reduction over the open-sourced Pytorch baseline, while the latter, offers additional performance advantage for generation based workloads. The full latency and cost advantage comparision across these two versions is available [here](xyz).
 
 ## Getting Started with MII
 
@@ -161,14 +168,13 @@ Once the deployment is running on AML, you can run queries by navigating to the 
 
 The only required key is `"query"`, all other items in the dictionary will be passed to `generate` as kwargs. For Hugging Face provided models you can find all possible arguments in their [documentation for generate](https://huggingface.co/docs/transformers/v4.20.1/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate).
 
-# Quantifying Latency and Cost Reduction
-
 Inference workloads can be either latency critical, where the primary objective is to minimize latency, or cost sensitive, where the primary objective is to minimize cost. In this section, we quantify the benefits of using MII for both latency-critical and cost-sensitive scenarios.
 
 MII can work with two variations of DeepSpeed-Inference. The first, referred to as ds-public, contains most of the optimizations discussed above and is also available via our open-source DeepSpeed library. The second referred to as ds-azure, offers tighter integration with Azure, and is available via MII to all Microsoft Azure customers. We refer to MII running the two DeepSpeed-Inference variants as MII-Public and MII-Azure, respectively.
 
 Both MII-Public and MII-Azure offer significant latency and cost reduction compared to open-sourced PyTorch implementation (Baseline), however for certain generative workloads, they can have differentiated performance. Here, we quantify the latency and cost reduction for both variations.
 
+# Latency and Cost Analysis
 ## Latency Critical Scenarios
 
 For latency-critical scenarios, where a small batch size of 1 is often used, MII can reduce the latency by up to 6x for a wide range of open-source models, across multiple tasks. More specifically, we show model latency reduction of [^overhead_details]:
