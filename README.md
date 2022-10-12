@@ -44,7 +44,7 @@ model family | size range | ~model count
 
 `pip install .` will install all dependencies required for deployment. A PyPI release of MII is coming soon.
 
-### Deploying with MII (Locally)
+### Deploying with MII-Public
 
 MII allows supported models to be deployed with just a few lines of code on-premise.
 
@@ -77,9 +77,14 @@ The only required key is `"query"`, all other items outside the dictionary will 
 mii.terminate("bloom560m_deployment")
 ```
 
-### Deploying with MII (AML)
+### Deploying with MII-Azure
 
-MII allows supported models to be deployed with just a few lines of code onto AzureML resources. This deployment process is very similar to local deployments and we will modify the code from the local deployment example with the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model.
+MII allows supported models to be deployed with just a few lines of code onto AzureML resources using AML Inference. This deployment process is very similar to local deployments and we will modify the code from the local deployment example with the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model.
+
+---
+📌 **Note:**  MII-Azure has the benefit of supporting DeepSpeed-Azure for better latency and cost than DeepSpeed-Public for certain workloads. We are working to enable DeepSpeed-Azure automatically for all MII-Azure deployments in a near-term MII update. In the meantime, we are offering DeepSpeed-Azure as a preview release to MII-Azure users. If you have a MII-Azure deployment and would like to try DeepSpeed-Azure, please reach out to us at deepspeed@microsoft.com to get access.
+
+---
 
 Several other AML deployment examples can be found here: [examples/aml](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/aml)
 
