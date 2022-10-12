@@ -19,8 +19,8 @@ There has been significant progress in system optimizations for DL model inferen
 DeepSpeed-MII is a new open-source python library from DeepSpeed, aimed towards making low-latency, low-cost inference of powerful models not only feasible but also easily accessible.
 
 * MII offers access to highly optimized implementation of thousands of widely used DL models.
-* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x. Similarly, it reduces the latency and cost of deploying Stable Diffusion by 1.9x.
-* To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as deepfusion for transformers, automated tensor-slicing for multi-GPU inference, on-the-fly quantization with ZeroQuant, and several others (see below for more details).
+* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x. Similarly, it reduces the latency and cost of deploying Stable Diffusion by 1.9x. See below, for an exhaustive latency and cost analysis of MII  .
+* To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as deepfusion for transformers, automated tensor-slicing for multi-GPU inference, on-the-fly quantization with ZeroQuant, and several others (see here for more details).
 * With state-of-the-art performance, MII supports low-cost deployment of these models both on-premises and on Azure via AML with just a few lines of codes.
 
 # How does MII work?
@@ -30,6 +30,7 @@ DeepSpeed-MII is a new open-source python library from DeepSpeed, aimed towards 
 *MII Architecture, showing how MII automatically optimizes OSS models using DS-Inference before deploying them on-premises using GRPC, or on Microsoft Azure using AML Inference.*
 
 Under-the-hood MII is powered by [DeepSpeed-Inference](https://arxiv.org/abs/2207.00032). Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize throughput. It does so by using one of many pre-specified model injection policies, that allows MII and DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation (see *Figure A*). In doing so, MII makes the expansive set of optimizations in DeepSpeed-Inference automatically available for thousands of popular models that it supports.
+
 
 ## Supported Models and Tasks
 
@@ -50,15 +51,21 @@ model family | size range | ~model count
 
 <!--For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)-->
 
+## MII-Public and MII-Azure
+
+MII can work with two variations of DeepSpeed-Inference. The first, referred to as ds-public, contains most of the DeepSpeed-Inference optimizations discussed here,  is also available via our open-source DeepSpeed library. The second referred to as ds-azure, offers tighter integration with Azure, and is available via MII to all Microsoft Azure customers. We refer to MII running the two DeepSpeed-Inference variants as MII-Public and MII-Azure, respectively.
+
+Both variants offers significant latency and cost reduction over the open-sourced Pytorch baseline, while the latter, offers additional performance advantage for generation based workloads. The full latency and cost advantage comparision across these two versions is available [here](xyz).
+
 ## Getting Started with MII
 
 ### Installation
 
 `pip install .` will install all dependencies required for deployment. A PyPI release of MII is coming soon.
 
-### Deploying with MII-Public
+### Deploying MII-Public
 
-MII allows supported models to be deployed with just a few lines of code on-premise.
+MII-Public can be deployed on-premises or on any cloud offering with just a few lines of code. MII creates a lightweight GRPC server to support this form of deployment and provides a GRPC inference endpoint for queries. 
 
 Several deployment and query examples can be found here: [examples/local](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/local)
 
@@ -89,9 +96,11 @@ The only required key is `"query"`, all other items outside the dictionary will 
 mii.terminate("bloom560m_deployment")
 ```
 
-### Deploying with MII-Azure
+#### Deploying with MII-Azure
 
-MII allows supported models to be deployed with just a few lines of code onto AzureML resources using AML Inference. This deployment process is very similar to local deployments and we will modify the code from the local deployment example with the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model.
+MII supports deployment on Azure via AML Inference. To enable this, MII generates AML deployment assets for a given model that can be deployed using the Azure-CLI, as shown in the code below. Furthermore, deploying on Azure, allows MII to leverage DeepSpeed-Azure as its optimization backend, which offers better latency and cost reduction than DeepSpeed-Public.
+
+This deployment process is very similar to local deployments and we will modify the code from the local deployment example with the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model.
 
 ---
 📌 **Note:**  MII-Azure has the benefit of supporting DeepSpeed-Azure for better latency and cost than DeepSpeed-Public for certain workloads. We are working to enable DeepSpeed-Azure automatically for all MII-Azure deployments in a near-term MII update. In the meantime, we are offering DeepSpeed-Azure as a preview release to MII-Azure users. If you have a MII-Azure deployment and would like to try DeepSpeed-Azure, please reach out to us at deepspeed-mii@microsoft.com to get access.
@@ -152,6 +161,7 @@ Once the deployment is running on AML, you can run queries by navigating to the 
 
 The only required key is `"query"`, all other items in the dictionary will be passed to `generate` as kwargs. For Hugging Face provided models you can find all possible arguments in their [documentation for generate](https://huggingface.co/docs/transformers/v4.20.1/en/main_classes/text_generation#transformers.generation_utils.GenerationMixin.generate).
 
+## Quantifying Cost and Latency Reduction with MII
 
 ## Contributing
 
