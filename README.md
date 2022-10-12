@@ -13,8 +13,20 @@
 
 * [2022/10] [Announcing DeepSpeed Model Implementations for Inference (MII)](https://www.deepspeed.ai/2022/10/10/mii.html)
 
+# Contents
 
-# DeepSpeed MII (Model Implementations for Inference)
+<!-- toc -->
+
+- [DeepSpeed MII](#deepspeed-model-implementations-for-inference)
+- [How does MII work?](#how-does-mii-work)
+- [Getting started with MII](#getting-started-with-mii)
+- [Quantifying Latency and Cost Reduction](#quantifying-latency-and-cost-reduction)
+- [Contributing](#contributing)
+- [Trademarks](#trademarks)
+
+<!-- tocstop -->
+
+# DeepSpeed Model Implementations for Inference
 
 ![hero dark](docs/images/hero-dark.png#gh-dark-mode-only)
 ![hero light](docs/images/hero-transparent.png#gh-light-mode-only)
@@ -64,13 +76,13 @@ MII can work with two variations of DeepSpeed-Inference. The first, referred to 
 
 While both variants offers significant latency and cost reduction over the open-sourced PyTorch baseline, the latter, offers additional performance advantage for generation based workloads. The full latency and cost advantage comparison with PyTorch baseline and across these two versions is available [here](#quantifying-latency-and-cost-reduction).
 
-## Getting Started with MII
+# Getting Started with MII
 
-### Installation
+## Installation
 
 `pip install .` will install all dependencies required for deployment. A PyPI release of MII is coming soon.
 
-### Deploying MII-Public
+## Deploying MII-Public
 
 MII-Public can be deployed on-premises or on any cloud offering with just a few lines of code. MII creates a lightweight GRPC server to support this form of deployment and provides a GRPC inference endpoint for queries. 
 
@@ -103,7 +115,7 @@ The only required key is `"query"`, all other items outside the dictionary will 
 mii.terminate("bloom560m_deployment")
 ```
 
-### Deploying with MII-Azure
+## Deploying with MII-Azure
 
 MII supports deployment on Azure via AML Inference. To enable this, MII generates AML deployment assets for a given model that can be deployed using the Azure-CLI, as shown in the code below. Furthermore, deploying on Azure, allows MII to leverage DeepSpeed-Azure as its optimization backend, which offers better latency and cost reduction than DeepSpeed-Public.
 
@@ -217,7 +229,7 @@ MII can significantly reduce the inference cost of very expensive language model
 [ ![azure cost](/docs/images/azure-cost.png) ](/docs/images/azure-cost.png)
 *Figure 8: Cost of generating 1 million tokens on Azure with different model types. MII-Azure reduces the cost of generation by over 40x.*
 
-## Contributing
+# Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
@@ -231,7 +243,7 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
-## Trademarks
+# Trademarks
 
 This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
 trademarks or logos is subject to and must follow
