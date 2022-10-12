@@ -82,7 +82,7 @@ mii.terminate("bloom560m_deployment")
 MII allows supported models to be deployed with just a few lines of code onto AzureML resources using AML Inference. This deployment process is very similar to local deployments and we will modify the code from the local deployment example with the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model.
 
 ---
-📌 **Note:**  MII-Azure has the benefit of supporting DeepSpeed-Azure for better latency and cost than DeepSpeed-Public for certain workloads. We are working on enabling DeepSpeed-Azure automatically for MII-Azure deployment in near-term MII update. In the meantime, we offering DeepSpeed-Azure as a white glove service to our MII-Azure customers. If you have a MII-Azure deployment, please reach out to us at deepspeed-mii@microsoft.com to get access to DeepSpeed-Azure. 
+📌 **Note:**  MII-Azure has the benefit of supporting DeepSpeed-Azure for better latency and cost than DeepSpeed-Public for certain workloads. We are working to enable DeepSpeed-Azure automatically for all MII-Azure deployments in a near-term MII update. In the meantime, we are offering DeepSpeed-Azure as a preview release to MII-Azure users. If you have a MII-Azure deployment and would like to try DeepSpeed-Azure, please reach out to us at deepspeed@microsoft.com to get access.
 
 ---
 
