@@ -188,8 +188,8 @@ For latency-critical scenarios, where a small batch size of 1 is often used, MII
 
 4. Up to 9x for various text representation tasks like fill-mask, text classification, question answering, and token classification using RoBERTa- and BERT- based models (*Figures 5 and 6*).
 
-[ ![multi gpu latency](/docs/images/llm-latency-sd-latency.png) ](/assets/images/mii/llm-latency-sd-latency-zoom.png)
-*(Left) Best achievable latency for large models. MII-Azure (int8) offers 5.7X lower latency compared to Baseline for Bloom-176B. (Right) Stable Diffusion text to image generation latency comparison.*
+[ ![multi gpu latency](/docs/images/llm-latency-sd-latency.png) ](/docs/images/llm-latency-sd-latency-zoom.png)
+*Figure 2: (Left) Best achievable latency for large models. MII-Azure (int8) offers 5.7X lower latency compared to Baseline for Bloom-176B. (Right) Stable Diffusion text to image generation latency comparison.*
 
 [ ![OPT and BLOOM Models](/docs/images/opt-bloom.png) ](/docs/images/opt-bloom.png)
 *Figure 3: Latency comparison for OPT and BLOOM models. MII-Azure is up to 2.8x faster than baseline.*
