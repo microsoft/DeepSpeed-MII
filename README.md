@@ -19,7 +19,7 @@ There has been significant progress in system optimizations for DL model inferen
 DeepSpeed-MII is a new open-source python library from DeepSpeed, aimed towards making low-latency, low-cost inference of powerful models not only feasible but also easily accessible.
 
 * MII offers access to highly optimized implementation of thousands of widely used DL models.
-* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x. Similarly, it reduces the latency and cost of deploying Stable Diffusion by 1.9x. See below, for an exhaustive latency and cost analysis of MII  .
+* MII supported models achieve significantly lower latency and cost compared to their original implementation. For example, MII reduces the latency of Big-Science Bloom 176B model by 5.7x, while reducing the cost by over 40x. Similarly, it reduces the latency and cost of deploying Stable Diffusion by 1.9x. See [below](xyz), for an exhaustive latency and cost analysis of MII  .
 * To enable low latency/cost inference, MII leverages an extensive set of optimizations from DeepSpeed-Inference such as deepfusion for transformers, automated tensor-slicing for multi-GPU inference, on-the-fly quantization with ZeroQuant, and several others (see [here](xyz) for more details).
 * With state-of-the-art performance, MII supports low-cost deployment of these models both on-premises and on Azure via AML with just a few lines of codes.
 
