@@ -96,7 +96,7 @@ The only required key is `"query"`, all other items outside the dictionary will 
 mii.terminate("bloom560m_deployment")
 ```
 
-#### Deploying with MII-Azure
+### Deploying with MII-Azure
 
 MII supports deployment on Azure via AML Inference. To enable this, MII generates AML deployment assets for a given model that can be deployed using the Azure-CLI, as shown in the code below. Furthermore, deploying on Azure, allows MII to leverage DeepSpeed-Azure as its optimization backend, which offers better latency and cost reduction than DeepSpeed-Public.
 
