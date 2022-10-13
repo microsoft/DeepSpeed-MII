@@ -19,10 +19,10 @@
 
 - [DeepSpeed MII](#deepspeed-model-implementations-for-inference)
 - [How does MII work?](#how-does-mii-work)
+- [Supported Models and Tasks](#supported-models-and-tasks)
+- [MII-Public and MII-Azure](#mii-public-and-mii-azure)
 - [Getting started with MII](#getting-started-with-mii)
 - [Quantifying Latency and Cost Reduction](#quantifying-latency-and-cost-reduction)
-- [Contributing](#contributing)
-- [Trademarks](#trademarks)
 
 <!-- tocstop -->
 
@@ -51,7 +51,7 @@ DeepSpeed-MII is a new open-source python library from DeepSpeed, aimed towards 
 Under-the-hood MII is powered by [DeepSpeed-Inference](https://arxiv.org/abs/2207.00032). Based on model type, model size, batch size, and available hardware resources, MII automatically applies the appropriate set of system optimizations from DeepSpeed-Inference to minimize latency and maximize throughput. It does so by using one of many pre-specified model injection policies, that allows MII and DeepSpeed-Inference to identify the underlying PyTorch model architecture and replace it with an optimized implementation (see *Figure A*). In doing so, MII makes the expansive set of optimizations in DeepSpeed-Inference automatically available for thousands of popular models that it supports.
 
 
-## Supported Models and Tasks
+# Supported Models and Tasks
 
 MII currently supports over 20,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
 
@@ -70,7 +70,7 @@ model family | size range | ~model count
 
 <!--For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)-->
 
-## MII-Public and MII-Azure
+# MII-Public and MII-Azure
 
 MII can work with two variations of DeepSpeed-Inference. The first, referred to as ds-public, contains most of the DeepSpeed-Inference optimizations discussed here,  is also available via our open-source DeepSpeed library. The second referred to as ds-azure, offers tighter integration with Azure, and is available via MII to all Microsoft Azure customers. We refer to MII running the two DeepSpeed-Inference variants as MII-Public and MII-Azure, respectively.
 
