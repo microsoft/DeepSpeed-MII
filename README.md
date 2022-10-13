@@ -184,10 +184,6 @@ The only required key is `"query"`, all other items in the dictionary will be pa
 
 Inference workloads can be either latency critical, where the primary objective is to minimize latency, or cost sensitive, where the primary objective is to minimize cost. In this section, we quantify the benefits of using MII for both latency-critical and cost-sensitive scenarios.
 
-MII can work with two variations of DeepSpeed-Inference. The first, referred to as ds-public, contains most of the optimizations discussed above and is also available via our open-source DeepSpeed library. The second referred to as ds-azure, offers tighter integration with Azure, and is available via MII to all Microsoft Azure customers. We refer to MII running the two DeepSpeed-Inference variants as MII-Public and MII-Azure, respectively.
-
-Both MII-Public and MII-Azure offer significant latency and cost reduction compared to open-sourced PyTorch implementation (Baseline), however for certain generative workloads, they can have differentiated performance. Here, we quantify the latency and cost reduction for both variations.
-
 ## Latency Critical Scenarios
 
 For latency-critical scenarios, where a small batch size of 1 is often used, MII can reduce the latency by up to 6x for a wide range of open-source models, across multiple tasks. More specifically, we show model latency reduction of [^overhead_details]:
