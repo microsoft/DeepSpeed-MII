@@ -54,6 +54,7 @@ SUPPORTED_MODEL_TYPES = {
     'bert': ModelProvider.HUGGING_FACE,
     'gpt_neo': ModelProvider.HUGGING_FACE,
     'gptj': ModelProvider.HUGGING_FACE,
+    'opt': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
     'bloom': ModelProvider.HUGGING_FACE_LLM,
     'stable-diffusion': ModelProvider.DIFFUSERS

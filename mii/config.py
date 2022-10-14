@@ -12,6 +12,8 @@ class MIIConfig(BaseModel):
     deploy_rank: Union[int, List[int]] = -1
     torch_dist_port: int = 29500
     hf_auth_token: str = None
+    replace_with_kernel_inject: bool = True
+    profile_model_time: bool = False
 
     @validator('dtype')
     def dtype_valid(cls, value):
@@ -55,9 +57,9 @@ class MIIConfig(BaseModel):
     @staticmethod
     def _torch_dtype(value):
         value = value.lower()
-        if value == "float" or value == "fp32":
+        if value == "float" or value == "fp32" or value == "float32":
             dtype = torch.float
-        elif value == "half" or value == "fp16":
+        elif value == "half" or value == "fp16" or value == "float16":
             dtype = torch.half
         elif value == "int8":
             dtype = torch.int8

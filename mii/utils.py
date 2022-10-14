@@ -78,8 +78,13 @@ def get_task(task_name):
 def _get_hf_models_by_type(model_type, task=None):
     api = HfApi()
     models = api.list_models(filter=model_type)
-    return ([m.modelId for m in models]
-            if task is None else [m.modelId for m in models if m.pipeline_tag == task])
+    models = ([m.modelId for m in models]
+              if task is None else [m.modelId for m in models if m.pipeline_tag == task])
+    if task == TEXT_GENERATION_NAME:
+        # TODO: this is a temp solution to get around some HF models not having the correct tags
+        models.append("microsoft/bloom-deepspeed-inference-fp16")
+        models.append("EleutherAI/gpt-neox-20b")
+    return models
 
 
 # TODO read this from a file containing list of files supported for each task
@@ -114,7 +119,7 @@ def check_if_task_and_model_is_valid(task, model_name):
     valid_task_models = _get_hf_models_by_type(None, task_name)
     assert (
         model_name in valid_task_models
-    ), f"{task_name} only supports {valid_task_models}"
+        ), f"{task_name} only supports {valid_task_models}"
 
 
 def full_model_path(model_path):
