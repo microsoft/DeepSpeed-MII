@@ -55,9 +55,10 @@ class BloomPipeline(object):
 
 
 def get_checkpoint_files(model_name):
-    cache_dir = snapshot_download(model_name)
-    model_file = os.path.join(cache_dir, WEIGHTS_NAME)
-    model_sharded_file = os.path.join(cache_dir, WEIGHTS_INDEX_NAME)
+    cache_dir = os.getenv("TRANSFORMERS_CACHE")
+    model_dir = snapshot_download(model_name, cache_dir=cache_dir)
+    model_file = os.path.join(model_dir, WEIGHTS_NAME)
+    model_sharded_file = os.path.join(model_dir, WEIGHTS_INDEX_NAME)
 
     if os.path.isfile(model_file):
         resolved_archive_files = [model_file]
@@ -65,7 +66,7 @@ def get_checkpoint_files(model_name):
         resolved_archive_files, sharded_metadata = get_checkpoint_shard_files(
             model_name,
             model_sharded_file,
-            cache_dir=cache_dir,
+            cache_dir=model_dir,
             revision=None
         )
     else:
