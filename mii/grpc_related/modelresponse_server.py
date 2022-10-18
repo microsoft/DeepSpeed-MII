@@ -10,7 +10,9 @@ from .proto import modelresponse_pb2_grpc
 import sys
 import time
 
+from torch import autocast
 from transformers import Conversation
+from mii.constants import GRPC_MAX_MSG_SIZE
 
 
 class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -64,6 +66,36 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         val = modelresponse_pb2.MultiStringReply(response=text_responses,
                                                  time_taken=end - start,
                                                  model_time_taken=model_time)
+        return val
+
+    def Txt2ImgReply(self, request, context):
+        query_kwargs = self._unpack_proto_query_kwargs(request.query_kwargs)
+
+        # unpack grpc list into py-list
+        request = [r for r in request.request]
+
+        start = time.time()
+        with autocast("cuda"):
+            response = self.inference_pipeline(request, **query_kwargs)
+        end = time.time()
+
+        images_bytes = []
+        nsfw_content_detected = []
+        response_count = len(response.images)
+        for i in range(response_count):
+            img = response.images[i]
+            img_bytes = img.tobytes()
+            images_bytes.append(img_bytes)
+            nsfw_content_detected.append(response.nsfw_content_detected[i])
+        img_mode = response.images[0].mode
+        img_size_w, img_size_h = response.images[0].size
+
+        val = modelresponse_pb2.ImageReply(images=images_bytes,
+                                           nsfw_content_detected=nsfw_content_detected,
+                                           mode=img_mode,
+                                           size_w=img_size_w,
+                                           size_h=img_size_h,
+                                           time_taken=end - start)
         return val
 
     def ClassificationReply(self, request, context):
@@ -131,7 +163,11 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
 
 
 def serve(inference_pipeline, port):
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10),
+                         options=[('grpc.max_send_message_length',
+                                   GRPC_MAX_MSG_SIZE),
+                                  ('grpc.max_receive_message_length',
+                                   GRPC_MAX_MSG_SIZE)])
     modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(
         ModelResponse(inference_pipeline),
         server)

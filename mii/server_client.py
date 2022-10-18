@@ -184,6 +184,8 @@ class MIIServerClient():
                 provider = mii.constants.MODEL_PROVIDER_NAME_EA
             elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
+            elif self.task == mii.Tasks.TEXT2IMG:
+                provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
             else:
                 provider = mii.constants.MODEL_PROVIDER_NAME_HF
             server_args_str += f" --provider {provider}"
@@ -211,11 +213,26 @@ class MIIServerClient():
                     )
                 server_args_str += f" --ds-config {ds_config_path}"
             cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
-            logger.info(f"multi-gpu deepspeed launch: {cmd}")
+            printable_config = f"task-name {mii.utils.get_task_name(self.task)} model {model_name} model-path {model_path} port {self.port_number} provider {provider}"
+            logger.info(f"MII using multi-gpu deepspeed launcher:\n" +
+                        self.print_helper(printable_config))
             mii_env = os.environ.copy()
             mii_env["TRANSFORMERS_CACHE"] = model_path
             process = subprocess.Popen(cmd, env=mii_env)
         return process
+
+    def print_helper(self, args):
+        # convert to list
+        args = args.split(" ")
+        # convert to dict
+        dct = {args[i]: args[i + 1] for i in range(0, len(args), 2)}
+        printable_string = ""
+        printable_string += " " + "-" * 60 + "\n"
+        for k, v in dct.items():
+            dots = "." * (29 - len(k))
+            printable_string += f" {k} {dots} {v} \n"
+        printable_string += " " + "-" * 60
+        return printable_string
 
     def _initialize_grpc_client(self):
         channels = []
@@ -279,8 +296,16 @@ class MIIServerClient():
                     generated_responses=request_dict['generated_responses'],
                     query_kwargs=proto_kwargs))
 
+        elif self.task == mii.Tasks.TEXT2IMG:
+            # convert to batch of queries if they are not already
+            if not isinstance(request_dict['query'], list):
+                request_dict['query'] = [request_dict['query']]
+            req = modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
+                                                       query_kwargs=proto_kwargs)
+            response = await self.stubs[stub_id].Txt2ImgReply(req)
+
         else:
-            assert False, "unknown task"
+            raise ValueError(f"unknown task: {self.task}")
         return response
 
     def _request_response(self, request_dict, query_kwargs):
@@ -304,6 +329,9 @@ class MIIServerClient():
 
         elif self.task == mii.Tasks.CONVERSATIONAL:
             response = self.model(["", request_dict['query']], **query_kwargs)
+
+        elif self.task == mii.Tasks.TEXT2IMG:
+            response = self.model(request_dict['query'], **query_kwargs)
 
         else:
             raise NotImplementedError(f"task is not supported: {self.task}")
