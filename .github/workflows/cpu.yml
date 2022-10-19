@@ -29,8 +29,7 @@ jobs:
 
       - name: Install MII
         run: |
-          pip install git+https://github.com/microsoft/DeepSpeed.git
-          pip install .[dev,local]
+          pip install .[dev,local] git+https://github.com/microsoft/deepspeed.git@staging-mii-update
 
       - name: Unit tests
         run: |

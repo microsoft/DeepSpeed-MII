@@ -1,7 +1,8 @@
 asyncio
-deepspeed>=0.6.7
+deepspeed
 grpcio
 grpcio-tools
+packaging
 pydantic
 torch
 transformers==4.21.2
