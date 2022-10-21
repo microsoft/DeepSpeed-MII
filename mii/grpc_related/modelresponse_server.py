@@ -10,7 +10,6 @@ from .proto import modelresponse_pb2_grpc
 import sys
 import time
 
-from torch import autocast
 from transformers import Conversation
 from mii.constants import GRPC_MAX_MSG_SIZE
 
@@ -75,8 +74,7 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         request = [r for r in request.request]
 
         start = time.time()
-        with autocast("cuda"):
-            response = self.inference_pipeline(request, **query_kwargs)
+        response = self.inference_pipeline(request, **query_kwargs)
         end = time.time()
 
         images_bytes = []
