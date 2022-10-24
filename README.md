@@ -92,6 +92,7 @@ As an example here is a deployment of the [bigscience/bloom-560m](https://huggin
 
 **Deployment**
 ```python
+import mii
 mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
 mii.deploy(task="text-generation",
            model="bigscience/bloom-560m",
@@ -103,6 +104,7 @@ This will deploy the model onto a single GPU and start the GRPC server that can 
 
 **Query**
 ```python
+import mii
 generator = mii.mii_query_handle("bloom560m_deployment")
 result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30)
 print(result)
@@ -112,6 +114,7 @@ The only required key is `"query"`, all other items outside the dictionary will 
 
 **Shutdown Deployment**
 ```python
+import mii
 mii.terminate("bloom560m_deployment")
 ```
 
@@ -139,6 +142,7 @@ To use MII on AML resources, you must have the Azure-CLI installed with an activ
 
 **Deployment**
 ```python
+import mii
 mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
 mii.deploy(task="text-generation",
            model="bigscience/bloom-560m",
