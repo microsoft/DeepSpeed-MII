@@ -1,7 +1,7 @@
 <!-- [![Build Status](https://github.com/microsoft/deepspeed-mii/workflows/Build/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions) -->
 [![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Microsoft/DeepSpeed-MII/blob/master/LICENSE)
-<!-- [![PyPI version](https://badge.fury.io/py/deepspeed.svg)](https://pypi.org/project/deepspeed/) -->
+[![PyPI version](https://badge.fury.io/py/deepspeed-mii.svg)](https://pypi.org/project/deepspeed-mii/) -->
 <!-- [![Documentation Status](https://readthedocs.org/projects/deepspeed/badge/?version=latest)](https://deepspeed.readthedocs.io/en/latest/?badge=latest) -->
 
 <div align="center">
@@ -80,7 +80,11 @@ While both variants offers significant latency and cost reduction over the open-
 
 ## Installation
 
-`pip install .` will install all dependencies required for deployment. A PyPI release of MII is coming soon.
+We regularly push releases to [PyPI](https://pypi.org/project/deepspeed-mii/) and encourage users to install from there in most cases.
+
+```bash
+pip install deepspeed-mii
+```
 
 ## Deploying MII-Public
 
