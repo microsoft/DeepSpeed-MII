@@ -63,18 +63,22 @@ else:
     # None of the above, probably installing from source
     version_str += f'+{git_hash}'
 
-setup(
-    name='mii',
-    version=version_str,
-    description='deepspeed mii',
-    install_requires=install_requires,
-    #scripts=[],
-    extras_require=extras_require,
-    packages=find_packages(),
-    classifiers=[
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9'
-        'Programming Language :: Python :: 3.10'
-    ])
+setup(name="deepspeed-mii",
+      version=version_str,
+      description='deepspeed mii',
+      author='DeepSpeed Team',
+      author_email='deepspeed-mii@microsoft.com',
+      url='http://deepspeed.ai',
+      project_urls={
+          'Documentation': 'https://github.com/microsoft/DeepSpeed-MII',
+          'Source': 'https://github.com/microsoft/DeepSpeed-MII',
+      },
+      install_requires=install_requires,
+      extras_require=extras_require,
+      packages=find_packages(),
+      classifiers=[
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10'
+      ])

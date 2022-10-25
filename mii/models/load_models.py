@@ -22,8 +22,14 @@ def load_models(task_name,
     global generator
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 
-    #TODO: pass in mii_config to fetch dtype, training_mp_size, and other params
-    ds_kwargs = {"checkpoint": None, "mpu": None, "args": None, "training_mp_size": 1}
+    ds_kwargs = {
+        "checkpoint": None,
+        "mpu": None,
+        "args": None,
+        "training_mp_size": 1,
+        "replace_with_kernel_inject": mii_config.replace_with_kernel_inject
+    }
+
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
         from mii.models.providers.huggingface import hf_provider
         inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)
@@ -49,6 +55,14 @@ def load_models(task_name,
             if "enable_qkv_quantization" in inspect.signature(
                     deepspeed.init_inference).parameters:
                 ds_kwargs["enable_qkv_quantization"] = True
+    elif provider == mii.constants.ModelProvider.DIFFUSERS:
+        from mii.models.providers.diffusers import diffusers_provider
+        assert not mii_config.enable_cuda_graph, "Diffusers models do no support Cuda Graphs (yet)"
+        inference_pipeline = diffusers_provider(model_path,
+                                                model_name,
+                                                task_name,
+                                                mii_config)
+        ds_kwargs["replace_with_kernel_inject"] = False  #not supported yet
     else:
         raise ValueError(f"Unknown model provider {provider}")
 
@@ -56,16 +70,19 @@ def load_models(task_name,
         f"> --------- MII Settings: {ds_optimize}, replace_with_kernel_inject={mii_config.replace_with_kernel_inject}, enable_cuda_graph={mii_config.enable_cuda_graph} "
     )
     if ds_optimize:
-        inference_pipeline.model = deepspeed.init_inference(
-            inference_pipeline.model,
-            mp_size=world_size,
-            dtype=mii_config.torch_dtype(),
-            replace_with_kernel_inject=mii_config.replace_with_kernel_inject,
-            replace_method='auto',
-            enable_cuda_graph=mii_config.enable_cuda_graph,
-            **ds_kwargs)
+        engine = deepspeed.init_inference(getattr(inference_pipeline,
+                                                  "model",
+                                                  inference_pipeline),
+                                          mp_size=world_size,
+                                          dtype=mii_config.torch_dtype(),
+                                          replace_method='auto',
+                                          enable_cuda_graph=mii_config.enable_cuda_graph,
+                                          **ds_kwargs)
         if mii_config.profile_model_time:
-            inference_pipeline.model.profile_model_time()
+            engine.profile_model_time()
+        if hasattr(inference_pipeline, "model"):
+            inference_pipeline.model = engine
+
     elif ds_zero:
         ds_config = DeepSpeedConfig(ds_config_path)
         #TODO: don't read ds-config from disk, we should pass this around as a dict instead

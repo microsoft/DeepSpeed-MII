@@ -11,6 +11,7 @@ class MIIConfig(BaseModel):
     checkpoint_dict: Union[dict, None] = None
     deploy_rank: Union[int, List[int]] = -1
     torch_dist_port: int = 29500
+    hf_auth_token: str = None
     replace_with_kernel_inject: bool = True
     profile_model_time: bool = False
 

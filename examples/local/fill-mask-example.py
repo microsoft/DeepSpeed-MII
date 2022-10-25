@@ -1,9 +1,19 @@
 import mii
+import argparse
 
-# roberta
-name = "roberta-base"
-name = "bert-base-cased"
+parser = argparse.ArgumentParser()
+parser.add_argument("-q", "--query", action="store_true", help="query")
+args = parser.parse_args()
 
-print(f"Deploying {name}...")
+name = "bert-base-uncased"
+mask = "[MASK]"
 
-mii.deploy(task='fill-mask', model=name, deployment_name=name + "_deployment")
+if not args.query:
+    print(f"Deploying {name}...")
+    mii.deploy(task='fill-mask', model=name, deployment_name=name + "_deployment")
+else:
+    print(f"Querying {name}...")
+    generator = mii.mii_query_handle(name + "_deployment")
+    result = generator.query({'query': f"Hello I'm a {mask} model."})
+    print(result.response)
+    print("time_taken:", result.time_taken)
