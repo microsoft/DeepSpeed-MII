@@ -54,11 +54,9 @@ class BloomPipeline(object):
         return output_dicts
 
 
-def get_checkpoint_files(model_name):
-    cache_dir = os.getenv("TRANSFORMERS_CACHE")
-    model_dir = snapshot_download(model_name, cache_dir=cache_dir)
-    model_file = os.path.join(model_dir, WEIGHTS_NAME)
-    model_sharded_file = os.path.join(model_dir, WEIGHTS_INDEX_NAME)
+def get_checkpoint_files(model_name, model_path):
+    model_file = os.path.join(model_path, WEIGHTS_NAME)
+    model_sharded_file = os.path.join(model_path, WEIGHTS_INDEX_NAME)
 
     if os.path.isfile(model_file):
         resolved_archive_files = [model_file]
@@ -66,7 +64,7 @@ def get_checkpoint_files(model_name):
         resolved_archive_files, sharded_metadata = get_checkpoint_shard_files(
             model_name,
             model_sharded_file,
-            cache_dir=model_dir,
+            cache_dir=model_path,
             revision=None
         )
     else:
@@ -122,6 +120,8 @@ def get_checkpoint_files_old(pretrained_model_name_or_path):
 
 
 def create_checkpoint_dict(model_name, model_path, mii_config):
+    if USE_NEW_HF_CACHE:
+        model_path = snapshot_download(model_name, cache_dir=model_path)
     if mii_config.checkpoint_dict:
         mii_config.checkpoint_dict['base_dir'] = model_path
         return mii_config.checkpoint_dict
@@ -132,7 +132,7 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
         return data
     else:
         if USE_NEW_HF_CACHE:
-            checkpoint_files = get_checkpoint_files(model_name)
+            checkpoint_files = get_checkpoint_files(model_name, model_path)
         else:
             checkpoint_files = get_checkpoint_files_old(model_name)
         data = {"type": "BLOOM", "checkpoints": checkpoint_files, "version": 1.0}

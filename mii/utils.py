@@ -78,6 +78,7 @@ def _get_hf_models_by_type(model_type, task=None):
     if task == TEXT_GENERATION_NAME:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         models.append("microsoft/bloom-deepspeed-inference-fp16")
+        models.append("microsoft/bloom-deepspeed-inference-int8")
         models.append("EleutherAI/gpt-neox-20b")
     return models
 
