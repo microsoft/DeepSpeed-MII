@@ -34,3 +34,22 @@ def download_model_and_get_path(task, model_name):
         assert False, "Only models from HF supported so far"
 
     return model_path
+
+
+class ImageResponse():
+    def __init__(self, response):
+        self._response = response
+        self.nsfw_content_detected = response.nsfw_content_detected
+        self._deserialized_images = None
+
+    @property
+    def images(self):
+        if self._deserialized_images is None:
+            from PIL import Image
+            images = []
+            for idx, img_bytes in enumerate(self._response.images):
+                size = (self._response.size_w, self._response.size_h)
+                img = Image.frombytes(self._response.mode, size, img_bytes)
+                images.append(img)
+            self._deserialized_images = images
+        return self._deserialized_images
