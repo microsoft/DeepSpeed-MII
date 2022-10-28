@@ -1,7 +1,7 @@
 <!-- [![Build Status](https://github.com/microsoft/deepspeed-mii/workflows/Build/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions) -->
 [![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
 [![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Microsoft/DeepSpeed-MII/blob/master/LICENSE)
-<!-- [![PyPI version](https://badge.fury.io/py/deepspeed.svg)](https://pypi.org/project/deepspeed/) -->
+[![PyPI version](https://badge.fury.io/py/deepspeed-mii.svg)](https://pypi.org/project/deepspeed-mii/)
 <!-- [![Documentation Status](https://readthedocs.org/projects/deepspeed/badge/?version=latest)](https://deepspeed.readthedocs.io/en/latest/?badge=latest) -->
 
 <div align="center">
@@ -80,7 +80,11 @@ While both variants offers significant latency and cost reduction over the open-
 
 ## Installation
 
-`pip install .` will install all dependencies required for deployment. A PyPI release of MII is coming soon.
+We regularly push releases to [PyPI](https://pypi.org/project/deepspeed-mii/) and encourage users to install from there in most cases.
+
+```bash
+pip install deepspeed-mii
+```
 
 ## Deploying MII-Public
 
@@ -92,6 +96,7 @@ As an example here is a deployment of the [bigscience/bloom-560m](https://huggin
 
 **Deployment**
 ```python
+import mii
 mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
 mii.deploy(task="text-generation",
            model="bigscience/bloom-560m",
@@ -103,6 +108,7 @@ This will deploy the model onto a single GPU and start the GRPC server that can 
 
 **Query**
 ```python
+import mii
 generator = mii.mii_query_handle("bloom560m_deployment")
 result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30)
 print(result)
@@ -112,6 +118,7 @@ The only required key is `"query"`, all other items outside the dictionary will 
 
 **Shutdown Deployment**
 ```python
+import mii
 mii.terminate("bloom560m_deployment")
 ```
 
@@ -139,6 +146,7 @@ To use MII on AML resources, you must have the Azure-CLI installed with an activ
 
 **Deployment**
 ```python
+import mii
 mii_configs = {"tensor_parallel": 1, "dtype": "fp16"}
 mii.deploy(task="text-generation",
            model="bigscience/bloom-560m",

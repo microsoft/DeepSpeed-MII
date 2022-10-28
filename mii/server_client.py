@@ -14,6 +14,7 @@ import mii
 import base64
 from mii.utils import logger, kwarg_dict_to_proto
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
+from mii.models.utils import ImageResponse
 
 
 def mii_query_handle(deployment_name):
@@ -360,4 +361,8 @@ class MIIServerClient():
                 self._query_in_tensor_parallel(request_dict,
                                                query_kwargs))
             ret = response.result()
+
+        if self.task == mii.Tasks.TEXT2IMG:
+            ret = ImageResponse(ret)
+
         return ret
