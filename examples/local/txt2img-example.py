@@ -32,8 +32,5 @@ else:
         ["a panda in space with a rainbow",
          "a soda can on top a snowy mountain"]
     })
-    from PIL import Image
-    for idx, img_bytes in enumerate(result.images):
-        size = (result.size_w, result.size_h)
-        img = Image.frombytes(result.mode, size, img_bytes)
+    for idx, img in enumerate(result.images):
         img.save(f"test-{idx}.png")
