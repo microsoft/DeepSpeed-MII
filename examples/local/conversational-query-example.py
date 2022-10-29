@@ -12,7 +12,7 @@ text = "DeepSpeed is the greatest"
 
 generator = mii.mii_query_handle(name + "_deployment")
 result = generator.query({
-    'text': str,
+    'text': text,
     'conversation_id': time(),
     'past_user_inputs': [],
     'generated_responses': []
