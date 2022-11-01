@@ -1,16 +1,17 @@
 import os
 import mii
-import torch
 from utils import benchmark
+
+# Get HF auth key from environment or replace with key
+hf_auth_key = os.environ["HF_AUTH_KEY"]
 
 trials = 5
 batch_size = 1
 save_path = "."
 deploy_name = "sd_deploy"
-torch.cuda.manual_seed(42)
 
 # Deploy Stable Diffusion w. MII
-mii_config = {"dtype": "fp16", "hf_auth_token": os.environ["HF_AUTH_TOKEN"]}
+mii_config = {"dtype": "fp16", "hf_auth_token": hf_auth_key}
 mii.deploy(task='text-to-image',
            model="CompVis/stable-diffusion-v1-4",
            deployment_name=deploy_name,

@@ -3,17 +3,18 @@ import torch
 import diffusers
 from utils import benchmark
 
+# Get HF auth key from environment or replace with key
+hf_auth_key = os.environ["HF_AUTH_KEY"]
+
 trials = 5
 batch_size = 1
 save_path = "."
-torch.cuda.manual_seed(42)
 
 # Setup the stable diffusion pipeline via the diffusers pipeline api
-pipe = diffusers.StableDiffusionPipeline.from_pretrained(
-    "CompVis/stable-diffusion-v1-4",
-    use_auth_token=os.environ["HF_AUTH_TOKEN"],
-    torch_dtype=torch.float16,
-    revision="fp16").to("cuda")
+pipe = diffusers.StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4",
+                                                         use_auth_token=hf_auth_key,
+                                                         torch_dtype=torch.float16,
+                                                         revision="fp16").to("cuda")
 
 # Create batch size number of prompts
 prompts = ["a photo of an astronaut riding a horse on mars"] * batch_size
