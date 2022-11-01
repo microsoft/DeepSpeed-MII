@@ -2,14 +2,13 @@ import os
 import torch
 import time
 import deepspeed
-#import mii
+import mii
 import diffusers
 
 from packaging import version
 
 assert version.parse(diffusers.__version__) >= version.parse('0.6.0'), "diffusers must be 0.6.0+"
-# TODO: add __version__ support into mii
-#assert version.parse(mii.__version__) >= version.parse("0.0.3"), "mii must be 0.0.3+"
+assert version.parse(mii.__version__) >= version.parse("0.0.3"), "mii must be 0.0.3+"
 assert version.parse(deepspeed.__version__) >= version.parse("0.7.4"), "deepspeed must be 0.7.4+"
 
 
