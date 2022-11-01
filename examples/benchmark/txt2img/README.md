@@ -72,7 +72,7 @@ image = pipe("a photo of an astronaut riding a horse on mars").images[0]
 image.save("horse-on-mars.png")
 ```
 
-For your convience we've created a runnable script that sets up the pipeline, runs an example, and runs a benchmarks. You can run this example via:
+For your convenience we've created a runnable script that sets up the pipeline, runs an example, and runs a benchmarks. You can run this example via:
 
 ```bash
 export HF_AUTH_TOKEN=hf_xxxxxxxx
