@@ -52,7 +52,7 @@ Some additional environment context for reproducibility:
 
 Let's first deploy the baseline Stable Diffusion from the [diffusers tutorial](https://github.com/huggingface/diffusers#text-to-image-generation-with-stable-diffusion). We've modified their example to use an explicit auth token for downloading the model, you can get your auth token from your account on the [Hugging Face Hub](https://huggingface.co/settings/tokens). If you do not already have one, you can create a token by going to your [Hugging Face Settings](https://huggingface.co/settings/tokens) and clicking on the `New Token` button. You will also need to accept the license of [CompVis/stable-diffusion-v1-4](https://huggingface.co/CompVis/stable-diffusion-v1-4) to be able to download it.
 
-Going forward we will refer to [baseline-sd.py]() to run and benchmark a non-MII accelerated baseline.
+Going forward we will refer to [baseline-sd.py](baseline-sd.py) to run and benchmark a non-MII accelerated baseline.
 
 We utilize the `StableDiffusionPipeline` from diffusers to download and setup the model and move it to our GPU via:
 
@@ -79,7 +79,7 @@ export HF_AUTH_TOKEN=hf_xxxxxxxx
 python baseline-sd.py
 ```
 
-We've created a helper benchmark utility in [utils.py]() that adds basic timing around each image generation, prints the results, and saves the images.
+We've created a helper benchmark utility in [utils.py](utils.py) that adds basic timing around each image generation, prints the results, and saves the images.
 
 You can modify the `baseline-sd.py` script to use different batch sizes, in this case we will run batch size 1 to evaluate a latency sensitive scenario.
 
@@ -140,14 +140,14 @@ image = generator.query({'query': prompt}).images[0]
 image.save("horse-on-mars.png")
 ```
 
-We've packaged up all that you need to deploy, query, and tear down an SD MII deployment for you in [mii-sd.py]() which we will refer to going forward. You can run this example via:
+We've packaged up all that you need to deploy, query, and tear down an SD MII deployment for you in [mii-sd.py](mii-sd.py) which we will refer to going forward. You can run this example via:
 
 ```bash
 export HF_AUTH_TOKEN=hf_xxxxxxxx
 python mii-sd.py
 ```
 
-We use the same helper benchmark utility in [utils.py]() as we did in the baseline to evaluate the MII deployment.
+We use the same helper benchmark utility in [utils.py](utils.py) as we did in the baseline to evaluate the MII deployment.
 
 Similar to baseline you can modify the `mii-sd.py` script to use different batch sizes, for comparison purposes we run with batch size 1 to evaluate a latency sensitive scenario.
 
