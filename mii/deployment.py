@@ -28,7 +28,7 @@ def deploy(task,
 
     Arguments:
         task: Name of the machine learning task to be deployed.Currently MII supports the following list of tasks
-            ``['text-generation', 'question-answering']``
+            ``['text-generation', 'text-classification', 'question-answering', 'fill-mask', 'token-classification', 'conversational', 'text-to-image']``
 
         model: Name of a supported model for the task. Models in MII are sourced from multiple open-source projects
             such as Huggingface Transformer, FairSeq, EluetherAI etc. For the list of supported models for each task, please
