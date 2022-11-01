@@ -1,8 +1,8 @@
 # Generate Stable Diffusion Images with < 1 Second per Image
 
 <div align="center">
- <img src="../../docs/images/sd-hero.png#gh-light-mode-only">
- <img src="../../docs/images/sd-hero-dark.png#gh-dark-mode-only">
+ <img src="../../../docs/images/sd-hero.png#gh-light-mode-only">
+ <img src="../../../docs/images/sd-hero-dark.png#gh-dark-mode-only">
 </div>
 
 In this tutorial you will learn how to deploy [Stable Diffusion](https://huggingface.co/CompVis/stable-diffusion-v1-4) with state-of-the-art performance optimizations from DeepSpeed. Specifically, you will use both [DeepSpeed Inference](https://github.com/microsoft/deepspeed) and [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) to your deployment. In addition to deploying we will perform several performance evaluations.
