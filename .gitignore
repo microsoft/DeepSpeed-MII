@@ -12,3 +12,4 @@ build.txt
 .theia
 .cache
 __pycache__
+mii/version.py

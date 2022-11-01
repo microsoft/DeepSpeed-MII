@@ -7,3 +7,9 @@ from .aml_related.utils import aml_output_path
 
 from .config import MIIConfig
 from .grpc_related.proto import modelresponse_pb2_grpc
+
+__version__ = "0.0.0"
+try:
+    from .version import __version__
+except ImportError:
+    pass
