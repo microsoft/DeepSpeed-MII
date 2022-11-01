@@ -4,7 +4,7 @@ import diffusers
 from utils import benchmark
 
 # Get HF auth key from environment or replace with key
-hf_auth_key = os.environ["HF_AUTH_KEY"]
+hf_auth_key = os.environ["HF_AUTH_TOKEN"]
 
 trials = 5
 batch_size = 1
