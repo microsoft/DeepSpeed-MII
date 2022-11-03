@@ -10,9 +10,25 @@ In this tutorial you will learn how to deploy [Stable Diffusion](https://hugging
 This tutorial and related results are using Azure [ND96amsr\_A100\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) instances with NVIDIA A100-80GB GPUs. We observe similar performance on [ND96asr\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) instances with NVIDIA A100-40GB GPUs. In addition all of the techniques described here have also been successfully deployed on NVIDIA RTX A6000 GPUs as well.
 
 ## Outline
+* [Optimizations for Stable Diffusion with DeepSpeed-MII](#optimizations)
 * [Environment and dependency setup](#environment-setup)
 * [Deploy and evaluate baseline Stable Diffusion with diffusers](#deploy-baseline-stable-diffusion-with-diffusers)
 * [Deploy and evaluate MII with DeepSpeed inference optimizations](#deploy-mii-with-deepspeed-inference-optimizations)
+
+## Optimizations for Stable Diffusion with DeepSpeed-MII
+
+MII will automatically inject a wide range of optimizations from DeepSpeed-Inference to accelerated Stable Diffusion Deployment. The optimizations are as follows:
+
+1. FlashAttention for UNet cross-attention
+    * The implementation is adapted from [Triton](https://github.com/openai/triton)'s FlashAttention and further optimized to accelerate Stable Diffusion specific scenarios.
+4. UNet channel-last memory format 
+    * Faster convolution performnace using NHWC data layout   
+    * Removal of NHWC <--> NCHW data layout conversion though NHWC implementation of missing operators 
+3. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
+5. Custom CUDA implementation for GroupNorm, LayerNorm, cross-attention and fusion across multiple elementwise operators
+8. Exploitation of coarse grained computation sparsity to reduce the compute by over 10% 
+
+Keep an eye on the [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) repo and this tutorial for further updates and a deeper dive into these and future performance optimizations to achieve *under 1 second* generation times in latency sensitive deployments and further improvements to multi-batch throughput.
 
 ## Environment and dependency setup
 
@@ -102,17 +118,6 @@ trial=4, time_taken=2.3148
 
 Next we will use DeepSpeed-MII to setup a persistent deployment that utilizes DeepSpeed inference optimizations to improve latency by 1.8x.
 
-As of today, DeepSpeed inference will automatically apply several different optimizations to Stable Diffusion:
-
-1. FlashAttention for UNet cross-attention
-    * We created an adapted version of [Triton](https://github.com/openai/triton)'s FlashAttention to support our inference-only scenario plus Stable Diffusion specific requirements.
-    * We compared both the Triton and original implementation and found our Triton version performed better for small batch sizes.
-2. Custom CUDA kernels for UNet cross-attention
-3. [nvFuser](https://pytorch.org/blog/introducing-nvfuser-a-deep-learning-compiler-for-pytorch/)
-4. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
-5. UNet channel-last memory format
-
-Keep an eye on the [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) repo and this tutorial for further updates and a deeper dive into these and future performance optimizations to achieve *under 1 second* generation times in latency sensitive deployments and further improvements to multi-batch throughput.
 
 Stable Diffusion can be deployed with MII in the following way. You provide your Hugging Face auth key in an `mii_config` and tell MII what model and task you want to deploy in the `mii.deploy` API.
 
