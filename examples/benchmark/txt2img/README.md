@@ -145,7 +145,7 @@ image = generator.query({'query': prompt}).images[0]
 image.save("horse-on-mars.png")
 ```
 
-We've packaged up all that you need to deploy, query, and tear down an SD MII deployment for you in [mii-sd.py](mii-sd.py) which we will refer to going forward. You can run this example via:
+We've packaged up all that you need to deploy, query, and tear down an SD MII deployment in [mii-sd.py](mii-sd.py) which we will refer to going forward. You can run this example via:
 
 ```bash
 export HF_AUTH_TOKEN=hf_xxxxxxxx
