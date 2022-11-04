@@ -11,7 +11,7 @@ This tutorial and related results are using Azure [ND96amsr\_A100\_v4](https://l
 
 ## Outline
 * [Optimizations for Stable Diffusion with DeepSpeed-MII](#optimizations)
-* [Environment and dependency setup](#environment-setup)
+* [Environment and dependency setup](#environment-and-dependency-setup)
 * [Deploy and evaluate baseline Stable Diffusion with diffusers](#deploy-baseline-stable-diffusion-with-diffusers)
 * [Deploy and evaluate Stable Diffusion with MII-Public](#deploy-mii-with-MII-Public)
 * [Deploy and evaluate Stable Diffusion with MII-Azure](#deploy-mii-with-MII-Azure)
