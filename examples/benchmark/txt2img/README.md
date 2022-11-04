@@ -23,8 +23,8 @@ DeepSpeed-MII will automatically inject a wide range of optimizations from DeepS
 1. FlashAttention for UNet cross-attention
     * The implementation is adapted from [Triton](https://github.com/openai/triton)'s FlashAttention and further optimized to accelerate Stable Diffusion specific scenarios.
 4. UNet channel-last memory format
-    * Faster convolution performnace using NHWC data layout
-    * Removal of NHWC <--> NCHW data layout conversion though NHWC implementation of missing operators
+    * Faster convolution performance using NHWC data layout
+    * Removal of NHWC <--> NCHW data layout conversion through NHWC implementation of missing operators
 3. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
 5. Custom CUDA implementation of GroupNorm, LayerNorm, cross-attention and fusion across multiple elementwise operators
 8. Exploitation of coarse grained computation sparsity to reduce the compute by over 10%
