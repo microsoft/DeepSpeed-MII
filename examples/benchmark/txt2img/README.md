@@ -5,7 +5,7 @@
  <img src="../../../docs/images/sd-hero-dark.png#gh-dark-mode-only">
 </div>
 
-In this tutorial you will learn how to deploy [Stable Diffusion](https://huggingface.co/CompVis/stable-diffusion-v1-4) with state-of-the-art performance optimizations from DeepSpeed. Specifically, you will use both [DeepSpeed Inference](https://github.com/microsoft/deepspeed) and [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) to your deployment. In addition to deploying we will perform several performance evaluations.
+In this tutorial you will learn how to deploy [Stable Diffusion](https://huggingface.co/CompVis/stable-diffusion-v1-4) with state-of-the-art performance optimizations from both [DeepSpeed Inference](https://github.com/microsoft/deepspeed) and [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii). In addition to deploying we will perform several performance evaluations.
 
 This tutorial and related results are using Azure [ND96amsr\_A100\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) instances with NVIDIA A100-80GB GPUs. We observe similar performance on [ND96asr\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) instances with NVIDIA A100-40GB GPUs. In addition all of the techniques described here have also been successfully deployed on NVIDIA RTX A6000 GPUs as well.
 
@@ -18,18 +18,18 @@ This tutorial and related results are using Azure [ND96amsr\_A100\_v4](https://l
 
 ## Stable Diffusion Optimizations with DeepSpeed-MII
 
-DeepSpeed-MII will automatically inject a wide range of optimizations from DeepSpeed-Inference to accelerated Stable Diffusion Deployment. We list the optimizations below: 
+DeepSpeed-MII will automatically inject a wide range of optimizations from DeepSpeed-Inference to accelerated Stable Diffusion Deployment. We list the optimizations below:
 
 1. FlashAttention for UNet cross-attention
     * The implementation is adapted from [Triton](https://github.com/openai/triton)'s FlashAttention and further optimized to accelerate Stable Diffusion specific scenarios.
-4. UNet channel-last memory format 
-    * Faster convolution performnace using NHWC data layout   
-    * Removal of NHWC <--> NCHW data layout conversion though NHWC implementation of missing operators 
+4. UNet channel-last memory format
+    * Faster convolution performnace using NHWC data layout
+    * Removal of NHWC <--> NCHW data layout conversion though NHWC implementation of missing operators
 3. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
 5. Custom CUDA implementation of GroupNorm, LayerNorm, cross-attention and fusion across multiple elementwise operators
-8. Exploitation of coarse grained computation sparsity to reduce the compute by over 10% 
+8. Exploitation of coarse grained computation sparsity to reduce the compute by over 10%
 
-The first three optimizations are available via MII-Public, while the rest are available via MII-Aure (see here to read more about MII-Public and MII-Azure). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure. 
+The first three optimizations are available via MII-Public, while the rest are available via MII-Aure (see here to read more about MII-Public and MII-Azure). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure.
 
 Keep an eye on the [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) repo and this tutorial for further updates and a deeper dive into these and future performance optimizations.
 
