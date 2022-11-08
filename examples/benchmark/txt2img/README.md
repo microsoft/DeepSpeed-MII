@@ -25,13 +25,18 @@ DeepSpeed-MII will automatically inject a wide range of optimizations from DeepS
 2. UNet channel-last memory format
     * Faster convolution performance using NHWC data layout
     * Removal of NHWC <--> NCHW data layout conversion through NHWC implementation of missing operators
-3. Custom CUDA implementation of LayerNorm, cross-attention and fusion across multiple elementwise operators
-4. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
-5. Custom CUDA implementation of GroupNorm
-6. Partial UNet INT8 quantization
-7. Exploitation of coarse grained computation sparsity to reduce the compute by over 10%
+3. Custom CUDA implementations of:
+    * LayerNorm
+    * Cross-attention 
+    * Fusion across multiple elementwise operators
+5. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
+6. Custom CUDA implementation of 
+   * GroupNorm
+   * Fusion across multiple elementwise operators
+7. Partial UNet INT8 quantization via [ZeroQuant](https://arxiv.org/abs/2206.01861)
+8. Exploitation of coarse grained computation sparsity
 
-The first four optimizations are available via MII-Public, while the rest are available via MII-Aure (see here to read more about MII-Public and MII-Azure). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure.
+The first five optimizations are available via MII-Public, while the rest are available via MII-Aure (see here to read more about MII-Public and MII-Azure). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure.
 
 Keep an eye on the [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) repo and this tutorial for further updates and a deeper dive into these and future performance optimizations.
 
