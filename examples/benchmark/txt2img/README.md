@@ -1,4 +1,4 @@
-# Generate Stable Diffusion Images with < 1 Second per Image
+# Stable Diffusion Image Generation under 1 second w. DeepSpeed MII
 
 <div align="center">
  <img src="../../../docs/images/sd-hero.png#gh-light-mode-only">
