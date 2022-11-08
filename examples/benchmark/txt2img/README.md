@@ -27,9 +27,9 @@ DeepSpeed-MII will automatically inject a wide range of optimizations from DeepS
     * Removal of NHWC <--> NCHW data layout conversion through NHWC implementation of missing operators
 3. Custom CUDA implementations of:
     * LayerNorm
-    * Cross-attention 
+    * Cross-attention
 4. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
-5. Custom CUDA implementation of 
+5. Custom CUDA implementation of
    * GroupNorm
    * Fusion across multiple elementwise operators
 6. Partial UNet INT8 quantization via [ZeroQuant](https://arxiv.org/abs/2206.01861)
@@ -66,11 +66,11 @@ You can see we are running PyTorch 1.12.1 built against CUDA 11.6 and our NVCC v
 Some additional environment context for reproducibility:
 * Ubuntu 20.04.4 LTS
 * Python 3.9.15
-* deepspeed==0.7.4
+* deepspeed==0.7.5
 * deepspeed-mii==0.0.3
 * torch==1.12.1+cu116
-* diffusers==0.6.0
-* transformers==4.23.1
+* diffusers==0.7.1
+* transformers==4.24.0
 * triton==2.0.0.dev20221005
 
 ## Deploy baseline Stable Diffusion with diffusers
