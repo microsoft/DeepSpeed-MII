@@ -16,6 +16,10 @@ assert version.parse(transformers.__version__) >= version.parse("4.24.0"), "tran
 
 
 def benchmark(func, inputs, save_path=".", trials=5, tag="", save=True):
+    # Turn off the tqdm progress bar
+    if hasattr(func, "set_progress_bar_config"):
+        func.set_progress_bar_config(disable=True)
+
     durations = []
     for trial in range(trials):
         torch.cuda.synchronize()
