@@ -12,9 +12,10 @@ The performance results above utilized NVIDIA GPUs from Azure: [ND96amsr\_A100\_
 ## Outline
 * [Optimizations for Stable Diffusion with DeepSpeed-MII](#optimizations)
 * [Environment and dependency setup](#environment-and-dependency-setup)
-* [Deploy and evaluate baseline Stable Diffusion with diffusers](#deploy-baseline-stable-diffusion-with-diffusers)
-* [Deploy and evaluate Stable Diffusion with MII-Public](#deploy-mii-with-MII-Public)
-* [Deploy and evaluate Stable Diffusion with MII-Azure](#deploy-mii-with-MII-Azure)
+* [Evaluation methodology](#evaluation-methodology)
+* [Deploy baseline Stable Diffusion with diffusers](#deploy-baseline-stable-diffusion-with-diffusers)
+* [Deploy Stable Diffusion with MII-Public](#deploy-mii-with-MII-Public)
+* [Deploy Stable Diffusion with MII-Azure](#deploy-mii-with-MII-Azure)
 
 ## Stable Diffusion Optimizations with DeepSpeed-MII
 
@@ -77,6 +78,12 @@ Some additional environment context for reproducibility:
 * triton==2.0.0.dev20221005
 * Ubuntu 20.04.4 LTS
 * Python 3.9.15
+
+## Evaluation methodology
+
+The evaluations in this tutorial are done with the full `diffusers` end-to-end pipeline. The primary steps of the pipeline include CLIP, UNet, VAE, safety checker, and PIL conversion. We see that in `diffusers` v0.7.1 the resulting image tensors are moved from GPU to CPU for both safety checking and PIL conversion ([essentially this code block](https://github.com/huggingface/diffusers/blob/v0.7.1/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py#L406-L420)). We observe between 40-60 ms for the safety checker and PIL conversion in our setup but see these times can vary more dramatically in shared CPU environments.
+
+We run the same text prompt for single and multi-batch cases. In addition, we run each method for 10 trials and report the median value.
 
 ## Deploy baseline Stable Diffusion with diffusers
 
