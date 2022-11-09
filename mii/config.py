@@ -14,6 +14,7 @@ class MIIConfig(BaseModel):
     hf_auth_token: str = None
     replace_with_kernel_inject: bool = True
     profile_model_time: bool = False
+    skip_model_check: bool = False
 
     @validator('dtype')
     def dtype_valid(cls, value):

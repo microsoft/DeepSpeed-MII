@@ -15,4 +15,5 @@ def diffusers_provider(model_path, model_name, task_name, mii_config):
                                                  use_auth_token=mii_config.hf_auth_token,
                                                  **kwargs)
     pipeline = pipeline.to(f"cuda:{local_rank}")
+    pipeline.set_progress_bar_config(disable=True)
     return pipeline

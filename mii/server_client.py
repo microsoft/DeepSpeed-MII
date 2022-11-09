@@ -15,6 +15,7 @@ import base64
 from mii.utils import logger, kwarg_dict_to_proto
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.models.utils import ImageResponse
+from mii.constants import GRPC_MAX_MSG_SIZE
 
 
 def mii_query_handle(deployment_name):
@@ -238,7 +239,13 @@ class MIIServerClient():
     def _initialize_grpc_client(self):
         channels = []
         for i in range(self.num_gpus):
-            channel = grpc.aio.insecure_channel(f'localhost:{self.port_number + i}')
+            channel = grpc.aio.insecure_channel(f'localhost:{self.port_number + i}',
+                                                options=[
+                                                    ('grpc.max_send_message_length',
+                                                     GRPC_MAX_MSG_SIZE),
+                                                    ('grpc.max_receive_message_length',
+                                                     GRPC_MAX_MSG_SIZE)
+                                                ])
             stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
             channels.append(channel)
             self.stubs.append(stub)
