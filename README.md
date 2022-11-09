@@ -11,6 +11,7 @@
 
 ## Latest News
 
+* [2022/11] [Stable Diffusion Image Generation under 1 second w. DeepSpeed MII](examples/benchmark/txt2img)
 * [2022/10] [Announcing DeepSpeed Model Implementations for Inference (MII)](https://www.deepspeed.ai/2022/10/10/mii.html)
 
 # Contents
