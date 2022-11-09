@@ -29,8 +29,8 @@ DeepSpeed-MII will automatically inject a wide range of optimizations from DeepS
 3. Custom CUDA implementations of:
     * LayerNorm
     * Cross-attention
-4. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/)
-5. Custom CUDA implementation of
+4. [CUDA Graph](https://developer.nvidia.com/blog/cuda-graphs/) for VAE, UNet, and CLIP encoder
+5. Custom CUDA implementation of:
    * GroupNorm
    * Fusion across multiple elementwise operators
 6. Partial UNet INT8 quantization via [ZeroQuant](https://arxiv.org/abs/2206.01861)
@@ -194,5 +194,8 @@ median duration: 1.2065
 ```
 ## Deploy Stable Diffusion with MII-Azure
 
-> **Note**
-> Continue to watch this space for updates in the coming weeks on how to deploy MII-Azure via [Azure](https://azuremarketplace.microsoft.com/en-us/marketplace/) and [AzureML](https://azure.microsoft.com/en-us/free/machine-learning/).
+Continue to watch this space for updates in the coming weeks on how to get access to MII-Azure. We will be providing two options for users to access these optimizations: (1) Azure VM Image and (2) AzureML endpoint deployments.
+
+An Azure VM image will be released via the [Azure Marketplace](https://azuremarketplace.microsoft.com/en-us/marketplace/) in late November 2022. This VM will have MII-Azure pre-installed with all the required components to get started with models like Stable Diffusion and other MII supported models. The VM image itself will be be free, you only pay for the Azure compute costs associated with the instance(s) you use it with.
+
+A more comprehensive [AzureML (AML)](https://azure.microsoft.com/en-us/free/machine-learning/) deployment with MII-Azure is also in the works to make deploying on AML with MII-Azure quick and easy to use. Keep watching our MII repo for more updates on this release.
