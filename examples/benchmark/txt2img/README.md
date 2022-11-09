@@ -36,7 +36,7 @@ DeepSpeed-MII will automatically inject a wide range of optimizations from DeepS
 6. Partial UNet INT8 quantization via [ZeroQuant](https://arxiv.org/abs/2206.01861)
 7. Exploitation of coarse grained computation sparsity
 
-The first four optimizations are available via MII-Public, while the rest are available via MII-Aure (see here to read more about MII-Public and MII-Azure). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure.
+The first four optimizations are available via MII-Public, while the rest are available via MII-Azure ([see here to read more about MII-Public and MII-Azure](https://github.com/microsoft/deepspeed-mii#mii-public-and-mii-azure)). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure.
 
 Keep an eye on the [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) repo and this tutorial for further updates and a deeper dive into these and future performance optimizations.
 
@@ -196,6 +196,6 @@ median duration: 1.2065
 
 Continue to watch this space for updates in the coming weeks on how to get access to MII-Azure. We will be providing two options for users to access these optimizations: (1) Azure VM Image and (2) AzureML endpoint deployments.
 
-An Azure VM image will be released via the [Azure Marketplace](https://azuremarketplace.microsoft.com/en-us/marketplace/) in late November 2022. This VM will have MII-Azure pre-installed with all the required components to get started with models like Stable Diffusion and other MII supported models. The VM image itself will be be free, you only pay for the Azure compute costs associated with the instance(s) you use it with.
+An Azure VM image will be released via the [Azure Marketplace](https://azuremarketplace.microsoft.com/en-us/marketplace/) in late November 2022. This VM will have MII-Azure pre-installed with all the required components to get started with models like Stable Diffusion and other MII supported models. The VM image itself will be free and can be used with any Azure Compute Instances.
 
 A more comprehensive [AzureML (AML)](https://azure.microsoft.com/en-us/free/machine-learning/) deployment with MII-Azure is also in the works to make deploying on AML with MII-Azure quick and easy to use. Keep watching our MII repo for more updates on this release.
