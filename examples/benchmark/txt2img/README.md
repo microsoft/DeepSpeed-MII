@@ -1,7 +1,7 @@
 # Stable Diffusion Image Generation under 1 second w. DeepSpeed MII
 
 <div align="center">
- <img src="../../../docs/images/sd-hero.png#gh-light-mode-only">
+ <img src="../../../docs/images/sd-hero-light.png#gh-light-mode-only">
  <img src="../../../docs/images/sd-hero-dark.png#gh-dark-mode-only">
 </div>
 
