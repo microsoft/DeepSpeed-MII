@@ -49,7 +49,7 @@ pip install deepspeed[sd] deepspeed-mii
 ```
 
 > **Note**
-> The DeepSpeed version used in the rest of this tutorial uses [this branch](https://github.com/microsoft/DeepSpeed/tree/cholmes/sd-extension) which will be merged into master and released as part of DeepSpeed v0.7.5 later this week.
+> The DeepSpeed version used in the rest of this tutorial uses [this branch](https://github.com/microsoft/DeepSpeed/pull/2491) which will be merged into master and released as part of DeepSpeed v0.7.5 later this week.
 
 In order to check your DeepSpeed install is setup correctly run `ds_report` from your command line. This will show what versions of DeepSpeed, PyTorch, and nvcc will be used at runtime. The bottom half of `ds_report` is show below for our setup:
 
