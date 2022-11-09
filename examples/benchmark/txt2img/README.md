@@ -19,10 +19,10 @@ The performance results above utilized NVIDIA GPUs from Azure: [ND96amsr\_A100\_
 
 ## Stable Diffusion Optimizations with DeepSpeed-MII
 
-DeepSpeed-MII will automatically inject a wide range of optimizations from DeepSpeed-Inference to accelerated Stable Diffusion Deployment. We list the optimizations below:
+DeepSpeed-MII will automatically inject a wide range of optimizations from DeepSpeed-Inference to accelerate Stable Diffusion Deployment. We list the optimizations below:
 
 1. FlashAttention for UNet cross-attention
-    * The implementation is adapted from [Triton](https://github.com/openai/triton)'s FlashAttention and further optimized to accelerate Stable Diffusion specific scenarios.
+    * The implementation is adapted from [Triton](https://github.com/openai/triton)'s FlashAttention and further tuned to accelerate Stable Diffusion specific scenarios.
 2. UNet channel-last memory format
     * Faster convolution performance using NHWC data layout
     * Removal of NHWC <--> NCHW data layout conversion through NHWC implementation of missing operators
