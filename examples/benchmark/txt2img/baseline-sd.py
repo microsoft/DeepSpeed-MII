@@ -6,7 +6,7 @@ from utils import benchmark
 # Get HF auth key from environment or replace with key
 hf_auth_key = os.environ["HF_AUTH_TOKEN"]
 
-trials = 5
+trials = 10
 batch_size = 1
 save_path = "."
 

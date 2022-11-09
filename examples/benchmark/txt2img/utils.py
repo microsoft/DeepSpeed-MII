@@ -29,4 +29,4 @@ def benchmark(func, inputs, save_path=".", trials=5, tag="", save=True):
         if save:
             for idx, img in enumerate(results.images):
                 img.save(os.path.join(save_path, f"{tag}-trial{trial}-img{idx}.png"))
-    print(f"median duration: {numpy.median(durations)}")
+    print(f"median duration: {numpy.median(durations):.4f}")

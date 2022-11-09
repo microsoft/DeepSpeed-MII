@@ -5,9 +5,9 @@
  <img src="../../../docs/images/sd-hero-dark.png#gh-dark-mode-only">
 </div>
 
-In this tutorial you will learn how to deploy [Stable Diffusion](https://huggingface.co/CompVis/stable-diffusion-v1-4) with state-of-the-art performance optimizations from both [DeepSpeed Inference](https://github.com/microsoft/deepspeed) and [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii). In addition to deploying we will perform several performance evaluations.
+In this tutorial you will learn how to deploy [Stable Diffusion](https://huggingface.co/CompVis/stable-diffusion-v1-4) with state-of-the-art performance optimizations from [DeepSpeed Inference](https://github.com/microsoft/deepspeed) and [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii). In addition to deploying we will perform several performance evaluations.
 
-This tutorial and related results are using Azure [ND96amsr\_A100\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) instances with NVIDIA A100-80GB GPUs. We observe similar performance on [ND96asr\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) instances with NVIDIA A100-40GB GPUs. In addition all of the techniques described here have also been successfully deployed on NVIDIA RTX A6000 GPUs as well.
+The performance results above utilized NVIDIA GPUs from Azure: [ND96amsr\_A100\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) (NVIDIA A100-80GB) and [ND96asr\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) (A100-40GB). We have also used MII-Public with NVIDIA RTX-A6000 GPUs and will include those results at a future date.
 
 ## Outline
 * [Optimizations for Stable Diffusion with DeepSpeed-MII](#optimizations)
@@ -47,6 +47,9 @@ Install [DeepSpeed](https://pypi.org/project/deepspeed/) and [DeepSpeed-MII](htt
 pip install deepspeed[sd] deepspeed-mii
 ```
 
+> **Note**
+> The DeepSpeed version used in the rest of this tutorial uses [this branch](https://github.com/microsoft/DeepSpeed/tree/cholmes/sd-extension) which will be merged into master and released as part of DeepSpeed v0.7.5 later this week.
+
 In order to check your DeepSpeed install is setup correctly run `ds_report` from your command line. This will show what versions of DeepSpeed, PyTorch, and nvcc will be used at runtime. The bottom half of `ds_report` is show below for our setup:
 
 ```
@@ -57,25 +60,27 @@ torch cuda version ............... 11.6
 torch hip version ................ None
 nvcc version ..................... 11.6
 deepspeed install path ........... ['/usr/local/lib/python3.9/dist-packages/deepspeed']
-deepspeed info ................... 0.7.4, unknown, unknown
+deepspeed info ................... 0.7.5, unknown, unknown
 deepspeed wheel compiled w. ...... torch 1.12, cuda 11.6
 ```
 
-You can see we are running PyTorch 1.12.1 built against CUDA 11.6 and our NVCC version of 11.6 is properly aligned with the installed torch version.
+You can see we are running PyTorch 1.12.1 built against CUDA 11.6 and our NVCC version of 11.6 is properly aligned with the installed torch version, this alignment is highly recommended by both us and NVIDIA.
+
+The [CUDA toolkit](https://developer.nvidia.com/cuda-toolkit) which includes `nvcc` is required for DeepSpeed. All of our custom CUDA/C++ ops for this tutorial will be compiled the first time you run the model in under 30 seconds. By comparison some similar projects can take upwards of 30+ minutes to compile and get running.
 
 Some additional environment context for reproducibility:
-* Ubuntu 20.04.4 LTS
-* Python 3.9.15
 * deepspeed==0.7.5
 * deepspeed-mii==0.0.3
 * torch==1.12.1+cu116
 * diffusers==0.7.1
 * transformers==4.24.0
 * triton==2.0.0.dev20221005
+* Ubuntu 20.04.4 LTS
+* Python 3.9.15
 
 ## Deploy baseline Stable Diffusion with diffusers
 
-Let's first deploy the baseline Stable Diffusion from the [diffusers tutorial](https://github.com/huggingface/diffusers#text-to-image-generation-with-stable-diffusion). We've modified their example to use an explicit auth token for downloading the model, you can get your auth token from your account on the [Hugging Face Hub](https://huggingface.co/settings/tokens). If you do not already have one, you can create a token by going to your [Hugging Face Settings](https://huggingface.co/settings/tokens) and clicking on the `New Token` button. You will also need to accept the license of [CompVis/stable-diffusion-v1-4](https://huggingface.co/CompVis/stable-diffusion-v1-4) to be able to download it.
+Let's first deploy the baseline Stable Diffusion from the [diffusers tutorial](https://github.com/huggingface/diffusers#text-to-image-generation-with-stable-diffusion). In this example we will show performance on a NVIDIA A100-40GB GPU from Azure. We've modified their example to use an explicit auth token for downloading the model, you can get your auth token from your account on the [Hugging Face Hub](https://huggingface.co/settings/tokens). If you do not already have one, you can create a token by going to your [Hugging Face Settings](https://huggingface.co/settings/tokens) and clicking on the `New Token` button. You will also need to accept the license of [CompVis/stable-diffusion-v1-4](https://huggingface.co/CompVis/stable-diffusion-v1-4) to be able to download it.
 
 Going forward we will refer to [baseline-sd.py](baseline-sd.py) to run and benchmark a non-MII accelerated baseline.
 
@@ -97,6 +102,8 @@ image = pipe("a photo of an astronaut riding a horse on mars").images[0]
 image.save("horse-on-mars.png")
 ```
 
+We use the `diffusers` [StableDiffusionPipeline](https://huggingface.co/docs/diffusers/v0.7.0/en/api/pipelines/stable_diffusion#diffusers.StableDiffusionPipeline.__call__) defaults for image height/width (512x512) and number of inference steps (50). Changing these values will impact the the latency/throughput you will see.
+
 For your convenience we've created a runnable script that sets up the pipeline, runs an example, and runs a benchmarks. You can run this example via:
 
 ```bash
@@ -108,24 +115,25 @@ We've created a helper benchmark utility in [utils.py](utils.py) that adds basic
 
 You can modify the `baseline-sd.py` script to use different batch sizes, in this case we will run batch size 1 to evaluate a latency sensitive scenario.
 
-Here is what we observe in terms of performance over 5 trials with the same prompt:
+Here is what we observe in terms of A100-40GB performance over 10 trials with the same prompt:
 
 ```
-100%|███████████████████████████████████████████████| 51/51 [00:02<00:00, 23.24it/s]
-trial=0, time_taken=2.3496
-100%|███████████████████████████████████████████████| 51/51 [00:02<00:00, 23.46it/s]
-trial=1, time_taken=2.3371
-100%|███████████████████████████████████████████████| 51/51 [00:02<00:00, 23.52it/s]
-trial=2, time_taken=2.3185
-100%|███████████████████████████████████████████████| 51/51 [00:02<00:00, 23.54it/s]
-trial=3, time_taken=2.3274
-100%|███████████████████████████████████████████████| 51/51 [00:02<00:00, 23.57it/s]
-trial=4, time_taken=2.3148
+trial=0, time_taken=2.2166
+trial=1, time_taken=2.2143
+trial=2, time_taken=2.2205
+trial=3, time_taken=2.2106
+trial=4, time_taken=2.2105
+trial=5, time_taken=2.2254
+trial=6, time_taken=2.2044
+trial=7, time_taken=2.2304
+trial=8, time_taken=2.2078
+trial=9, time_taken=2.2097
+median duration: 2.2125
 ```
 
 ## Deploy Stable diffusion with MII-Public
 
-MII-Public improves latency by 1.8x compared to the baseline. To create a  MII-Public deployment, simply provide your Hugging Face auth key in an `mii_config` and tell MII what model and task you want to deploy in the `mii.deploy` API.
+MII-Public improves latency by up to 1.8x compared to several baselines (see image at top of tutorial). To create a MII-Public deployment, simply provide your Hugging Face auth key in an `mii_config` and tell MII what model and task you want to deploy in the `mii.deploy` API.
 
 ```python
 import mii
@@ -162,20 +170,22 @@ We use the same helper benchmark utility in [utils.py](utils.py) as we did in th
 
 Similar to baseline you can modify the `mii-sd.py` script to use different batch sizes, for comparison purposes we run with batch size 1 to evaluate a latency sensitive scenario.
 
-Here is what we observe in terms of performance over 5 trials with the same prompt:
+Here is what we observe in terms of A100-40GB performance over 10 trials with the same prompt:
 
 ```
-100%|███████████████████████████████████████████████| 51/51 [00:01<00:00, 43.58it/s]
-trial=0, time_taken=1.2683
-100%|███████████████████████████████████████████████| 51/51 [00:01<00:00, 43.69it/s]
-trial=1, time_taken=1.2635
-100%|███████████████████████████████████████████████| 51/51 [00:01<00:00, 43.69it/s]
-trial=2, time_taken=1.2683
-100%|███████████████████████████████████████████████| 51/51 [00:01<00:00, 43.67it/s]
-trial=3, time_taken=1.2786
-100%|███████████████████████████████████████████████| 51/51 [00:01<00:00, 43.72it/s]
-trial=4, time_taken=1.2626
+trial=0, time_taken=1.3935
+trial=1, time_taken=1.2091
+trial=2, time_taken=1.2110
+trial=3, time_taken=1.2068
+trial=4, time_taken=1.2064
+trial=5, time_taken=1.2002
+trial=6, time_taken=1.2063
+trial=7, time_taken=1.2062
+trial=8, time_taken=1.2069
+trial=9, time_taken=1.2063
+median duration: 1.2065
 ```
-## Deploy Stable diffusion with MII-Azure
+## Deploy Stable Diffusion with MII-Azure
 
-MII-Public improves latency by Nx compared to the baseline. To create a  MII-Azure deployment, ...
+> **Note**
+> Continue to watch this space for updates in the coming weeks on how to deploy MII-Azure via [Azure](https://azuremarketplace.microsoft.com/en-us/marketplace/) and [AzureML](https://azure.microsoft.com/en-us/free/machine-learning/).
