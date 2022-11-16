@@ -1,11 +1,11 @@
 import torch
 from typing import Union, List
 from pydantic import BaseModel, validator
-
+import socket
 
 class MIIConfig(BaseModel):
     tensor_parallel: int = 1
-    port_number: int = 50050
+    port_number: int = None
     dtype: str = "float"
     enable_cuda_graph: bool = False
     checkpoint_dict: Union[dict, None] = None
@@ -15,6 +15,46 @@ class MIIConfig(BaseModel):
     replace_with_kernel_inject: bool = True
     profile_model_time: bool = False
     skip_model_check: bool = False
+
+    DEFAULT_PORT = 50050
+
+    def __is_port_in_use(port_number: int) -> bool:
+        """
+        Checks if a port_number is in use
+
+        Args:
+            port_number (int): port_number to check
+
+        Returns:
+            bool: True if port_number is in use else False
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(('localhost', port_number)) == 0
+
+
+    @validator('port_number')
+    def assign_port(port_number: int = None) -> int:
+        """
+        Starts a socket connection to grab a free port (Involves a race
+            condition but will do for now)
+        Args:
+            port_number (int): Port to start the socket connection (default: None)
+        Returns:
+            int: Free port number
+        """
+
+        # if port is None set the default 50050 and default port is not in use return it
+        if port is None:
+            port = MIIConfig.DEFAULT_PORT
+
+        # if the defined port is in use find a free port
+        if MIIConfig.__is_port_in_use(port_number):
+            tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp.bind(("", 0))
+            _, port = tcp.getsockname()
+            tcp.close()
+
+        return int(port)
 
     @validator('dtype')
     def dtype_valid(cls, value):
