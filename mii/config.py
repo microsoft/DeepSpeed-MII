@@ -16,8 +16,6 @@ class MIIConfig(BaseModel):
     profile_model_time: bool = False
     skip_model_check: bool = False
 
-    DEFAULT_PORT = 50050
-
     def __is_port_in_use(port_number: int) -> bool:
         """
         Checks if a port_number is in use
@@ -42,19 +40,21 @@ class MIIConfig(BaseModel):
         Returns:
             int: Free port number
         """
-
+        DEFAULT_PORT = 50050
         # if port is None set the default 50050 and default port is not in use return it
-        if port is None:
-            port = MIIConfig.DEFAULT_PORT
+        if port_number is None:
+            port_number = DEFAULT_PORT
 
         # if the defined port is in use find a free port
         if MIIConfig.__is_port_in_use(port_number):
             tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             tcp.bind(("", 0))
-            _, port = tcp.getsockname()
+            _, port_number = tcp.getsockname()
             tcp.close()
 
-        return int(port)
+        MIIConfig.port_number = port_number
+
+        return port_number
 
     @validator('dtype')
     def dtype_valid(cls, value):
