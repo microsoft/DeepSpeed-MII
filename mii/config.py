@@ -3,6 +3,7 @@ from typing import Union, List
 from pydantic import BaseModel, validator
 import socket
 
+
 class MIIConfig(BaseModel):
     tensor_parallel: int = 1
     port_number: int = None
@@ -28,7 +29,6 @@ class MIIConfig(BaseModel):
         """
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             return s.connect_ex(('localhost', port_number)) == 0
-
 
     @validator('port_number')
     def assign_port(port_number: int = None) -> int:
