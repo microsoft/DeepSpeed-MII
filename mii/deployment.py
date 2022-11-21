@@ -65,9 +65,9 @@ def deploy(task,
     mii_config = mii.config.MIIConfig(**mii_config)
     if enable_zero:
         if ds_config.get("fp16", {}).get("enabled", False):
-            assert (mii_config.torch_dtype() == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
+            assert (mii_config.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
         else:
-            assert (mii_config.torch_dtype() == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
+            assert (mii_config.dtype == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
     assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
     # aml only allows certain characters for deployment names
