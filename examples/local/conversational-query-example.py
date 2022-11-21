@@ -2,7 +2,6 @@ import mii
 
 from time import time
 
-
 # gpt2
 name = "microsoft/DialoGPT-medium"
 
