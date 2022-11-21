@@ -32,6 +32,9 @@ def load_models(task_name,
 
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
         from mii.models.providers.huggingface import hf_provider
+        if "bigscience/bloom" in model_name:
+            assert mii_config.torch_dtype() == torch.half or mii_config.torch_dtype() == torch.int8, "Bloom models only support fp16/int8"
+            assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
         inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         from mii.models.providers.eleutherai import eleutherai_provider
