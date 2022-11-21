@@ -63,8 +63,19 @@ else:
     # None of the above, probably installing from source
     version_str += f'+{git_hash}'
 
+# write out installed version
+with open("mii/version.py", 'w') as fd:
+    fd.write(f"__version__ = '{version_str}'\n")
+
+# Parse README.md to make long_description for PyPI page.
+thisdir = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(thisdir, 'README.md'), encoding='utf-8') as fin:
+    readme_text = fin.read()
+
 setup(name="deepspeed-mii",
       version=version_str,
+      long_description=readme_text,
+      long_description_content_type='text/markdown',
       description='deepspeed mii',
       author='DeepSpeed Team',
       author_email='deepspeed-mii@microsoft.com',

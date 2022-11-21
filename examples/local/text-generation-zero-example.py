@@ -15,17 +15,17 @@ ds_config = {
     "bf16": {
         "enabled": False
     },
+    "aio": {
+        "block_size": 262144,
+        "queue_depth": 32,
+        "thread_count": 1,
+        "single_submit": False,
+        "overlap_events": True
+    },
     "zero_optimization": {
         "stage": 3,
         "offload_param": {
             "device": "cpu",
-        },
-        "aio": {
-            "block_size": 262144,
-            "queue_depth": 32,
-            "thread_count": 1,
-            "single_submit": False,
-            "overlap_events": True
         },
         "overlap_comm": True,
         "contiguous_gradients": True,

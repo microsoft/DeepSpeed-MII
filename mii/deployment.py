@@ -77,9 +77,11 @@ def deploy(task,
         assert set(deployment_name) <= allowed_chars, "AML deployment names can only contain a-z, A-Z, 0-9, and '-'"
 
     task = mii.utils.get_task(task)
-    mii.utils.check_if_task_and_model_is_valid(task, model)
-    if enable_deepspeed:
-        mii.utils.check_if_task_and_model_is_supported(task, model)
+
+    if not mii_config.skip_model_check:
+        mii.utils.check_if_task_and_model_is_valid(task, model)
+        if enable_deepspeed:
+            mii.utils.check_if_task_and_model_is_supported(task, model)
 
     if enable_deepspeed:
         logger.info(

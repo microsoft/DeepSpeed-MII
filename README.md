@@ -11,6 +11,7 @@
 
 ## Latest News
 
+* [2022/11] [Stable Diffusion Image Generation under 1 second w. DeepSpeed MII](examples/benchmark/txt2img)
 * [2022/10] [Announcing DeepSpeed Model Implementations for Inference (MII)](https://www.deepspeed.ai/2022/10/10/mii.html)
 
 # Contents
@@ -23,6 +24,7 @@
 - [MII-Public and MII-Azure](#mii-public-and-mii-azure)
 - [Getting started with MII](#getting-started-with-mii)
 - [Quantifying Latency and Cost Reduction](#quantifying-latency-and-cost-reduction)
+- [Community Tutorials](#community-tutorials)
 
 <!-- tocstop -->
 
@@ -232,6 +234,10 @@ MII can significantly reduce the inference cost of very expensive language model
 
 [ ![azure cost](/docs/images/azure-cost.png) ](/docs/images/azure-cost.png)
 *Figure 8: Cost of generating 1 million tokens on Azure with different model types. MII-Azure reduces the cost of generation by over 40x.*
+
+# Community Tutorials
+
+* [DeepSpeed Deep Dive — Model Implementations for Inference (MII) (Heiko Hotz)](https://towardsdatascience.com/deepspeed-deep-dive-model-implementations-for-inference-mii-b02aa5d5e7f7)
 
 # Contributing
 

@@ -57,12 +57,12 @@ def load_models(task_name,
                 ds_kwargs["enable_qkv_quantization"] = True
     elif provider == mii.constants.ModelProvider.DIFFUSERS:
         from mii.models.providers.diffusers import diffusers_provider
-        assert not mii_config.enable_cuda_graph, "Diffusers models do no support Cuda Graphs (yet)"
         inference_pipeline = diffusers_provider(model_path,
                                                 model_name,
                                                 task_name,
                                                 mii_config)
         ds_kwargs["replace_with_kernel_inject"] = False  #not supported yet
+        mii_config.enable_cuda_graph = True
     else:
         raise ValueError(f"Unknown model provider {provider}")
 
