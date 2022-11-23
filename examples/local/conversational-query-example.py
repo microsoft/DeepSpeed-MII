@@ -1,18 +1,17 @@
 import mii
 
-from time import time
-
 # gpt2
 name = "microsoft/DialoGPT-medium"
 
 print(f"Querying {name}...")
 
+conv_id = 0
 text = "DeepSpeed is the greatest"
 
 generator = mii.mii_query_handle(name + "_deployment")
 result = generator.query({
     'text': text,
-    'conversation_id': time(),
+    'conversation_id': conv_id,
     'past_user_inputs': [],
     'generated_responses': []
 })
