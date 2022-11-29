@@ -68,6 +68,7 @@ model family | size range | ~model count
 [gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 140
 [gpt\_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 300
 [gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 7,888
+[xlm-roberta](https://huggingface.co/models?other=xlm-roberta) | 0.1B - 0.3B | 1,850
 [roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 5,190
 [bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 13,940
 
