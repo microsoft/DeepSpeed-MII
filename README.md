@@ -62,6 +62,7 @@ MII model support will continue to grow over time, check back for updates! Curre
 model family | size range | ~model count
 ------ | ------ | ------
 [bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 120
+[stable-diffusion](https://huggingface.co/models?other=stable-diffusion) | 1.1B | 330
 [opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 70
 [gpt\_neox](https://huggingface.co/models?other=gpt_neox) | 1.3B - 20B | 10
 [gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 110
@@ -69,6 +70,13 @@ model family | size range | ~model count
 [gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 7,100
 [roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 4,200
 [bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 12,500
+
+<!--
+SD param count:
+text_encoder: 123060480
+unet: 859520964
+vae: 83653863
+-->
 
 <!--For a full set of models and tasks supported by MII, please see here (TODO: add reference to specific model classes we support)-->
 
