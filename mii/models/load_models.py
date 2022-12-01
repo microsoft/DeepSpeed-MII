@@ -28,7 +28,7 @@ def load_models(task_name,
             "tp_size": world_size,
             "mpu": None
         },
-        "dtype": mii_config.torch_dtype(),
+        "dtype": mii_config.dtype,
         "replace_method": "auto",
         "enable_cuda_graph": mii_config.enable_cuda_graph,
         "checkpoint": None,
@@ -58,7 +58,7 @@ def load_models(task_name,
         assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
         inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
         inf_config["checkpoint"] = inference_pipeline.checkpoint_dict
-        if mii_config.torch_dtype() == torch.int8:
+        if mii_config.dtype == torch.int8:
             if "enable_qkv_quantization" in inspect.signature(
                     deepspeed.init_inference).parameters:
                 inf_config["enable_qkv_quantization"] = True
