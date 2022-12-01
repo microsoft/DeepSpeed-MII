@@ -1,12 +1,41 @@
 import torch
 from typing import Union, List
+from enum import Enum
 from pydantic import BaseModel, validator
+
+
+class DtypeEnum(Enum):
+    # The torch dtype must always be the first value (so we return torch.dtype)
+    fp16 = torch.float16, "torch.float16", "fp16", "float16", "half"
+    bf16 = torch.bfloat16, "torch.bfloat16", "bf16", "bfloat16"
+    fp32 = torch.float32, "torch.float32", "fp32", "float32", "float"
+    int8 = torch.int8, "torch.int8", "int8"
+
+    # Copied from https://stackoverflow.com/a/43210118
+    # Allows us to use multiple values for each Enum index and returns first
+    # listed value when Enum is called
+    def __new__(cls, *values):
+        obj = object.__new__(cls)
+        # first value is canonical value
+        obj._value_ = values[0]
+        for other_value in values[1:]:
+            cls._value2member_map_[other_value] = obj
+        obj._all_values = values
+        return obj
+
+    def __repr__(self):
+        return "<%s.%s: %s>" % (
+            self.__class__.__name__,
+            self._name_,
+            ", ".join([repr(v) for v in self._all_values]),
+        )
 
 
 class MIIConfig(BaseModel):
     tensor_parallel: int = 1
     port_number: int = 50050
-    dtype: str = "float"
+    dtype: DtypeEnum = torch.float32
+    load_with_sys_mem: bool = False
     enable_cuda_graph: bool = False
     checkpoint_dict: Union[dict, None] = None
     deploy_rank: Union[int, List[int]] = -1
@@ -15,12 +44,6 @@ class MIIConfig(BaseModel):
     replace_with_kernel_inject: bool = True
     profile_model_time: bool = False
     skip_model_check: bool = False
-
-    @validator('dtype')
-    def dtype_valid(cls, value):
-        # parse dtype value to determine torch dtype
-        MIIConfig._torch_dtype(value)
-        return value.lower()
 
     @validator("deploy_rank")
     def deploy_valid(cls, field_value, values):
@@ -55,24 +78,9 @@ class MIIConfig(BaseModel):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return value
 
-    @staticmethod
-    def _torch_dtype(value):
-        value = value.lower()
-        if value == "float" or value == "fp32" or value == "float32":
-            dtype = torch.float
-        elif value == "half" or value == "fp16" or value == "float16":
-            dtype = torch.half
-        elif value == "int8":
-            dtype = torch.int8
-        else:
-            raise ValueError(f"unknown dtype={value}")
-        return dtype
-
-    def torch_dtype(self):
-        return self._torch_dtype(self.dtype)
-
     class Config:
         validate_all = True
         validate_assignment = True
         use_enum_values = True
         extra = 'forbid'
+        json_encoders = {torch.dtype: lambda x: str(x)}
