@@ -20,6 +20,7 @@ def load_models(task_name,
                 mii_config,
                 ds_config_path=None):
     global generator
+    local_rank = int(os.getenv('LOCAL_RANK', '0'))
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 
     inf_config = {
@@ -27,7 +28,7 @@ def load_models(task_name,
             "tp_size": world_size,
             "mpu": None
         },
-        "dtype": mii_config.torch_dtype(),
+        "dtype": mii_config.dtype,
         "replace_method": "auto",
         "enable_cuda_graph": mii_config.enable_cuda_graph,
         "checkpoint": None,
@@ -41,7 +42,7 @@ def load_models(task_name,
         inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         from mii.models.providers.eleutherai import eleutherai_provider
-        assert mii_config.torch_dtype() == torch.half, "gpt-neox only support fp16"
+        assert mii_config.dtype == torch.half, "gpt-neox only support fp16"
         assert mii_config.enable_cuda_graph == False, "Provider EleutherAI not supported with Cuda Graphs"
         from megatron import mpu
         inf_config["tensor_parallel"]["mpu"] = mpu
@@ -53,11 +54,11 @@ def load_models(task_name,
         inf_config["config"] = inference_pipeline.neox_args
     elif provider == mii.constants.ModelProvider.HUGGING_FACE_LLM:
         from mii.models.providers.llm import load_hf_llm
-        assert mii_config.torch_dtype() == torch.half or mii_config.torch_dtype() == torch.int8, "Bloom models only support fp16/int8"
+        assert mii_config.dtype == torch.half or mii_config.dtype == torch.int8, "Bloom models only support fp16/int8"
         assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
         inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
         inf_config["checkpoint"] = inference_pipeline.checkpoint_dict
-        if mii_config.torch_dtype() == torch.int8:
+        if mii_config.dtype == torch.int8:
             if "enable_qkv_quantization" in inspect.signature(
                     deepspeed.init_inference).parameters:
                 inf_config["enable_qkv_quantization"] = True
@@ -96,4 +97,8 @@ def load_models(task_name,
                                          config_params=ds_config_dict)[0]
         ds_engine.module.eval()  # inference
         inference_pipeline.model = ds_engine.module
+
+    if mii_config.load_with_sys_mem:
+        inference_pipeline.device = torch.device(f"cuda:{local_rank}")
+
     return inference_pipeline

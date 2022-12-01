@@ -4,6 +4,7 @@ Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import os
 import json
+import torch
 import mii
 import time
 

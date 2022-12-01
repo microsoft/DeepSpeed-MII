@@ -30,6 +30,11 @@ def port_number(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=[False])
+def load_with_sys_mem(request):
+    return request.param
+
+
 @pytest.fixture(scope="function", params=[True])
 def enable_deepspeed(request):
     return request.param
@@ -49,11 +54,15 @@ def ds_config(request):
 
 
 @pytest.fixture(scope="function")
-def mii_configs(dtype: str, tensor_parallel: int, port_number: int):
+def mii_configs(dtype: str,
+                tensor_parallel: int,
+                port_number: int,
+                load_with_sys_mem: bool):
     return {
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
-        'port_number': port_number
+        'port_number': port_number,
+        'load_with_sys_mem': load_with_sys_mem,
     }
 
 
@@ -157,6 +166,26 @@ def local_deployment(deployment_config, expected_failure):
     ],
 )
 def test_single_GPU(local_deployment, query):
+    generator = mii.mii_query_handle(local_deployment.deployment_name)
+    result = generator.query(query)
+    assert result
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("load_with_sys_mem", [True])
+@pytest.mark.parametrize(
+    "task_name, model_name, query",
+    [
+        (
+            "text-generation",
+            "distilgpt2",
+            {
+                "query": ["DeepSpeed is the greatest"]
+            },
+        ),
+    ],
+)
+def test_load_to_sys_mem(local_deployment, query):
     generator = mii.mii_query_handle(local_deployment.deployment_name)
     result = generator.query(query)
     assert result

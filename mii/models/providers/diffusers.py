@@ -7,7 +7,7 @@ def diffusers_provider(model_path, model_name, task_name, mii_config):
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
 
     kwargs = {}
-    if mii_config.torch_dtype() == torch.half:
+    if mii_config.dtype == torch.half:
         kwargs["torch_dtype"] = torch.float16
         kwargs["revision"] = "fp16"
 
