@@ -55,7 +55,7 @@ Under-the-hood MII is powered by [DeepSpeed-Inference](https://arxiv.org/abs/220
 
 # Supported Models and Tasks
 
-MII currently supports over 20,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
+MII currently supports over 30,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
 
 MII model support will continue to grow over time, check back for updates! Currently we support the following Hugging Face Transformers model families:
 
@@ -68,6 +68,7 @@ model family | size range | ~model count
 [gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 140
 [gpt\_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 300
 [gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 7,888
+[xlm-roberta](https://huggingface.co/models?other=xlm-roberta) | 0.1B - 0.3B | 1,850
 [roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 5,190
 [bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 13,940
 
