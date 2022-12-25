@@ -63,6 +63,7 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
                 text = response['generated_text']
             else:
                 raise ValueError('Expected response to be a list or dict')
+
             text_responses.append(text)
 
         model_time = self._get_model_time(self.inference_pipeline.model, sum_times=True)

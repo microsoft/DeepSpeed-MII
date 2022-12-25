@@ -78,6 +78,7 @@ def get_task(task_name):
 
     if task_name == TEXT2TEXT_GENERATION_NAME:
         return Tasks.TEXT2TEXT_GENERATION
+
     assert False, f"Unknown Task {task_name}"
 
 
