@@ -54,10 +54,15 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         batched_responses = self.inference_pipeline(request, **query_kwargs)
         end = time.time()
 
-        # response is a list
         text_responses = []
         for response in batched_responses:
-            text = response[0]['generated_text']
+            # response is a list for TextGeneration and a dict for Text2TextGeneration.
+            if isinstance(response, list):
+                text = response[0]['generated_text']
+            elif isinstance(response, dict):
+                text = response['generated_text']
+            else:
+                raise ValueError('Expected response to be a list or dict')
             text_responses.append(text)
 
         model_time = self._get_model_time(self.inference_pipeline.model, sum_times=True)

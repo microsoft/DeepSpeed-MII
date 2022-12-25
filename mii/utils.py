@@ -20,7 +20,8 @@ from mii.constants import (CONVERSATIONAL_NAME,
                            SUPPORTED_MODEL_TYPES,
                            ModelProvider,
                            REQUIRED_KEYS_PER_TASK,
-                           TEXT2IMG_NAME)
+                           TEXT2IMG_NAME,
+                           TEXT2TEXT_GENERATION_NAME)
 
 from mii.constants import Tasks
 
@@ -47,6 +48,9 @@ def get_task_name(task):
     if task == Tasks.TEXT2IMG:
         return TEXT2IMG_NAME
 
+    if task == Tasks.TEXT2TEXT_GENERATION:
+        return TEXT2TEXT_GENERATION_NAME
+
     raise ValueError(f"Unknown Task {task}")
 
 
@@ -72,6 +76,8 @@ def get_task(task_name):
     if task_name == TEXT2IMG_NAME:
         return Tasks.TEXT2IMG
 
+    if task_name == TEXT2TEXT_GENERATION_NAME:
+        return Tasks.TEXT2TEXT_GENERATION
     assert False, f"Unknown Task {task_name}"
 
 
