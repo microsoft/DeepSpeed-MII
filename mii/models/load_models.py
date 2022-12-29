@@ -83,7 +83,8 @@ def load_models(task_name,
         engine = deepspeed.init_inference(getattr(inference_pipeline,
                                                   "model",
                                                   inference_pipeline),
-                                          config=inf_config)
+                                          config=inf_config,
+                                         max_tokens=2048)
         if mii_config.profile_model_time:
             engine.profile_model_time()
         if hasattr(inference_pipeline, "model"):
