@@ -34,7 +34,8 @@ def load_models(task_name,
         "checkpoint": None,
         "config": None,
         "training_mp_size": 1,
-        "replace_with_kernel_inject": mii_config.replace_with_kernel_inject
+        "replace_with_kernel_inject": mii_config.replace_with_kernel_inject,
+        "max_tokens": mii_config.max_tokens
     }
 
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
@@ -83,8 +84,7 @@ def load_models(task_name,
         engine = deepspeed.init_inference(getattr(inference_pipeline,
                                                   "model",
                                                   inference_pipeline),
-                                          config=inf_config,
-                                         max_tokens=2048)
+                                          config=inf_config)
         if mii_config.profile_model_time:
             engine.profile_model_time()
         if hasattr(inference_pipeline, "model"):
