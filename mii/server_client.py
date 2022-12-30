@@ -16,6 +16,8 @@ from mii.utils import logger, kwarg_dict_to_proto
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.models.utils import ImageResponse
 from mii.constants import GRPC_MAX_MSG_SIZE
+import nest_asyncio
+nest_asyncio.apply()
 
 
 def mii_query_handle(deployment_name):
