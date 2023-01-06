@@ -70,7 +70,7 @@ model family | size range | ~model count
 [gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 8,272
 [xlm-roberta](https://huggingface.co/models?other=xlm-roberta) | 0.1B - 0.3B | 2,040
 [roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 5,768
-[distilbert](https://huggingface.co/models?other=distilbert) | 0.1B - 0.3B | 4,700 
+[distilbert](https://huggingface.co/models?other=distilbert) | 0.1B - 0.3B | 4,700
 [bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 14,829
 
 <!--
