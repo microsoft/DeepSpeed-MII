@@ -18,9 +18,11 @@ class Tasks(enum.Enum):
     TOKEN_CLASSIFICATION = 5
     CONVERSATIONAL = 6
     TEXT2IMG = 7
+    TEXT2TEXT_GENERATION = 8
 
 
 TEXT_GENERATION_NAME = 'text-generation'
+TEXT2TEXT_GENERATION_NAME = 'text2text-generation'
 TEXT_CLASSIFICATION_NAME = 'text-classification'
 QUESTION_ANSWERING_NAME = 'question-answering'
 FILL_MASK_NAME = 'fill-mask'
@@ -58,7 +60,8 @@ SUPPORTED_MODEL_TYPES = {
     'opt': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
     'bloom': ModelProvider.HUGGING_FACE_LLM,
-    'stable-diffusion': ModelProvider.DIFFUSERS
+    'stable-diffusion': ModelProvider.DIFFUSERS,
+    't5': ModelProvider.HUGGING_FACE,
 }
 
 SUPPORTED_TASKS = [

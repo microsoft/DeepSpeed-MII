@@ -312,6 +312,14 @@ class MIIServerClient():
                                                        query_kwargs=proto_kwargs)
             response = await self.stubs[stub_id].Txt2ImgReply(req)
 
+        elif self.task == mii.Tasks.TEXT2TEXT_GENERATION:
+            # convert to batch of queries if they are not already
+            if not isinstance(request_dict['query'], list):
+                request_dict['query'] = [request_dict['query']]
+            req = modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
+                                                       query_kwargs=proto_kwargs)
+            response = await self.stubs[stub_id].GeneratorReply(req)
+
         else:
             raise ValueError(f"unknown task: {self.task}")
         return response
