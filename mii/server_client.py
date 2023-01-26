@@ -12,10 +12,10 @@ import json
 from pathlib import Path
 import mii
 import base64
-from mii.utils import logger, kwarg_dict_to_proto
-from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.models.utils import ImageResponse
+from mii.utils import logger
+from mii.grpc_related.proto import modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE
+from mii.method_table import GRPC_METHOD_TABLE
 
 
 def mii_query_handle(deployment_name):
@@ -265,56 +265,16 @@ class MIIServerClient():
         return responses[0]
 
     async def _request_async_response(self, stub_id, request_dict, query_kwargs):
-        proto_kwargs = kwarg_dict_to_proto(query_kwargs)
-        if self.task == mii.Tasks.TEXT_GENERATION:
-            # convert to batch of queries if they are not already
-            if not isinstance(request_dict['query'], list):
-                request_dict['query'] = [request_dict['query']]
-            req = modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
-                                                       query_kwargs=proto_kwargs)
-            response = await self.stubs[stub_id].GeneratorReply(req)
-
-        elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
-            response = await self.stubs[stub_id].ClassificationReply(
-                modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
-                                                      query_kwargs=proto_kwargs))
-
-        elif self.task == mii.Tasks.QUESTION_ANSWERING:
-            response = await self.stubs[stub_id].QuestionAndAnswerReply(
-                modelresponse_pb2.QARequest(question=request_dict['question'],
-                                            context=request_dict['context'],
-                                            query_kwargs=proto_kwargs))
-        elif self.task == mii.Tasks.FILL_MASK:
-            response = await self.stubs[stub_id].FillMaskReply(
-                modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
-                                                      query_kwargs=proto_kwargs))
-
-        elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
-            response = await self.stubs[stub_id].TokenClassificationReply(
-                modelresponse_pb2.SingleStringRequest(request=request_dict['query'],
-                                                      query_kwargs=proto_kwargs))
-
-        elif self.task == mii.Tasks.CONVERSATIONAL:
-            response = await self.stubs[stub_id].ConversationalReply(
-                modelresponse_pb2.ConversationRequest(
-                    text=request_dict['text'],
-                    conversation_id=request_dict['conversation_id']
-                    if 'conversation_id' in request_dict else None,
-                    past_user_inputs=request_dict['past_user_inputs'],
-                    generated_responses=request_dict['generated_responses'],
-                    query_kwargs=proto_kwargs))
-
-        elif self.task == mii.Tasks.TEXT2IMG:
-            # convert to batch of queries if they are not already
-            if not isinstance(request_dict['query'], list):
-                request_dict['query'] = [request_dict['query']]
-            req = modelresponse_pb2.MultiStringRequest(request=request_dict['query'],
-                                                       query_kwargs=proto_kwargs)
-            response = await self.stubs[stub_id].Txt2ImgReply(req)
-
-        else:
+        if self.task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {self.task}")
-        return response
+
+        conv_funcs = GRPC_METHOD_TABLE[self.task]
+        proto_request = conv_funcs["pack_request_to_proto"](request_dict, **query_kwargs)
+        proto_response = await getattr(self.stubs[stub_id],
+                                       conv_funcs["method"])(proto_request)
+        return conv_funcs["unpack_response_from_proto"](
+            proto_response
+        ) if "unpack_response_from_proto" in conv_funcs else proto_response
 
     def _request_response(self, request_dict, query_kwargs):
         start = time.time()
@@ -368,8 +328,5 @@ class MIIServerClient():
                 self._query_in_tensor_parallel(request_dict,
                                                query_kwargs))
             ret = response.result()
-
-        if self.task == mii.Tasks.TEXT2IMG:
-            ret = ImageResponse(ret)
 
         return ret
