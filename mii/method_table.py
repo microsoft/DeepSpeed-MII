@@ -52,7 +52,8 @@ def question_answering_unpack_request_from_proto(request):
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     kwargs["question"] = request.question
     kwargs["context"] = request.context
-    return (), kwargs
+    args = ()
+    return args, kwargs
 
 
 def conversational_unpack_request_from_proto(request):
@@ -62,7 +63,9 @@ def conversational_unpack_request_from_proto(request):
                         past_user_inputs=request.past_user_inputs,
                         generated_responses=request.generated_responses,
                         **kwargs)
-    return (conv, ), {}
+    args = (conv, )
+    kwargs = {}
+    return args, kwargs
 
 
 def text2img_pack_response_to_proto(response, time_taken, model_time_taken):
