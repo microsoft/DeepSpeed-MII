@@ -52,8 +52,8 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         if task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {task}")
 
-        conv_funcs = GRPC_METHOD_TABLE[task]
-        args, kwargs = conv_funcs["unpack_request_from_proto"](request_proto)
+        conversions = GRPC_METHOD_TABLE[task]
+        args, kwargs = conversions["unpack_request_from_proto"](request_proto)
 
         start = time.time()
         response = self.inference_pipeline(*args, **kwargs)
@@ -64,7 +64,7 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
                                               self.inference_pipeline,
                                               "model") else -1
 
-        return conv_funcs["pack_response_to_proto"](response, end - start, model_time)
+        return conversions["pack_response_to_proto"](response, end - start, model_time)
 
     def GeneratorReply(self, request, context):
         return self._run_inference("GeneratorReply", request)

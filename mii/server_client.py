@@ -268,13 +268,14 @@ class MIIServerClient():
         if self.task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {self.task}")
 
-        conv_funcs = GRPC_METHOD_TABLE[self.task]
-        proto_request = conv_funcs["pack_request_to_proto"](request_dict, **query_kwargs)
+        conversions = GRPC_METHOD_TABLE[self.task]
+        proto_request = conversions["pack_request_to_proto"](request_dict,
+                                                             **query_kwargs)
         proto_response = await getattr(self.stubs[stub_id],
-                                       conv_funcs["method"])(proto_request)
-        return conv_funcs["unpack_response_from_proto"](
+                                       conversions["method"])(proto_request)
+        return conversions["unpack_response_from_proto"](
             proto_response
-        ) if "unpack_response_from_proto" in conv_funcs else proto_response
+        ) if "unpack_response_from_proto" in conversions else proto_response
 
     def _request_response(self, request_dict, query_kwargs):
         start = time.time()
