@@ -59,7 +59,10 @@ class ModelResponse(modelresponse_pb2_grpc.ModelResponseServicer):
         response = self.inference_pipeline(*args, **kwargs)
         end = time.time()
 
-        model_time = self._get_model_time(self.inference_pipeline.model, sum_times=True)
+        model_time = self._get_model_time(self.inference_pipeline.model,
+                                          sum_times=True) if hasattr(
+                                              self.inference_pipeline,
+                                              "model") else -1
 
         return conv_funcs["pack_response_to_proto"](response, end - start, model_time)
 
