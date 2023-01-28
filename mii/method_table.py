@@ -56,6 +56,22 @@ def question_answering_unpack_request_from_proto(request):
     return args, kwargs
 
 
+def question_answering_pack_request_to_proto(request_dict, **query_kwargs):
+    return modelresponse_pb2.QARequest(question=request_dict['question'],
+                                       context=request_dict['context'],
+                                       query_kwargs=kwarg_dict_to_proto(query_kwargs))
+
+
+def conversational_pack_request_to_proto(request_dict, **query_kwargs):
+    return modelresponse_pb2.ConversationRequest(
+        text=request_dict['text'],
+        conversation_id=request_dict['conversation_id']
+        if 'conversation_id' in request_dict else None,
+        past_user_inputs=request_dict['past_user_inputs'],
+        generated_responses=request_dict['generated_responses'],
+        query_kwargs=kwarg_dict_to_proto(query_kwargs))
+
+
 def conversational_unpack_request_from_proto(request):
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     conv = Conversation(text=request.text,
@@ -66,6 +82,15 @@ def conversational_unpack_request_from_proto(request):
     args = (conv, )
     kwargs = {}
     return args, kwargs
+
+
+def conversational_pack_response_to_proto(conv, time_taken, model_time_taken):
+    return modelresponse_pb2.ConversationReply(
+        conversation_id=conv.uuid,
+        past_user_inputs=conv.past_user_inputs,
+        generated_responses=conv.generated_responses,
+        time_taken=time_taken,
+        model_time_taken=model_time_taken)
 
 
 def text2img_pack_response_to_proto(response, time_taken, model_time_taken):
@@ -88,6 +113,10 @@ def text2img_pack_response_to_proto(response, time_taken, model_time_taken):
                                         time_taken=time_taken)
 
 
+def text2img_unpack_response_from_proto(response):
+    return ImageResponse(response)
+
+
 GRPC_METHOD_TABLE = {
     Tasks.TEXT_GENERATION: {
         "method": "GeneratorReply",
@@ -102,18 +131,10 @@ GRPC_METHOD_TABLE = {
         "pack_response_to_proto": single_string_response_to_proto
     },
     Tasks.QUESTION_ANSWERING: {
-        "method":
-        "QuestionAndAnswerReply",
-        "pack_request_to_proto":
-        lambda request_dict,
-        **query_kwargs: modelresponse_pb2.QARequest(question=request_dict['question'],
-                                                    context=request_dict['context'],
-                                                    query_kwargs=kwarg_dict_to_proto(
-                                                        query_kwargs)),
-        "unpack_request_from_proto":
-        question_answering_unpack_request_from_proto,
-        "pack_response_to_proto":
-        single_string_response_to_proto
+        "method": "QuestionAndAnswerReply",
+        "pack_request_to_proto": question_answering_pack_request_to_proto,
+        "unpack_request_from_proto": question_answering_unpack_request_from_proto,
+        "pack_response_to_proto": single_string_response_to_proto
     },
     Tasks.FILL_MASK: {
         "method": "FillMaskReply",
@@ -128,34 +149,16 @@ GRPC_METHOD_TABLE = {
         "pack_response_to_proto": single_string_response_to_proto
     },
     Tasks.CONVERSATIONAL: {
-        "method":
-        "ConversationalReply",
-        "pack_request_to_proto":
-        lambda request_dict,
-        **query_kwargs: modelresponse_pb2.ConversationRequest(
-            text=request_dict['text'],
-            conversation_id=request_dict['conversation_id']
-            if 'conversation_id' in request_dict else None,
-            past_user_inputs=request_dict['past_user_inputs'],
-            generated_responses=request_dict['generated_responses'],
-            query_kwargs=kwarg_dict_to_proto(query_kwargs)),
-        "unpack_request_from_proto":
-        conversational_unpack_request_from_proto,
-        "pack_response_to_proto":
-        lambda conv,
-        time_taken,
-        model_time_taken: modelresponse_pb2.ConversationReply(
-            conversation_id=conv.uuid,
-            past_user_inputs=conv.past_user_inputs,
-            generated_responses=conv.generated_responses,
-            time_taken=time_taken,
-            model_time_taken=model_time_taken)
+        "method": "ConversationalReply",
+        "pack_request_to_proto": conversational_pack_request_to_proto,
+        "unpack_request_from_proto": conversational_unpack_request_from_proto,
+        "pack_response_to_proto": conversational_pack_response_to_proto
     },
     Tasks.TEXT2IMG: {
         "method": "Txt2ImgReply",
         "pack_request_to_proto": multi_string_request_to_proto,
         "unpack_request_from_proto": proto_request_to_list,
         "pack_response_to_proto": text2img_pack_response_to_proto,
-        "unpack_response_from_proto": lambda response: ImageResponse(response)
+        "unpack_response_from_proto": text2img_unpack_response_from_proto
     }
 }
