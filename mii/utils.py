@@ -120,7 +120,7 @@ def check_if_task_and_model_is_valid(task, model_name):
     valid_task_models = _get_hf_models_by_type(None, task_name)
     assert (
         model_name in valid_task_models
-        ), f"{task_name} only supports {valid_task_models}"
+    ), f"{task_name} only supports {valid_task_models}"
 
 
 def full_model_path(model_path):
@@ -176,6 +176,16 @@ def kwarg_dict_to_proto(kwarg_dict):
         return proto_value
 
     return {k: get_proto_value(v) for k, v in kwarg_dict.items()}
+
+
+def unpack_proto_query_kwargs(query_kwargs):
+    query_kwargs = {
+        k: getattr(v,
+                   v.WhichOneof("oneof_values"))
+        for k,
+        v in query_kwargs.items()
+    }
+    return query_kwargs
 
 
 def extract_query_dict(task, request_dict):
