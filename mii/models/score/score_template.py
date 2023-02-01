@@ -26,16 +26,19 @@ def init():
     assert model_name is not None, "The model name should be set before calling init"
     assert task is not None, "The task name should be set before calling init"
 
+    mii.MIIServer(task,
+                  model_name,
+                  model_path,
+                  ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
+                  ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
+                  ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
+                  mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
+                  use_grpc_server=use_grpc_server)
     global model
-    model = mii.MIIServerClient(task,
-                                model_name,
-                                model_path,
-                                ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
-                                ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
-                                ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
-                                mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
-                                use_grpc_server=use_grpc_server,
-                                initialize_grpc_client=initialize_grpc_client)
+    model = mii.MIIClient(task,
+                          mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
+                          use_grpc_server=use_grpc_server,
+                          initialize_grpc_client=initialize_grpc_client)
 
 
 def run(request):
