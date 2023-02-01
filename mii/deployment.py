@@ -8,7 +8,7 @@ import mii
 
 from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT
 from .utils import logger
-from .models.score import create_score_file
+from .models.score import create_score_file, generated_score_path
 
 
 def deploy(task,
@@ -92,11 +92,13 @@ def deploy(task,
             f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
         )
 
-    # In local deployments use default path if no model path set
-    if model_path is None and deployment_type == DeploymentType.LOCAL:
-        model_path = MII_MODEL_PATH_DEFAULT
-    elif model_path is None and deployment_type == DeploymentType.AML:
+        # In local deployments use default path if no model path set
+    if model_path is None and deployment_type == DeploymentType.AML:
         model_path = "model"
+    elif model_path is None and deployment_type == DeploymentType.AML_LOCAL:
+        model_path = MII_MODEL_PATH_DEFAULT
+    elif model_path is None and deployment_type == DeploymentType.LOCAL:
+        model_path = MII_MODEL_PATH_DEFAULT
 
     create_score_file(deployment_name=deployment_name,
                       deployment_type=deployment_type,
@@ -110,6 +112,8 @@ def deploy(task,
 
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
+    elif deployment_type == DeploymentType.AML_LOCAL:
+        _deploy_aml_local(deployment_name=deployment_name, model_path=model_path)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     else:
@@ -130,3 +134,13 @@ def _deploy_aml(deployment_name, model_name, version):
         f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_name)}"
     )
     print("Please run 'deploy.sh' to bring your deployment online")
+
+
+def _deploy_aml_local(deployment_name, model_path):
+    score_path = generated_score_path(deployment_name, DeploymentType.AML_LOCAL)
+    print(
+        "Please verify you have Azure Machine Learning inference HTTP server installed, run:"
+    )
+    print("python -m pip install azureml-inference-server-http")
+    print("To deploy your MII AML-local deployment, run:")
+    print(f"azmlinfsrv --entry_script {score_path} --model_dir {model_path}")

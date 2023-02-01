@@ -46,7 +46,7 @@ def create_score_file(deployment_name,
 
 
 def generated_score_path(deployment_name, deployment_type):
-    if deployment_type == DeploymentType.LOCAL:
+    if deployment_type in [DeploymentType.LOCAL, DeploymentType.AML_LOCAL]:
         score_path = os.path.join(mii.utils.mii_cache_path(), deployment_name)
     elif deployment_type == DeploymentType.AML:
         score_path = os.path.join(mii.aml_related.utils.aml_output_path(deployment_name),
