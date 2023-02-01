@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import importlib
+import torch
 import mii
 
 from huggingface_hub import HfApi
@@ -197,6 +198,14 @@ def extract_query_dict(task, request_dict):
             raise ValueError("Request for task: {task} is missing required key: {key}.")
         query_dict[key] = value
     return query_dict
+
+
+def get_num_gpus(mii_configs):
+    num_gpus = mii_configs.tensor_parallel
+
+    assert torch.cuda.device_count(
+    ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+    return num_gpus
 
 
 log_levels = {

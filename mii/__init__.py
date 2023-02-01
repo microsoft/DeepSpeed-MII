@@ -1,5 +1,6 @@
 import grpc
-from .server_client import MIIServerClient, mii_query_handle
+from .server import MIIServer
+from .client import MIIClient, mii_query_handle
 from .deployment import deploy
 from .terminate import terminate
 from .constants import DeploymentType, Tasks
