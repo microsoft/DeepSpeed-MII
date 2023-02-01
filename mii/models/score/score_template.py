@@ -38,7 +38,7 @@ def init():
 
 def run(request):
     global model
-    assert model is None, "grpc client has not been setup when this model was created"
+    assert model is not None, "grpc client has not been setup when this model was created"
 
     request_dict = json.loads(request)
 
