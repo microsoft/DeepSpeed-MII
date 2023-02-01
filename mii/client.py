@@ -2,7 +2,6 @@
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import asyncio
-import time
 import grpc
 import mii
 from mii.utils import get_num_gpus
@@ -32,21 +31,12 @@ def mii_query_handle(deployment_name):
 
     assert task is not None, "The task name should be set before calling init"
 
-    return mii.MIIClient(task,
-                         mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
-                         initialize_service=False,
-                         initialize_grpc_client=True,
-                         use_grpc_server=True)
+    return mii.MIIClient(task, mii_configs=configs[mii.constants.MII_CONFIGS_KEY])
 
 
 class MIIClient():
-    '''Initialize the model, setup the server and client for the model under model_path'''
-    def __init__(self,
-                 task_name,
-                 mii_configs={},
-                 initialize_service=True,
-                 initialize_grpc_client=True,
-                 use_grpc_server=False):
+    '''Setup the client for the model'''
+    def __init__(self, task_name, mii_configs={}):
 
         mii_configs = mii.config.MIIConfig(**mii_configs)
 
@@ -55,21 +45,11 @@ class MIIClient():
         self.num_gpus = get_num_gpus(mii_configs)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
 
-        # This is true in two cases
-        # i) If its multi-GPU
-        # ii) It is a local deployment
-        self.use_grpc_server = True if (self.num_gpus > 1) else use_grpc_server
-        self.initialize_grpc_client = initialize_grpc_client
-
         self.port_number = mii_configs.port_number
 
-        if initialize_service and not self.use_grpc_server:
-            self.model = None
-
-        if self.initialize_grpc_client and self.use_grpc_server:
-            self.stubs = []
-            self.asyncio_loop = asyncio.get_event_loop()
-            self._initialize_grpc_client()
+        self.stubs = []
+        self.asyncio_loop = asyncio.get_event_loop()
+        self._initialize_grpc_client()
 
     def _initialize_grpc_client(self):
         channels = []
@@ -112,36 +92,6 @@ class MIIClient():
             proto_response
         ) if "unpack_response_from_proto" in conversions else proto_response
 
-    def _request_response(self, request_dict, query_kwargs):
-        start = time.time()
-        if self.task == mii.Tasks.TEXT_GENERATION:
-            response = self.model(request_dict['query'], **query_kwargs)
-
-        elif self.task == mii.Tasks.TEXT_CLASSIFICATION:
-            response = self.model(request_dict['query'], **query_kwargs)
-
-        elif self.task == mii.Tasks.QUESTION_ANSWERING:
-            response = self.model(question=request_dict['query'],
-                                  context=request_dict['context'],
-                                  **query_kwargs)
-
-        elif self.task == mii.Tasks.FILL_MASK:
-            response = self.model(request_dict['query'], **query_kwargs)
-
-        elif self.task == mii.Tasks.TOKEN_CLASSIFICATION:
-            response = self.model(request_dict['query'], **query_kwargs)
-
-        elif self.task == mii.Tasks.CONVERSATIONAL:
-            response = self.model(["", request_dict['query']], **query_kwargs)
-
-        elif self.task == mii.Tasks.TEXT2IMG:
-            response = self.model(request_dict['query'], **query_kwargs)
-
-        else:
-            raise NotImplementedError(f"task is not supported: {self.task}")
-        end = time.time()
-        return f"{response}" + f"\n Model Execution Time: {end-start} seconds"
-
     def query(self, request_dict, **query_kwargs):
         """Query a local deployment:
 
@@ -155,14 +105,9 @@ class MIIClient():
         Returns:
             response: Response of the model
         """
-        if not self.use_grpc_server:
-            response = self._request_response(request_dict, query_kwargs)
-            ret = f"{response}"
-        else:
-            assert self.initialize_grpc_client, "grpc client has not been setup when this model was created"
-            response = self.asyncio_loop.run_until_complete(
-                self._query_in_tensor_parallel(request_dict,
-                                               query_kwargs))
-            ret = response.result()
+        response = self.asyncio_loop.run_until_complete(
+            self._query_in_tensor_parallel(request_dict,
+                                           query_kwargs))
+        ret = response.result()
 
         return ret

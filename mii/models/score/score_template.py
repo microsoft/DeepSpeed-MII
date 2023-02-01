@@ -12,12 +12,6 @@ model = None
 
 
 def init():
-    # In AML deployments both the GRPC client and server are used in the same process
-    initialize_grpc_client = mii.utils.is_aml()
-
-    # XXX: Always run grpc server, originally was "not is_aml()"
-    use_grpc_server = True
-
     model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
 
     model_name = configs[mii.constants.MODEL_NAME_KEY]
@@ -32,17 +26,20 @@ def init():
                   ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
                   ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
                   ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
-                  mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
-                  use_grpc_server=use_grpc_server)
+                  mii_configs=configs[mii.constants.MII_CONFIGS_KEY])
+
     global model
-    model = mii.MIIClient(task,
-                          mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
-                          use_grpc_server=use_grpc_server,
-                          initialize_grpc_client=initialize_grpc_client)
+    model = None
+
+    # In AML deployments both the GRPC client and server are used in the same process
+    if mii.utils.is_aml():
+        model = mii.MIIClient(task, mii_configs=configs[mii.constants.MII_CONFIGS_KEY])
 
 
 def run(request):
     global model
+    assert model is None, "grpc client has not been setup when this model was created"
+
     request_dict = json.loads(request)
 
     query_dict = mii.utils.extract_query_dict(configs[mii.constants.TASK_NAME_KEY],

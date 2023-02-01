@@ -22,9 +22,7 @@ class MIIServer():
                  ds_optimize=True,
                  ds_zero=False,
                  ds_config=None,
-                 mii_configs={},
-                 initialize_service=True,
-                 use_grpc_server=False):
+                 mii_configs={}):
 
         mii_configs = mii.config.MIIConfig(**mii_configs)
 
@@ -33,26 +31,15 @@ class MIIServer():
         self.num_gpus = get_num_gpus(mii_configs)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
 
-        # This is true in two cases
-        # i) If its multi-GPU
-        # ii) It is a local deployment
-        self.use_grpc_server = True if (self.num_gpus > 1) else use_grpc_server
-        self.initialize_service = initialize_service
-
         self.port_number = mii_configs.port_number
 
-        if initialize_service and not self.use_grpc_server:
-            self.model = None
-
-        if self.initialize_service:
-            self.process = self._initialize_service(model_name,
-                                                    model_path,
-                                                    ds_optimize,
-                                                    ds_zero,
-                                                    ds_config,
-                                                    mii_configs)
-            if self.use_grpc_server:
-                self._wait_until_server_is_live()
+        self.process = self._initialize_service(model_name,
+                                                model_path,
+                                                ds_optimize,
+                                                ds_zero,
+                                                ds_config,
+                                                mii_configs)
+        self._wait_until_server_is_live()
 
     def _wait_until_server_is_live(self):
         sockets_open = False
@@ -92,84 +79,72 @@ class MIIServer():
                             ds_zero,
                             ds_config,
                             mii_configs):
-        process = None
-        if not self.use_grpc_server:
-            self.model = mii.models.load_models(task_name=mii.utils.get_task_name(
-                self.task),
-                                                model_name=model_name,
-                                                model_path=model_path,
-                                                ds_optimize=ds_optimize,
-                                                ds_zero=ds_zero,
-                                                ds_config_path=ds_config,
-                                                mii_config=mii_configs)
+        if self._is_socket_open(self.port_number):
+            raise RuntimeError(
+                f"Server is already running on port {self.port_number}, please shutdown or use different port."
+            )
+
+        # serialize mii config
+        # convert json str -> bytes
+        json_bytes = mii_configs.json().encode()
+        # base64 encoded bytes
+        b64_config_bytes = base64.urlsafe_b64encode(json_bytes)
+        # bytes -> str
+        b64_config_str = b64_config_bytes.decode()
+
+        # TODO: will need worker hostfile support here for multi-node launching, this force ignores a /job/hostfile
+        #      if one exists which is not compatible when passing localhost as a hostname.
+        worker_str = "-H /dev/null "
+        # pin deepspeed launch to specific gpu id(s)
+        worker_str += f"-i localhost:{','.join(map(str, mii_configs.deploy_rank))} "
+        # adjust torch dist port depending on rank, otherwise multi-replica deployments will conflict
+        worker_str += f"--master_port {mii_configs.torch_dist_port + mii_configs.deploy_rank[0]}"
+
+        ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
+        launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
+        server_args_str = f"--task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
+        server_args_str += " --ds-optimize" if ds_optimize else ""
+
+        # XXX: fetch model provider based on model name in a more general way
+        if model_name == "gpt-neox":
+            provider = mii.constants.MODEL_PROVIDER_NAME_EA
+        elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
+            provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
+        elif self.task == mii.Tasks.TEXT2IMG:
+            provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
         else:
-            if self._is_socket_open(self.port_number):
-                raise RuntimeError(
-                    f"Server is already running on port {self.port_number}, please shutdown or use different port."
-                )
+            provider = mii.constants.MODEL_PROVIDER_NAME_HF
+        server_args_str += f" --provider {provider}"
 
-            # serialize mii config
-            # convert json str -> bytes
-            json_bytes = mii_configs.json().encode()
-            # base64 encoded bytes
-            b64_config_bytes = base64.urlsafe_b64encode(json_bytes)
-            # bytes -> str
-            b64_config_str = b64_config_bytes.decode()
+        server_args_str += f" --config {b64_config_str}"
+        server_args_str += " --ds-zero" if ds_zero else ""
+        if ds_zero and ds_config is not None:
+            if isinstance(ds_config, dict):
 
-            # TODO: will need worker hostfile support here for multi-node launching, this force ignores a /job/hostfile
-            #      if one exists which is not compatible when passing localhost as a hostname.
-            worker_str = "-H /dev/null "
-            # pin deepspeed launch to specific gpu id(s)
-            worker_str += f"-i localhost:{','.join(map(str, mii_configs.deploy_rank))} "
-            # adjust torch dist port depending on rank, otherwise multi-replica deployments will conflict
-            worker_str += f"--master_port {mii_configs.torch_dist_port + mii_configs.deploy_rank[0]}"
+                def create_config_from_dict(tmpdir, config_dict):
+                    if not os.path.exists(tmpdir):
+                        os.makedirs(tmpdir)
+                    config_path = os.path.join(tmpdir, 'temp_config.json')
+                    with open(config_path, 'w') as fd:
+                        json.dump(config_dict, fd)
+                    return config_path
 
-            ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
-            launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
-            server_args_str = f"--task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {self.port_number}"
-            server_args_str += " --ds-optimize" if ds_optimize else ""
-
-            # XXX: fetch model provider based on model name in a more general way
-            if model_name == "gpt-neox":
-                provider = mii.constants.MODEL_PROVIDER_NAME_EA
-            elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
-                provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
-            elif self.task == mii.Tasks.TEXT2IMG:
-                provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
+                model_dir = Path(model_path).parent.resolve()
+                ds_config_path = create_config_from_dict(model_dir, ds_config)
+            elif isinstance(ds_config, str):
+                ds_config_path = ds_config
             else:
-                provider = mii.constants.MODEL_PROVIDER_NAME_HF
-            server_args_str += f" --provider {provider}"
-
-            server_args_str += f" --config {b64_config_str}"
-            server_args_str += " --ds-zero" if ds_zero else ""
-            if ds_zero and ds_config is not None:
-                if isinstance(ds_config, dict):
-
-                    def create_config_from_dict(tmpdir, config_dict):
-                        if not os.path.exists(tmpdir):
-                            os.makedirs(tmpdir)
-                        config_path = os.path.join(tmpdir, 'temp_config.json')
-                        with open(config_path, 'w') as fd:
-                            json.dump(config_dict, fd)
-                        return config_path
-
-                    model_dir = Path(model_path).parent.resolve()
-                    ds_config_path = create_config_from_dict(model_dir, ds_config)
-                elif isinstance(ds_config, str):
-                    ds_config_path = ds_config
-                else:
-                    raise ValueError(
-                        f"Expected a string path to an existing deepspeed config, or a dictionary. Received: {ds_config}"
-                    )
-                server_args_str += f" --ds-config {ds_config_path}"
-            cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
-            printable_config = f"task-name {mii.utils.get_task_name(self.task)} model {model_name} model-path {model_path} port {self.port_number} provider {provider}"
-            logger.info(f"MII using multi-gpu deepspeed launcher:\n" +
-                        self.print_helper(printable_config))
-            mii_env = os.environ.copy()
-            mii_env["TRANSFORMERS_CACHE"] = model_path
-            process = subprocess.Popen(cmd, env=mii_env)
-        return process
+                raise ValueError(
+                    f"Expected a string path to an existing deepspeed config, or a dictionary. Received: {ds_config}"
+                )
+            server_args_str += f" --ds-config {ds_config_path}"
+        cmd = f'{ds_launch_str} {launch_str} {server_args_str}'.split(" ")
+        printable_config = f"task-name {mii.utils.get_task_name(self.task)} model {model_name} model-path {model_path} port {self.port_number} provider {provider}"
+        logger.info(f"MII using multi-gpu deepspeed launcher:\n" +
+                    self.print_helper(printable_config))
+        mii_env = os.environ.copy()
+        mii_env["TRANSFORMERS_CACHE"] = model_path
+        return subprocess.Popen(cmd, env=mii_env)
 
     def print_helper(self, args):
         # convert to list
