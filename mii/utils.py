@@ -203,15 +203,11 @@ def extract_query_dict(task, request_dict):
 
 
 def get_num_gpus(mii_configs):
-    def get_tensor_parallel_gpus(mii_configs):
-        num_gpus = mii_configs.tensor_parallel
+    num_gpus = mii_configs.tensor_parallel
 
-        assert torch.cuda.device_count(
-        ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
-        return num_gpus
-
-    # Only Tensor Parallelism supported for now
-    return get_tensor_parallel_gpus(mii_configs)
+    assert torch.cuda.device_count(
+    ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+    return num_gpus
 
 
 log_levels = {
