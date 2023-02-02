@@ -4,6 +4,8 @@ Copyright 2022 The Microsoft DeepSpeed Team
 import sys
 import torch
 import string
+import subprocess
+import requests
 
 import mii
 
@@ -118,7 +120,8 @@ def deploy(task,
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
     elif deployment_type == DeploymentType.AML_LOCAL:
         _deploy_aml_local(deployment_name=deployment_name,
-                          model_path=aml_local_model_path)
+                          model_path=aml_local_model_path,
+                          port=mii_config.aml_local_port)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     else:
@@ -141,21 +144,17 @@ def _deploy_aml(deployment_name, model_name, version):
     print("Please run 'deploy.sh' to bring your deployment online")
 
 
-def _deploy_aml_local(deployment_name, model_path):
+def _deploy_aml_local(deployment_name, model_path, port):
     try:
-        from azureml_inference_server_http import amlserver
+        import azureml_inference_server_http
     except ImportError:
         logger.error(
             "azureml-inference-server-http not installed. Please install DeepSpeed-MII with 'pip install deepspeed-mii[aml_local]'"
         )
     score_path = generated_score_path(deployment_name, DeploymentType.AML_LOCAL)
-    sys.argv = [
-        "azmlinfsrv",
-        "--entry_script",
-        score_path,
-        "--model_dir",
-        model_path,
-        "--port",
-        "5001"
-    ]
-    exit(amlserver.run())
+    cmd = f"azmlinfsrv --entry_script {score_path} --model_dir {model_path} --port {port}".split(" ")
+    process = subprocess.Popen(cmd)
+
+    # Wait for the server to response before exiting
+    url = f"https://localhost:{port}"
+    assert requests.get(url, timeout=60).text == "Healthy"
