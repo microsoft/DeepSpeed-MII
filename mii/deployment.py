@@ -1,11 +1,13 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
+import os
 import sys
 import torch
 import string
 import subprocess
 import requests
+import time
 
 import mii
 
@@ -152,9 +154,23 @@ def _deploy_aml_local(deployment_name, model_path, port):
             "azureml-inference-server-http not installed. Please install DeepSpeed-MII with 'pip install deepspeed-mii[aml_local]'"
         )
     score_path = generated_score_path(deployment_name, DeploymentType.AML_LOCAL)
-    cmd = f"azmlinfsrv --entry_script {score_path} --model_dir {model_path} --port {port}".split(" ")
+    cmd = f"azmlinfsrv --entry_script {score_path} --model_dir {model_path} --port {port}".split(
+        " ")
     process = subprocess.Popen(cmd)
+    print("PROCESS ID", process.pid)
 
     # Wait for the server to response before exiting
-    url = f"https://localhost:{port}"
-    assert requests.get(url, timeout=60).text == "Healthy"
+    url = f"http://localhost:{port}"
+    wait_time = 0
+    while wait_time < 60:
+        try:
+            response = requests.get(url)
+            assert response.text == "Healthy"
+            break
+        except requests.exceptions.ConnectionError:
+            time.sleep(5)
+            wait_time += 5
+
+    pid_file_path = os.path.join(os.path.dirname(score_path), "azmlinfsrv_pid")
+    with open(pid_file_path, "w") as pid_file:
+        pid_file.write(str(process.pid))
