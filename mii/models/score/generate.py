@@ -25,6 +25,7 @@ def create_score_file(deployment_name,
     config_dict[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
     config_dict[mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
+    config_dict[mii.constants.DEPLOYMENT_TYPE_KEY] = deployment_type.value
 
     if len(mii.__path__) > 1:
         logger.warning(

@@ -1,6 +1,7 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
+import sys
 import torch
 import string
 
@@ -95,8 +96,11 @@ def deploy(task,
         # In local deployments use default path if no model path set
     if model_path is None and deployment_type == DeploymentType.AML:
         model_path = "model"
-    elif model_path is None and deployment_type == DeploymentType.AML_LOCAL:
-        model_path = MII_MODEL_PATH_DEFAULT
+    elif deployment_type == DeploymentType.AML_LOCAL:
+        if model_path is None:
+            model_path = MII_MODEL_PATH_DEFAULT
+        aml_local_model_path = model_path
+        model_path = ""  # The actual model path will be passed to azmlinfsrv, so we keep this empty
     elif model_path is None and deployment_type == DeploymentType.LOCAL:
         model_path = MII_MODEL_PATH_DEFAULT
 
@@ -113,7 +117,8 @@ def deploy(task,
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
     elif deployment_type == DeploymentType.AML_LOCAL:
-        _deploy_aml_local(deployment_name=deployment_name, model_path=model_path)
+        _deploy_aml_local(deployment_name=deployment_name,
+                          model_path=aml_local_model_path)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     else:
@@ -137,10 +142,20 @@ def _deploy_aml(deployment_name, model_name, version):
 
 
 def _deploy_aml_local(deployment_name, model_path):
+    try:
+        from azureml_inference_server_http import amlserver
+    except ImportError:
+        logger.error(
+            "azureml-inference-server-http not installed. Please install DeepSpeed-MII with 'pip install deepspeed-mii[aml_local]'"
+        )
     score_path = generated_score_path(deployment_name, DeploymentType.AML_LOCAL)
-    print(
-        "Please verify you have Azure Machine Learning inference HTTP server installed, run:"
-    )
-    print("python -m pip install azureml-inference-server-http")
-    print("To deploy your MII AML-local deployment, run:")
-    print(f"azmlinfsrv --entry_script {score_path} --model_dir {model_path}")
+    sys.argv = [
+        "azmlinfsrv",
+        "--entry_script",
+        score_path,
+        "--model_dir",
+        model_path,
+        "--port",
+        "5001"
+    ]
+    exit(amlserver.run())
