@@ -1,5 +1,6 @@
 import pytest
 import requests
+import json
 
 import mii
 
@@ -64,7 +65,7 @@ import mii
     ],
 )
 def test_single_GPU(aml_local_deployment, query):
-    port = aml_local_deployment.mii_config["local_aml_port"]
+    port = aml_local_deployment.mii_config["aml_local_port"]
     url = f"http://localhost:{port}/score"
     result = requests.post(url, json=query)
     assert json.load(result.json())["responses"]

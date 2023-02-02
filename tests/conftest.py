@@ -32,7 +32,7 @@ def port_number(request):
 
 
 @pytest.fixture(scope="function", params=[5001])
-def local_aml_port(request):
+def aml_local_port(request):
     return request.param
 
 
@@ -60,13 +60,14 @@ def ds_config(request):
 def mii_configs(dtype: str,
                 tensor_parallel: int,
                 port_number: int,
-                load_with_sys_mem: bool):
+                load_with_sys_mem: bool,
+                aml_local_port: int):
     return {
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
         'port_number': port_number,
         'load_with_sys_mem': load_with_sys_mem,
-        'local_aml_port': local_aml_port,
+        'aml_local_port': aml_local_port,
     }
 
 
@@ -77,11 +78,11 @@ def expected_failure(request):
 
 @pytest.fixture(scope="function")
 def local_deployment_config(task_name: str,
-                      model_name: str,
-                      mii_configs: dict,
-                      enable_deepspeed: bool,
-                      enable_zero: bool,
-                      ds_config: dict):
+                            model_name: str,
+                            mii_configs: dict,
+                            enable_deepspeed: bool,
+                            enable_zero: bool,
+                            ds_config: dict):
     config = SimpleNamespace(task=task_name,
                              model=model_name,
                              deployment_type=mii.DeploymentType.LOCAL,
@@ -110,11 +111,11 @@ def local_deployment(local_deployment_config, expected_failure):
 
 @pytest.fixture(scope="function")
 def aml_local_deployment_config(task_name: str,
-                      model_name: str,
-                      mii_configs: dict,
-                      enable_deepspeed: bool,
-                      enable_zero: bool,
-                      ds_config: dict):
+                                model_name: str,
+                                mii_configs: dict,
+                                enable_deepspeed: bool,
+                                enable_zero: bool,
+                                ds_config: dict):
     config = SimpleNamespace(task=task_name,
                              model=model_name,
                              deployment_type=mii.DeploymentType.AML_LOCAL,

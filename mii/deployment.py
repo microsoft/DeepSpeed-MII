@@ -157,7 +157,6 @@ def _deploy_aml_local(deployment_name, model_path, port):
     cmd = f"azmlinfsrv --entry_script {score_path} --model_dir {model_path} --port {port}".split(
         " ")
     process = subprocess.Popen(cmd)
-    print("PROCESS ID", process.pid)
 
     # Wait for the server to response before exiting
     url = f"http://localhost:{port}"
