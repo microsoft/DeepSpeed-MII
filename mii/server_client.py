@@ -18,7 +18,6 @@ from mii.models.utils import ImageResponse
 from mii.constants import GRPC_MAX_MSG_SIZE
 
 
-
 def mii_query_handle(deployment_name):
     """Get a query handle for a local deployment:
 
