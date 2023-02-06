@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import importlib
+import torch
 import mii
 
 from huggingface_hub import HfApi
@@ -120,7 +121,7 @@ def check_if_task_and_model_is_valid(task, model_name):
     valid_task_models = _get_hf_models_by_type(None, task_name)
     assert (
         model_name in valid_task_models
-        ), f"{task_name} only supports {valid_task_models}"
+    ), f"{task_name} only supports {valid_task_models}"
 
 
 def full_model_path(model_path):
@@ -178,6 +179,16 @@ def kwarg_dict_to_proto(kwarg_dict):
     return {k: get_proto_value(v) for k, v in kwarg_dict.items()}
 
 
+def unpack_proto_query_kwargs(query_kwargs):
+    query_kwargs = {
+        k: getattr(v,
+                   v.WhichOneof("oneof_values"))
+        for k,
+        v in query_kwargs.items()
+    }
+    return query_kwargs
+
+
 def extract_query_dict(task, request_dict):
     required_keys = REQUIRED_KEYS_PER_TASK[task]
     query_dict = {}
@@ -187,6 +198,14 @@ def extract_query_dict(task, request_dict):
             raise ValueError("Request for task: {task} is missing required key: {key}.")
         query_dict[key] = value
     return query_dict
+
+
+def get_num_gpus(mii_configs):
+    num_gpus = mii_configs.tensor_parallel
+
+    assert torch.cuda.device_count(
+    ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+    return num_gpus
 
 
 log_levels = {

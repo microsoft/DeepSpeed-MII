@@ -1,4 +1,5 @@
 import pytest
+import os
 from types import SimpleNamespace
 
 import mii
@@ -77,7 +78,8 @@ def deployment_config(task_name: str,
                              model=model_name,
                              deployment_type=mii.DeploymentType.LOCAL,
                              deployment_name=model_name + "_deployment",
-                             model_path=".cache/models/" + model_name,
+                             model_path=os.getenv("TRANSFORMERS_CACHE",
+                                                  None),
                              mii_config=mii_configs,
                              enable_deepspeed=enable_deepspeed,
                              enable_zero=enable_zero,
