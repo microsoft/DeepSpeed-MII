@@ -10,7 +10,7 @@ import json
 from mii import MIIConfig
 
 from mii.models.load_models import load_models
-from mii.grpc_related.modelresponse_server import serve
+from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 
 
 def main():
@@ -35,6 +35,10 @@ def main():
         type=int,
         help="base server port, each rank will have unique port based on this value")
     parser.add_argument("-c", "--config", type=str, help="base64 encoded mii config")
+    parser.add_argument("-l",
+                        "--load-balancer",
+                        action='store_true',
+                        help="launch load balancer")
     args = parser.parse_args()
 
     provider = mii.constants.MODEL_PROVIDER_MAP.get(args.provider, None)
@@ -50,19 +54,22 @@ def main():
     # convert dict -> mii config
     mii_config = MIIConfig(**config_dict)
 
-    local_rank = int(os.getenv('LOCAL_RANK', '0'))
-    port = args.port + local_rank
+    if args.load_balancer:
+        serve_load_balancing(args.task_name, mii_config)
+    else:
+        local_rank = int(os.getenv('LOCAL_RANK', '0'))
+        port = args.port + local_rank
 
-    inference_pipeline = load_models(task_name=args.task_name,
-                                     model_name=args.model,
-                                     model_path=args.model_path,
-                                     ds_optimize=args.ds_optimize,
-                                     ds_zero=args.ds_zero,
-                                     ds_config_path=args.ds_config,
-                                     provider=provider,
-                                     mii_config=mii_config)
+        inference_pipeline = load_models(task_name=args.task_name,
+                                         model_name=args.model,
+                                         model_path=args.model_path,
+                                         ds_optimize=args.ds_optimize,
+                                         ds_zero=args.ds_zero,
+                                         ds_config_path=args.ds_config,
+                                         provider=provider,
+                                         mii_config=mii_config)
 
-    serve(inference_pipeline, port)
+        serve_inference(inference_pipeline, port)
 
 
 if __name__ == "__main__":

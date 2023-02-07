@@ -15,12 +15,12 @@ def init():
     model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
 
     model_name = configs[mii.constants.MODEL_NAME_KEY]
-    task = configs[mii.constants.TASK_NAME_KEY]
+    task_name = configs[mii.constants.TASK_NAME_KEY]
 
     assert model_name is not None, "The model name should be set before calling init"
-    assert task is not None, "The task name should be set before calling init"
+    assert task_name is not None, "The task name should be set before calling init"
 
-    mii.MIIServer(task,
+    mii.MIIServer(task_name,
                   model_name,
                   model_path,
                   ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
@@ -33,7 +33,8 @@ def init():
 
     # In AML deployments both the GRPC client and server are used in the same process
     if mii.utils.is_aml():
-        model = mii.MIIClient(task, mii_configs=configs[mii.constants.MII_CONFIGS_KEY])
+        model = mii.MIIClient(task_name,
+                              mii_configs=configs[mii.constants.MII_CONFIGS_KEY])
 
 
 def run(request):

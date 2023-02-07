@@ -19,9 +19,12 @@ option java_package = "io.grpc.examples.helloworld";
 option java_outer_classname = "HelloWorldProto";
 option objc_class_prefix = "HLW";*/
 
+import "google/protobuf/empty.proto";
+
 package modelresponse;
 
 service ModelResponse {
+  rpc Terminate (google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc GeneratorReply (MultiStringRequest) returns (MultiStringReply) {}
   rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
   rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}

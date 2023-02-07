@@ -3,6 +3,8 @@ from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel, validator
 
+from deepspeed.launcher.runner import DLTS_HOSTFILE
+
 
 class DtypeEnum(Enum):
     # The torch dtype must always be the first value (so we return torch.dtype)
@@ -44,6 +46,15 @@ class MIIConfig(BaseModel):
     replace_with_kernel_inject: bool = True
     profile_model_time: bool = False
     skip_model_check: bool = False
+    enable_load_balancing: bool = False
+    replica_num: int = 1
+    replica_deployment: Union[
+        List[tuple[str,
+                   List[int],
+                   int,
+                   List[int]]],
+        None] = None  # [(hostname, grpc_ports_of_tensor_parallel_servers, torch_dist_port, gpu indices)]
+    hostfile: str = DLTS_HOSTFILE
 
     @validator("deploy_rank")
     def deploy_valid(cls, field_value, values):
