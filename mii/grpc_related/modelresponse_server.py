@@ -143,9 +143,11 @@ class ParallelStubInvoker:
         return await responses[0]
 
     def invoke(self, method_name, proto_request):
-        return self.asyncio_loop.run_until_complete(
+        # This is needed because gRPC calls from interceptor are launched from
+        return asyncio.run_coroutine_threadsafe(
             self._invoke_async(method_name,
-                               proto_request))
+                               proto_request),
+            self.asyncio_loop).result()
 
 
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
@@ -159,6 +161,13 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         ]
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
+
+        # Start the asyncio loop in a separate thread
+        def run_asyncio_loop(loop):
+            asyncio.set_event_loop(loop)
+            loop.run_forever()
+
+        threading.Thread(target=run_asyncio_loop, args=(self.asyncio_loop, )).start()
 
     def choose_stub(self, call_count):
         return self.stubs[call_count % len(self.stubs)]
@@ -174,6 +183,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 for stub in self.stubs:
                     stub.invoke(TERMINATE_METHOD,
                                 google_dot_protobuf_dot_empty__pb2.Empty())
+                self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
 
             call_count = self.counter.get_and_increment()
