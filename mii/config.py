@@ -1,5 +1,5 @@
 import torch
-from typing import Union, List
+from typing import Union, List, Tuple
 from enum import Enum
 from pydantic import BaseModel, validator
 
@@ -49,7 +49,7 @@ class MIIConfig(BaseModel):
     enable_load_balancing: bool = False
     replica_num: int = 1
     replica_deployment: Union[
-        List[tuple[str,
+        List[Tuple[str,
                    List[int],
                    int,
                    List[int]]],
