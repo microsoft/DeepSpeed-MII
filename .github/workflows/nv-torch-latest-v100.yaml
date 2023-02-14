@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - id: setup-venv
-        uses ./.github/workflows/setup-venv
+        uses: ./.github/workflows/setup-venv
 
       - name: Install pytorch
         run: |
