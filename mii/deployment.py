@@ -106,15 +106,13 @@ def deploy(task,
                                        mii_config.replica_num)
     replica_deployment = []
     for i, (host, gpu_indices) in enumerate(replica_pool):
-        grpc_ports = []
         # Reserver port for a LB proxy when replication is enabled
         port_offset = 1 if mii_config.replica_num > 1 else 0
-        for j in range(mii_config.tensor_parallel):
-            grpc_ports.append(mii_config.port_number + i * mii_config.tensor_parallel +
-                              j + port_offset)
+        base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+        grpc_ports = list(range(base_port, base_port + mii_config.tensor_parallel))
         master_port = mii_config.torch_dist_port + i
-
         replica_deployment.append((host, grpc_ports, master_port, gpu_indices))
+
     mii_config.replica_deployment = replica_deployment
 
     create_score_file(deployment_name=deployment_name,
