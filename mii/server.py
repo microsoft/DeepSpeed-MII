@@ -12,6 +12,16 @@ from pathlib import Path
 
 import mii
 from mii.utils import get_num_gpus, logger
+from mii.config import ReplicaConfig
+
+
+def config_to_b64_str(config):
+    # convert json str -> bytes
+    json_bytes = config.json().encode()
+    # base64 encoded bytes
+    b64_config_bytes = base64.urlsafe_b64encode(json_bytes)
+    # bytes -> str
+    return b64_config_bytes.decode()
 
 
 class MIIServer():
@@ -23,7 +33,8 @@ class MIIServer():
                  ds_optimize=True,
                  ds_zero=False,
                  ds_config=None,
-                 mii_configs={}):
+                 mii_configs={},
+                 lb_config=None):
 
         mii_configs = mii.config.MIIConfig(**mii_configs)
 
@@ -43,28 +54,31 @@ class MIIServer():
                                              ds_optimize,
                                              ds_zero,
                                              ds_config,
-                                             mii_configs)
-        deployment = mii_configs.replica_deployment if mii_configs.enable_load_balancing else [
-            ('localhost',
-             [mii_configs.port_number],
-             mii_configs.torch_dist_port)
+                                             mii_configs,
+                                             lb_config)
+        deployment = lb_config.replica_configs if mii_configs.enable_load_balancing else [
+            ReplicaConfig(hostname='localhost',
+                          tensor_parallel_ports=[mii_configs.port_number],
+                          torch_dist_port=mii_configs.torch_dist_port)
         ]
         self._wait_until_server_is_live(processes, deployment)
 
     def _wait_until_server_is_live(self, processes, deployment):
-        for process, repl_deployment in zip(processes, deployment):
+        for process, repl_config in zip(processes, deployment):
             sockets_open = False
             while not sockets_open:
                 sockets_open = all(
-                    self._is_socket_open(repl_deployment[0],
-                                         port) for port in repl_deployment[1])
+                    self._is_socket_open(repl_config.hostname,
+                                         port)
+                    for port in repl_config.tensor_parallel_ports)
                 process_alive = self._is_server_process_alive(process)
                 if not process_alive:
                     raise RuntimeError(
                         "server crashed for some reason, unable to proceed")
                 time.sleep(4)
                 logger.info("waiting for server to start...")
-            logger.info(f"server has started on {repl_deployment[1]}")
+            logger.info(
+                f"server has started on ports {repl_config.tensor_parallel_ports}")
 
     def _is_socket_open(self, host, port):
         import socket
@@ -95,12 +109,7 @@ class MIIServer():
                            mii_configs,
                            port):
         # serialize mii config
-        # convert json str -> bytes
-        json_bytes = mii_configs.json().encode()
-        # base64 encoded bytes
-        b64_config_bytes = base64.urlsafe_b64encode(json_bytes)
-        # bytes -> str
-        b64_config_str = b64_config_bytes.decode()
+        b64_config_str = config_to_b64_str(mii_configs)
 
         server_args_str = f"--task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {port}"
         server_args_str += " --ds-optimize" if ds_optimize else ""
@@ -163,16 +172,21 @@ class MIIServer():
                               ds_zero,
                               ds_config,
                               mii_configs,
-                              port):
-        return self._launch_server_process(model_name,
-                                           model_path,
-                                           ds_optimize,
-                                           ds_zero,
-                                           ds_config,
-                                           mii_configs,
-                                           port,
-                                           "load balancer",
-                                           ex_server_args=["--load-balancer"])
+                              lb_config):
+
+        # serialize mii config
+        b64_config_str = config_to_b64_str(lb_config)
+
+        return self._launch_server_process(
+            model_name,
+            model_path,
+            ds_optimize,
+            ds_zero,
+            ds_config,
+            mii_configs,
+            mii_configs.port_number,
+            "load balancer",
+            ex_server_args=[f"--load-balancer {b64_config_str}"])
 
     def _launch_restful_gateway(self,
                                 model_name,
@@ -235,18 +249,16 @@ class MIIServer():
                           host,
                           port,
                           master_port,
-                          replica_idx):
+                          deploy_ranks):
         # use different hostfiles for replica instances
         # pass /dev/null when no replica is used
         worker_str = f"-H {hostfile} "
         # pin deepspeed launch to specific gpu id(s)
-        deploy_ranks = mii_configs.replica_deployment[replica_idx][3]
         included_gpus = f"{host}:{','.join(map(str, deploy_ranks))}"
         worker_str += f"-i {included_gpus} "
 
         # adjust torch dist port depending on rank, otherwise multi-replica deployments will conflict
         # assign different ports to replicas because they could be on the same host
-        master_port = mii_configs.torch_dist_port + (100 * replica_idx) + deploy_ranks[0]
         worker_str += f"--master_port {master_port}"
 
         ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
@@ -267,27 +279,31 @@ class MIIServer():
                             ds_optimize,
                             ds_zero,
                             ds_config,
-                            mii_configs):
+                            mii_configs,
+                            lb_config):
 
         processes = []
         if mii_configs.enable_load_balancing:
 
             # Start replica instances
-            for i, (host, port, torch_dist_port, gpu_indices) in enumerate(mii_configs.replica_deployment):
+            for i, repl_config in enumerate(lb_config.replica_configs):
                 hostfile = tempfile.NamedTemporaryFile(delete=False)
-                hostfile.write(f'{host} slots={mii_configs.replica_num}\n'.encode())
+                hostfile.write(
+                    f'{repl_config.hostname} slots={mii_configs.replica_num}\n'.encode())
                 processes.append(
-                    self._launch_deepspeed(model_name,
-                                           model_path,
-                                           ds_optimize,
-                                           ds_zero,
-                                           ds_config,
-                                           mii_configs,
-                                           hostfile.name,
-                                           host,
-                                           port[0],
-                                           torch_dist_port,
-                                           i))
+                    self._launch_deepspeed(
+                        model_name,
+                        model_path,
+                        ds_optimize,
+                        ds_zero,
+                        ds_config,
+                        mii_configs,
+                        hostfile.name,
+                        repl_config.hostname,
+                        repl_config.tensor_parallel_ports[0],
+                        mii_configs.torch_dist_port + (100 * i) +
+                        repl_config.gpu_indices[0],
+                        repl_config.gpu_indices))
 
             # start load balancer here.
             # we don't use deepspeed launcher for the load balancer because it does not need a GPU.
@@ -300,7 +316,7 @@ class MIIServer():
                                            ds_zero,
                                            ds_config,
                                            mii_configs,
-                                           mii_configs.port_number))
+                                           lb_config))
 
             return processes
         else:
@@ -320,5 +336,5 @@ class MIIServer():
                                        'localhost',
                                        mii_configs.port_number,
                                        mii_configs.torch_dist_port,
-                                       0))
+                                       mii_configs.deploy_rank))
         return processes

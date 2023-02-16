@@ -11,6 +11,7 @@ from deepspeed.launcher.runner import fetch_hostfile
 from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT
 from .utils import logger
 from .models.score import create_score_file
+from .config import ReplicaConfig, LoadBalancerConfig
 
 
 def deploy(task,
@@ -101,19 +102,27 @@ def deploy(task,
         model_path = "model"
 
     # add fields for replica deployment
-    replica_pool = _allocate_processes(mii_config.hostfile,
-                                       mii_config.tensor_parallel,
-                                       mii_config.replica_num)
-    replica_deployment = []
-    for i, (host, gpu_indices) in enumerate(replica_pool):
-        # Reserver port for a LB proxy when replication is enabled
-        port_offset = 1 if mii_config.replica_num > 1 else 0
-        base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-        grpc_ports = list(range(base_port, base_port + mii_config.tensor_parallel))
-        master_port = mii_config.torch_dist_port + i
-        replica_deployment.append((host, grpc_ports, master_port, gpu_indices))
-
-    mii_config.replica_deployment = replica_deployment
+    lb_config = None
+    if mii_config.enable_load_balancing:
+        replica_pool = _allocate_processes(mii_config.hostfile,
+                                           mii_config.tensor_parallel,
+                                           mii_config.replica_num)
+        replica_deployment = []
+        for i, (hostname, gpu_indices) in enumerate(replica_pool):
+            # Reserver port for a LB proxy when replication is enabled
+            port_offset = 1 if mii_config.replica_num > 1 else 0
+            base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+            tensor_parallel_ports = list(
+                range(base_port,
+                      base_port + mii_config.tensor_parallel))
+            torch_dist_port = mii_config.torch_dist_port + i
+            replica_deployment.append(
+                ReplicaConfig(hostname=hostname,
+                              tensor_parallel_ports=tensor_parallel_ports,
+                              torch_dist_port=torch_dist_port,
+                              gpu_indices=gpu_indices))
+        lb_config = LoadBalancerConfig(port=mii_config.port_number,
+                                       replica_configs=replica_deployment)
 
     create_score_file(deployment_name=deployment_name,
                       deployment_type=deployment_type,
@@ -123,7 +132,8 @@ def deploy(task,
                       ds_zero=enable_zero,
                       ds_config=ds_config,
                       mii_config=mii_config,
-                      model_path=model_path)
+                      model_path=model_path,
+                      lb_config=lb_config)
 
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)

@@ -89,6 +89,7 @@ REQUIRED_KEYS_PER_TASK = {
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
 MODEL_PATH_KEY = 'model_path'
+LOAD_BALANCER_CONFIG_KEY = 'load_balancer_config'
 
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'

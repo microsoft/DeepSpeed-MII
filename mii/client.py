@@ -20,11 +20,6 @@ def _get_deployment_info(deployment_name):
     return task, mii_configs
 
 
-def _get_host_ports(mii_configs, replica_idx):
-    repl_deploy = mii_configs.replica_deployment[replica_idx]
-    return repl_deploy[0], repl_deploy[1]
-
-
 def mii_query_handle(deployment_name):
     """Get a query handle for a local deployment:
 
@@ -41,8 +36,10 @@ def mii_query_handle(deployment_name):
     if mii_configs.enable_load_balancing:
         return MIIClient(task_name, "localhost", mii_configs.port_number)
     else:
-        host, ports = _get_host_ports(mii_configs, 0)
-        return MIITensorParallelClient(task_name, host, ports)
+        return MIITensorParallelClient(
+            task_name,
+            "localhost",
+            [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
 
 
 def create_channel(host, port):

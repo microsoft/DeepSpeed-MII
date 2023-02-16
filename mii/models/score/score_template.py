@@ -6,6 +6,7 @@ import os
 import json
 import torch
 import mii
+from mii.config import LoadBalancerConfig, ReplicaConfig
 import time
 
 model = None
@@ -26,7 +27,9 @@ def init():
                   ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
                   ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
                   ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
-                  mii_configs=configs[mii.constants.MII_CONFIGS_KEY])
+                  mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
+                  lb_config=configs[mii.constants.LOAD_BALANCER_CONFIG_KEY]
+                  if mii.constants.LOAD_BALANCER_CONFIG_KEY in configs else None)
 
     global model
     model = None
