@@ -46,6 +46,7 @@ class MIIConfig(BaseModel):
     replace_with_kernel_inject: bool = True
     profile_model_time: bool = False
     skip_model_check: bool = False
+    max_tokens: int = 1024
     enable_load_balancing: bool = False
     replica_num: int = 1
     hostfile: str = DLTS_HOSTFILE

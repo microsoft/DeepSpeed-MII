@@ -34,7 +34,8 @@ def load_models(task_name,
         "checkpoint": None,
         "config": None,
         "training_mp_size": 1,
-        "replace_with_kernel_inject": mii_config.replace_with_kernel_inject
+        "replace_with_kernel_inject": mii_config.replace_with_kernel_inject,
+        "max_tokens": mii_config.max_tokens
     }
 
     if provider == mii.constants.ModelProvider.HUGGING_FACE:

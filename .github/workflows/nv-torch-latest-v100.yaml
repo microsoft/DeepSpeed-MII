@@ -22,23 +22,30 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: environment
+      - id: setup-venv
+        uses: ./.github/workflows/setup-venv
+
+      - name: Install pytorch
         run: |
-          nvidia-smi
-          which python
-          python --version
-          which nvcc
-          nvcc --version
           pip install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu113
           python -c "import torch; print('torch:', torch.__version__, torch)"
           python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
-      - name: Install MII
+
+      - name: Install dependencies
         run: |
           pip install git+https://github.com/microsoft/DeepSpeed.git
           pip install git+https://github.com/huggingface/transformers.git
           pip install -U accelerate
-          pip install .[dev,local]
           ds_report
+
+      - name: Python environment
+        run: |
+          pip list
+
+      - name: Install MII
+        run: |
+          pip install .[dev,local]
+
       - name: Unit tests
         run: |
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
