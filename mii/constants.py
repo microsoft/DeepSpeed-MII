@@ -5,6 +5,7 @@ import enum
 class DeploymentType(enum.Enum):
     LOCAL = 1
     AML = 2
+    AML_LOCAL = 3
 
 
 MII_CONFIGS_KEY = 'mii_configs'
@@ -94,6 +95,7 @@ ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'
 CHECKPOINT_KEY = "checkpoint"
+DEPLOYMENT_TYPE_KEY = "deployment_type"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"

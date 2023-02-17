@@ -34,6 +34,7 @@ class DtypeEnum(Enum):
 class MIIConfig(BaseModel):
     tensor_parallel: int = 1
     port_number: int = 50050
+    aml_local_port: int = 5001
     dtype: DtypeEnum = torch.float32
     load_with_sys_mem: bool = False
     enable_cuda_graph: bool = False

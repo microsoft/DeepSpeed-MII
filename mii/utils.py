@@ -130,6 +130,8 @@ def full_model_path(model_path):
         # (potentially) append relative model_path w. aml path
         assert os.path.isabs(aml_model_dir), f"AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path"
         if model_path:
+            if model_path == aml_model_dir:
+                return aml_model_dir
             assert not os.path.isabs(model_path), f"model_path={model_path} must be relative to append w. AML path"
             return os.path.join(aml_model_dir, model_path)
         else:

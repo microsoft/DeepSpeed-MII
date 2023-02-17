@@ -1,14 +1,19 @@
 '''
 Copyright 2022 The Microsoft DeepSpeed Team
 '''
+import os
+import sys
 import torch
 import string
+import subprocess
+import requests
+import time
 
 import mii
 
 from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT
 from .utils import logger
-from .models.score import create_score_file
+from .models.score import create_score_file, generated_score_path
 
 
 def deploy(task,
@@ -92,11 +97,16 @@ def deploy(task,
             f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
         )
 
-    # In local deployments use default path if no model path set
-    if model_path is None and deployment_type == DeploymentType.LOCAL:
-        model_path = MII_MODEL_PATH_DEFAULT
-    elif model_path is None and deployment_type == DeploymentType.AML:
+        # In local deployments use default path if no model path set
+    if model_path is None and deployment_type == DeploymentType.AML:
         model_path = "model"
+    elif deployment_type == DeploymentType.AML_LOCAL:
+        if model_path is None:
+            model_path = MII_MODEL_PATH_DEFAULT
+        aml_local_model_path = model_path
+        model_path = ""  # The actual model path will be passed to azmlinfsrv, so we keep this empty
+    elif model_path is None and deployment_type == DeploymentType.LOCAL:
+        model_path = MII_MODEL_PATH_DEFAULT
 
     create_score_file(deployment_name=deployment_name,
                       deployment_type=deployment_type,
@@ -110,6 +120,10 @@ def deploy(task,
 
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
+    elif deployment_type == DeploymentType.AML_LOCAL:
+        _deploy_aml_local(deployment_name=deployment_name,
+                          model_path=aml_local_model_path,
+                          port=mii_config.aml_local_port)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     else:
@@ -130,3 +144,32 @@ def _deploy_aml(deployment_name, model_name, version):
         f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_name)}"
     )
     print("Please run 'deploy.sh' to bring your deployment online")
+
+
+def _deploy_aml_local(deployment_name, model_path, port):
+    try:
+        import azureml_inference_server_http
+    except ImportError:
+        logger.error(
+            "azureml-inference-server-http not installed. Please install DeepSpeed-MII with 'pip install deepspeed-mii[aml_local]'"
+        )
+    score_path = generated_score_path(deployment_name, DeploymentType.AML_LOCAL)
+    cmd = f"azmlinfsrv --entry_script {score_path} --model_dir {model_path} --port {port}".split(
+        " ")
+    process = subprocess.Popen(cmd)
+
+    # Wait for the server to response before exiting
+    url = f"http://localhost:{port}"
+    wait_time = 0
+    while wait_time < 60:
+        try:
+            response = requests.get(url)
+            assert response.text == "Healthy"
+            break
+        except requests.exceptions.ConnectionError:
+            time.sleep(5)
+            wait_time += 5
+
+    pid_file_path = os.path.join(os.path.dirname(score_path), "azmlinfsrv_pid")
+    with open(pid_file_path, "w") as pid_file:
+        pid_file.write(str(process.pid))
