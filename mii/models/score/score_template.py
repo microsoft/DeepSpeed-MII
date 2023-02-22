@@ -28,8 +28,7 @@ def init():
                   ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
                   ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
                   mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
-                  lb_config=configs[mii.constants.LOAD_BALANCER_CONFIG_KEY]
-                  if mii.constants.LOAD_BALANCER_CONFIG_KEY in configs else None)
+                  lb_config=configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY, None)
 
     global model
     model = None
