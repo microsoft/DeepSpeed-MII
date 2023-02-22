@@ -45,7 +45,7 @@ class MIIServer():
 
         self.port_number = mii_configs.port_number
 
-        if mii_configs.enable_load_balancing > 1 and mii_configs.hostfile is None:
+        if mii_configs.enable_load_balancing and mii_configs.hostfile is None:
             raise ValueError(
                 "hostfile must be provided if enable_load_balancing == True")
 
