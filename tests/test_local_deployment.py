@@ -249,7 +249,7 @@ def test_load_to_sys_mem(local_deployment, query):
             True,
             {
                 "fp16": {
-                    "enabled": False
+                    "enabled": True
                 },
                 "bf16": {
                     "enabled": False
