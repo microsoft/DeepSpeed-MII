@@ -1,5 +1,4 @@
 import grpc
-import psutil
 
 import mii
 
@@ -17,12 +16,4 @@ def terminate(deployment_name):
     except (KeyError, TypeError) as error:
         pass
 
-    mii_configs = mii.utils.import_score_file(deployment_name).configs[
-        mii.constants.MII_CONFIGS_KEY]
-    server_ports = [
-        mii_configs['port_number'] + i for i in range(mii_configs['tensor_parallel'])
-    ]
-    for conn in psutil.net_connections():
-        if conn.laddr.port in server_ports:
-            p = psutil.Process(conn.pid)
-            p.terminate()
+    generator.terminate()

@@ -1,5 +1,6 @@
 import pytest
 import os
+import torch
 from types import SimpleNamespace
 
 import mii
@@ -16,7 +17,7 @@ def validate_config(config):
 ''' These fixtures provide default values for the deployment config '''
 
 
-@pytest.fixture(scope="function", params=['fp32'])
+@pytest.fixture(scope="function", params=['fp16'])
 def dtype(request):
     return request.param
 
@@ -33,6 +34,11 @@ def port_number(request):
 
 @pytest.fixture(scope="function", params=[False])
 def load_with_sys_mem(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[False])
+def enable_load_balancing(request):
     return request.param
 
 
@@ -55,15 +61,30 @@ def ds_config(request):
 
 
 @pytest.fixture(scope="function")
-def mii_configs(dtype: str,
-                tensor_parallel: int,
-                port_number: int,
-                load_with_sys_mem: bool):
+def mii_configs(
+    tmpdir: str,
+    dtype: str,
+    tensor_parallel: int,
+    port_number: int,
+    load_with_sys_mem: bool,
+    enable_load_balancing: bool,
+):
+
+    # Create a hostfile for DeepSpeed launcher when load_balancing is enabled
+    hostfile = os.path.join(tmpdir, "hostfile")
+    num_gpu = torch.cuda.device_count()
+    if enable_load_balancing:
+        with open(hostfile, "w") as f:
+            f.write(f"localhost slots={num_gpu}")
+
     return {
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
         'port_number': port_number,
         'load_with_sys_mem': load_with_sys_mem,
+        'enable_load_balancing': enable_load_balancing,
+        'replica_num': num_gpu * enable_load_balancing,
+        'hostfile': hostfile,
     }
 
 
@@ -174,6 +195,27 @@ def test_single_GPU(local_deployment, query):
 
 
 @pytest.mark.local
+@pytest.mark.parametrize("enable_load_balancing", [True])
+@pytest.mark.parametrize(
+    "task_name, model_name, query",
+    [
+        (
+            "text-generation",
+            "bigscience/bloom-560m",
+            {
+                "query": ["DeepSpeed is the greatest"]
+            },
+        ),
+    ],
+)
+def test_load_balancing(local_deployment, query):
+    generator = mii.mii_query_handle(local_deployment.deployment_name)
+    for _ in range(10):
+        result = generator.query(query)
+    assert result
+
+
+@pytest.mark.local
 @pytest.mark.parametrize("load_with_sys_mem", [True])
 @pytest.mark.parametrize(
     "task_name, model_name, query",
@@ -207,7 +249,7 @@ def test_load_to_sys_mem(local_deployment, query):
             True,
             {
                 "fp16": {
-                    "enabled": False
+                    "enabled": True
                 },
                 "bf16": {
                     "enabled": False

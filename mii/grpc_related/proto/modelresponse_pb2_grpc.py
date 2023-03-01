@@ -2,6 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 import mii.grpc_related.proto.modelresponse_pb2 as modelresponse__pb2
 
 
@@ -13,6 +14,12 @@ class ModelResponseStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.Terminate = channel.unary_unary(
+            '/modelresponse.ModelResponse/Terminate',
+            request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
+            response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
         self.GeneratorReply = channel.unary_unary(
             '/modelresponse.ModelResponse/GeneratorReply',
             request_serializer=modelresponse__pb2.MultiStringRequest.SerializeToString,
@@ -52,6 +59,12 @@ class ModelResponseStub(object):
 
 class ModelResponseServicer(object):
     """Missing associated documentation comment in .proto file."""
+    def Terminate(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GeneratorReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -97,6 +110,13 @@ class ModelResponseServicer(object):
 
 def add_ModelResponseServicer_to_server(servicer, server):
     rpc_method_handlers = {
+        'Terminate':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.Terminate,
+            request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
+        ),
         'GeneratorReply':
         grpc.unary_unary_rpc_method_handler(
             servicer.GeneratorReply,
@@ -148,6 +168,32 @@ def add_ModelResponseServicer_to_server(servicer, server):
 # This class is part of an EXPERIMENTAL API.
 class ModelResponse(object):
     """Missing associated documentation comment in .proto file."""
+    @staticmethod
+    def Terminate(request,
+                  target,
+                  options=(),
+                  channel_credentials=None,
+                  call_credentials=None,
+                  insecure=False,
+                  compression=None,
+                  wait_for_ready=None,
+                  timeout=None,
+                  metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modelresponse.ModelResponse/Terminate',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
     @staticmethod
     def GeneratorReply(request,
                        target,
