@@ -23,7 +23,8 @@ def createRestfulGatewayApp(task, mii_config, server_thread):
 
         def post(self):
             data = request.get_json()
-            result = client.query(data["request"], **data["kwargs"])
+            kwargs = data["kwargs"] if "kwargs" in data else {}
+            result = client.query(data["request"], **kwargs)
             return MessageToJson(result)
 
     app = Flask("RestfulGateway")
