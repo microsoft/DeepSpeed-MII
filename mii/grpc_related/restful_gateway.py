@@ -4,12 +4,12 @@ import mii
 from flask import Flask, request
 from flask_restful import Resource, Api
 from werkzeug.serving import make_server
-from mii.constants import SERVER_SHUTDOWN_TIMEOUT, RESTFUL_API_PATH
+from mii.constants import RESTFUL_GATEWAY_SHUTDOWN_TIMEOUT, RESTFUL_API_PATH
 from google.protobuf.json_format import MessageToJson
 
 
 def shutdown(thread):
-    time.sleep(SERVER_SHUTDOWN_TIMEOUT)
+    time.sleep(RESTFUL_GATEWAY_SHUTDOWN_TIMEOUT)
     thread.server.shutdown()
 
 
@@ -56,6 +56,7 @@ class RestfulGatewayThread(threading.Thread):
 
     def run(self):
         self.server.serve_forever()
+        self._stop_event.set()
 
     def get_stop_event(self):
         return self._stop_event
