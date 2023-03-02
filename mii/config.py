@@ -49,6 +49,7 @@ class MIIConfig(BaseModel):
     max_tokens: int = 1024
     enable_load_balancing: bool = False
     replica_num: int = 1
+    restful_api_port: int = 0
     hostfile: str = DLTS_HOSTFILE
 
     @validator("deploy_rank")

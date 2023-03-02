@@ -3,6 +3,7 @@ Copyright 2022 The Microsoft DeepSpeed Team
 '''
 import asyncio
 import grpc
+import requests
 import mii
 from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
@@ -130,3 +131,9 @@ class MIITensorParallelClient():
         """Terminates the deployment"""
         for client in self.clients:
             client.terminate()
+
+
+def terminate_restful_gateway(deployment_name):
+    _, mii_configs = _get_deployment_info(deployment_name)
+    if mii_configs.restful_api_port > 0:
+        requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")

@@ -318,6 +318,17 @@ class MIIServer():
                                            mii_configs,
                                            lb_config))
 
+            if mii_configs.restful_api_port > 0:
+                # start rest api server
+                processes.append(
+                    self._launch_restful_gateway(model_name,
+                                                 model_path,
+                                                 ds_optimize,
+                                                 ds_zero,
+                                                 ds_config,
+                                                 mii_configs,
+                                                 mii_configs.port_number))
+
             return processes
         else:
             if self._is_socket_open("localhost", self.port_number):
