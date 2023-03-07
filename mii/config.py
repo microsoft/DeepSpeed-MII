@@ -1,9 +1,11 @@
 import torch
 from typing import Union, List
 from enum import Enum
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, root_validator
 
 from deepspeed.launcher.runner import DLTS_HOSTFILE
+
+from .utils import logger
 
 
 class DtypeEnum(Enum):
@@ -86,11 +88,12 @@ class MIIConfig(BaseModel):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return value
 
-    @validator('enable_load_balancing')
-    def enable_load_balancing_valid(cls, field_value, values):
-        if values["enable_restful_api"]:
-            field_value = True
-        return field_value
+    @root_validator
+    def auto_enable_load_balancing(cls, values):
+        if values["enable_restful_api"] and not values["enable_load_balancing"]:
+            logger.warn("Restful API is enabled, enabling Load Balancing")
+            values["enable_load_balancing"] = True
+        return values
 
     class Config:
         validate_all = True
