@@ -110,7 +110,7 @@ def deploy(task,
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
-            port_offset = 1 if mii_config.replica_num > 1 else 0
+            port_offset = 1 if mii_config.enable_load_balancing else 0
             base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
             tensor_parallel_ports = list(
                 range(base_port,
