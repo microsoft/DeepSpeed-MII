@@ -47,9 +47,10 @@ class MIIConfig(BaseModel):
     profile_model_time: bool = False
     skip_model_check: bool = False
     max_tokens: int = 1024
+    enable_restful_api: bool = False
+    restful_api_port: int = 51080
     enable_load_balancing: bool = False
     replica_num: int = 1
-    restful_api_port: int = 0
     hostfile: str = DLTS_HOSTFILE
 
     @validator("deploy_rank")
@@ -84,6 +85,12 @@ class MIIConfig(BaseModel):
             if not value.get(k, ''):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return value
+
+    @validator('enable_load_balancing')
+    def enable_load_balancing_valid(cls, field_value, values):
+        if values["enable_restful_api"]:
+            field_value = True
+        return field_value
 
     class Config:
         validate_all = True
