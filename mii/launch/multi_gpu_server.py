@@ -25,6 +25,7 @@ def decode_config_from_str(config_str):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--deployment-name", type=str, help="deployment name")
     parser.add_argument("-t", "--task-name", type=str, help="task name")
     parser.add_argument("-m", "--model", type=str, help="model name")
     parser.add_argument("-d", "--model-path", type=str, help="path to model")
@@ -63,7 +64,9 @@ def main():
 
     if args.restful_gateway:
         print(f"Starting RESTful API gateway on port: {mii_config.restful_api_port}")
-        gateway_thread = RestfulGatewayThread(args.task_name, mii_config)
+        gateway_thread = RestfulGatewayThread(args.deployment_name,
+                                              args.task_name,
+                                              mii_config)
         stop_event = gateway_thread.get_stop_event()
         gateway_thread.start()
         stop_event.wait()

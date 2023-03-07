@@ -247,12 +247,12 @@ def test_load_balancing(local_deployment, query):
         ),
     ],
 )
-def test_restful_api(local_deployment, task_name, query, restful_api_port):
+def test_restful_api(local_deployment, query, restful_api_port):
     generator = mii.mii_query_handle(local_deployment.deployment_name)
     for _ in range(2):
         result = generator.query(query)
 
-    url = f'http://localhost:{restful_api_port}/mii/{task_name}'
+    url = f'http://localhost:{restful_api_port}/mii/{local_deployment.deployment_name}'
     params = {"request": query}
     json_params = json.dumps(params)
     result = requests.post(url,

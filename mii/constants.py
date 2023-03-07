@@ -88,6 +88,7 @@ REQUIRED_KEYS_PER_TASK = {
 
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
+DEPLOYMENT_NAME_KEY = 'deployment_name'
 MODEL_PATH_KEY = 'model_path'
 LOAD_BALANCER_CONFIG_KEY = 'load_balancer_config'
 
