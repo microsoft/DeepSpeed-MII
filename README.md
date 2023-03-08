@@ -133,6 +133,74 @@ import mii
 mii.terminate("bloom560m_deployment")
 ```
 
+**Load balancing over multiple replicas**
+
+You can launch a load balancer and multiple replica of MII servers.
+When `enable_load_balancing` is set to `True`, `mii.deploy()` launches the load balancer server and `replica_num` number of replicas.
+Note that each replica consists of `tensor_parallel` server processes that are deployed on the same server.
+
+```python
+mii_configs = {
+...
+    "tensor_parallel": tensor_parallel,
+    "enable_load_balancing": True,
+    "replica_num": replica_num,
+    "hostfile": hostfile
+}
+mii.deploy(...
+           mii_config=mii_configs,
+           ...)
+```
+
+The client sends requests to the load balancer, which forwards them to the replicas, instead of sending requests to individual MII servers.
+Currently, the load balancer implements a simple round-robin algorithm.
+The load balancer acts as a simple proxy when `replica_num` is set to `1`.
+
+`hostfile` is the path to hostfile used by DeepSpeed's launcher.
+When hostfile is not specified, DeepSpeed-MII uses the default path `/job/hostfile`, which is defined for DeepSpeed.
+See the [DeepSpeed's document](https://www.deepspeed.ai/getting-started/#resource-configuration-multi-node) for the details.
+
+**RESTful API support**
+
+MII can enable users to call the inference service through RESTful APIs.
+By setting `enable_restful_api` to `True`, `mii.deploy()` launches a gateway that accepts RESTful API.
+The gateway can receive requests at `http://[HOST]:[PORT_FOR_RESTFUL_API]/mii/[DEPLOYMENT_NAME]`.
+
+```python
+mii_configs = {
+...
+    "enable_restful_api": True,
+    "restful_api_port": PORT_FOR_RESTFUL_API,
+...
+}
+mii.deploy(...
+    deployment_name=DEPLOYMENT_NAME,
+    mii_config=mii_configs)
+```
+
+Any HTTP client can be used to call the APIs. An example of using curl is:
+```bash
+# Assume deployment_name and restful_api_port are set to bloom560m_deployment and 28080 respectively:
+$ curl --header "Content-Type: application/json" --request POST  -d '{"request": {"query": ["Seattle is", "Bellevue is", "Redmond is"]}, "kwargs": {"do_sample": false, "max_new_tokens": 100}}' http://localhost:28080/mii/bloom560m_deployment
+```
+
+The code below is an example using Python.
+
+```python
+import requests
+import json
+
+# text_generation
+url = 'http://localhost:28080/mii/bloom560m_deployment'
+params = {"request": {"query": ["Seattle is", "Bellevue is", "Redmond is"]},
+          "kwargs": {"do_sample": False, "max_new_tokens": 100}}
+
+json_params = json.dumps(params)
+response = requests.post(url, data=json_params, headers={
+                         "Content-Type": "application/json"})
+print(response.json())
+```
+
 ## Deploying with MII-Azure
 
 MII supports deployment on Azure via AML Inference. To enable this, MII generates AML deployment assets for a given model that can be deployed using the Azure-CLI, as shown in the code below. Furthermore, deploying on Azure, allows MII to leverage DeepSpeed-Azure as its optimization backend, which offers better latency and cost reduction than DeepSpeed-Public.
