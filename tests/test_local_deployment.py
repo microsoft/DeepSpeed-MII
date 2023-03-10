@@ -258,7 +258,8 @@ def test_restful_api(local_deployment, query, restful_api_port):
     result = requests.post(url,
                            data=json_params,
                            headers={"Content-Type": "application/json"})
-    assert result
+    assert result.status_code == 200
+    assert "response" in result.json()
 
 
 @pytest.mark.local
