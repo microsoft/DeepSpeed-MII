@@ -332,7 +332,7 @@ class MIIServer():
                                            mii_configs,
                                            lb_config))
 
-            if mii_configs.restful_api_port > 0:
+            if mii_configs.enable_restful_api:
                 # start rest api server
                 processes.append(
                     self._launch_restful_gateway(deployment_name,
