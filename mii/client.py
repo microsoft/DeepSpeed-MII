@@ -9,6 +9,7 @@ from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE
 from mii.method_table import GRPC_METHOD_TABLE
+from mii.event_loop import get_event_loop
 
 
 def _get_deployment_info(deployment_name):
@@ -56,7 +57,7 @@ class MIIClient():
     Client to send queries to a single endpoint.
     """
     def __init__(self, task_name, host, port):
-        self.asyncio_loop = asyncio.get_event_loop()
+        self.asyncio_loop = get_event_loop()
         channel = create_channel(host, port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
         self.task = get_task(task_name)
@@ -73,17 +74,22 @@ class MIIClient():
             proto_response
         ) if "unpack_response_from_proto" in conversions else proto_response
 
-    def query(self, request_dict, **query_kwargs):
-        return self.asyncio_loop.run_until_complete(
+    def query_async(self, request_dict, **query_kwargs):
+        return asyncio.run_coroutine_threadsafe(
             self._request_async_response(request_dict,
-                                         **query_kwargs))
+                                         **query_kwargs),
+            get_event_loop())
+
+    def query(self, request_dict, **query_kwargs):
+        return self.query_async(request_dict, **query_kwargs).result()
 
     async def terminate_async(self):
         await self.stub.Terminate(
             modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
     def terminate(self):
-        self.asyncio_loop.run_until_complete(self.terminate_async())
+        asyncio.run_coroutine_threadsafe(self.terminate_async(),
+                                         get_event_loop()).result()
 
 
 class MIITensorParallelClient():
@@ -94,7 +100,7 @@ class MIITensorParallelClient():
     def __init__(self, task_name, host, ports):
         self.task = get_task(task_name)
         self.clients = [MIIClient(task_name, host, port) for port in ports]
-        self.asyncio_loop = asyncio.get_event_loop()
+        self.asyncio_loop = get_event_loop()
 
     # runs task in parallel and return the result from the first task
     async def _query_in_tensor_parallel(self, request_string, query_kwargs):
@@ -106,7 +112,16 @@ class MIITensorParallelClient():
                                                    **query_kwargs)))
 
         await responses[0]
-        return responses[0]
+        return responses[0].result()
+
+    def query_async(self, request_dict, **query_kwargs):
+        """Asynchronously auery a local deployment.
+        See `query` for the arguments and the return value.
+        """
+        return asyncio.run_coroutine_threadsafe(
+            self._query_in_tensor_parallel(request_dict,
+                                           query_kwargs),
+            self.asyncio_loop)
 
     def query(self, request_dict, **query_kwargs):
         """Query a local deployment:
@@ -121,11 +136,7 @@ class MIITensorParallelClient():
         Returns:
             response: Response of the model
         """
-        response = self.asyncio_loop.run_until_complete(
-            self._query_in_tensor_parallel(request_dict,
-                                           query_kwargs))
-        ret = response.result()
-        return ret
+        return self.query_async(request_dict, **query_kwargs).result()
 
     def terminate(self):
         """Terminates the deployment"""
@@ -135,5 +146,5 @@ class MIITensorParallelClient():
 
 def terminate_restful_gateway(deployment_name):
     _, mii_configs = _get_deployment_info(deployment_name)
-    if mii_configs.restful_api_port > 0:
+    if mii_configs.enable_restful_api:
         requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")
