@@ -2,6 +2,8 @@ import pytest
 import os
 import torch
 from types import SimpleNamespace
+import json
+import requests
 
 import mii
 
@@ -42,6 +44,16 @@ def enable_load_balancing(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=[False])
+def enable_restful_api(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[0])
+def restful_api_port(request):
+    return request.param
+
+
 @pytest.fixture(scope="function", params=[True])
 def enable_deepspeed(request):
     return request.param
@@ -68,11 +80,14 @@ def mii_configs(
     port_number: int,
     load_with_sys_mem: bool,
     enable_load_balancing: bool,
+    enable_restful_api: bool,
+    restful_api_port: int,
 ):
 
     # Create a hostfile for DeepSpeed launcher when load_balancing is enabled
     hostfile = os.path.join(tmpdir, "hostfile")
     num_gpu = torch.cuda.device_count()
+    enable_load_balancing = enable_load_balancing or enable_restful_api
     if enable_load_balancing:
         with open(hostfile, "w") as f:
             f.write(f"localhost slots={num_gpu}")
@@ -85,6 +100,8 @@ def mii_configs(
         'enable_load_balancing': enable_load_balancing,
         'replica_num': num_gpu * enable_load_balancing,
         'hostfile': hostfile,
+        'enable_restful_api': enable_restful_api,
+        'restful_api_port': restful_api_port,
     }
 
 
@@ -213,6 +230,36 @@ def test_load_balancing(local_deployment, query):
     for _ in range(10):
         result = generator.query(query)
     assert result
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("enable_restful_api", [True])
+@pytest.mark.parametrize("restful_api_port", [28080])
+@pytest.mark.parametrize(
+    "task_name, model_name, query",
+    [
+        (
+            "text-generation",
+            "bigscience/bloom-560m",
+            {
+                "query": ["DeepSpeed is the greatest"]
+            },
+        ),
+    ],
+)
+def test_restful_api(local_deployment, query, restful_api_port):
+    generator = mii.mii_query_handle(local_deployment.deployment_name)
+    for _ in range(2):
+        result = generator.query(query)
+
+    url = f'http://localhost:{restful_api_port}/mii/{local_deployment.deployment_name}'
+    params = {"request": query}
+    json_params = json.dumps(params)
+    result = requests.post(url,
+                           data=json_params,
+                           headers={"Content-Type": "application/json"})
+    assert result.status_code == 200
+    assert "response" in result.json()
 
 
 @pytest.mark.local

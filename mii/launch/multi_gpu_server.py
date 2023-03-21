@@ -11,6 +11,7 @@ from mii import MIIConfig, LoadBalancerConfig
 
 from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
+from mii.grpc_related.restful_gateway import RestfulGatewayThread
 
 
 def decode_config_from_str(config_str):
@@ -24,6 +25,7 @@ def decode_config_from_str(config_str):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--deployment-name", type=str, help="deployment name")
     parser.add_argument("-t", "--task-name", type=str, help="task name")
     parser.add_argument("-m", "--model", type=str, help="model name")
     parser.add_argument("-d", "--model-path", type=str, help="path to model")
@@ -48,18 +50,30 @@ def main():
                         type=str,
                         default=None,
                         help="base64 encoded load balancer config")
+    parser.add_argument("-r",
+                        "--restful-gateway",
+                        action='store_true',
+                        help="launch restful api gateway")
 
     args = parser.parse_args()
 
-    # if args.load_balancer is not None:
-    if args.load_balancer is None:
+    # de-serialize config object
+    config_dict = decode_config_from_str(args.config)
+    # convert dict -> mii config
+    mii_config = MIIConfig(**config_dict)
+
+    if args.restful_gateway:
+        print(f"Starting RESTful API gateway on port: {mii_config.restful_api_port}")
+        gateway_thread = RestfulGatewayThread(args.deployment_name,
+                                              args.task_name,
+                                              mii_config)
+        stop_event = gateway_thread.get_stop_event()
+        gateway_thread.start()
+        stop_event.wait()
+
+    elif args.load_balancer is None:
         provider = mii.constants.MODEL_PROVIDER_MAP.get(args.provider, None)
         assert provider is not None, f"Unknown model provider: {args.provider}"
-
-        # de-serialize config object
-        config_dict = decode_config_from_str(args.config)
-        # convert dict -> mii config
-        mii_config = MIIConfig(**config_dict)
 
         assert args.port is not None, "port is required for inference server"
         local_rank = int(os.getenv('LOCAL_RANK', '0'))

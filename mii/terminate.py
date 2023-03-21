@@ -17,3 +17,4 @@ def terminate(deployment_name):
         pass
 
     generator.terminate()
+    mii.client.terminate_restful_gateway(deployment_name)

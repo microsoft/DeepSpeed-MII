@@ -27,6 +27,7 @@ def config_to_b64_str(config):
 class MIIServer():
     '''Initialize the model, setup the server for the model under model_path'''
     def __init__(self,
+                 deployment_name,
                  task_name,
                  model_name,
                  model_path,
@@ -49,7 +50,8 @@ class MIIServer():
             raise ValueError(
                 "hostfile must be provided if enable_load_balancing == True")
 
-        processes = self._initialize_service(model_name,
+        processes = self._initialize_service(deployment_name,
+                                             model_name,
                                              model_path,
                                              ds_optimize,
                                              ds_zero,
@@ -101,6 +103,7 @@ class MIIServer():
         return is_alive
 
     def _build_server_args(self,
+                           deployment_name,
                            model_name,
                            model_path,
                            ds_optimize,
@@ -111,7 +114,7 @@ class MIIServer():
         # serialize mii config
         b64_config_str = config_to_b64_str(mii_configs)
 
-        server_args_str = f"--task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {port}"
+        server_args_str = f"--deployment-name {deployment_name} --task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {port}"
         server_args_str += " --ds-optimize" if ds_optimize else ""
 
         # XXX: fetch model provider based on model name in a more general way
@@ -166,6 +169,7 @@ class MIIServer():
         return printable_string
 
     def _launch_load_balancer(self,
+                              deployment_name,
                               model_name,
                               model_path,
                               ds_optimize,
@@ -178,6 +182,7 @@ class MIIServer():
         b64_config_str = config_to_b64_str(lb_config)
 
         return self._launch_server_process(
+            deployment_name,
             model_name,
             model_path,
             ds_optimize,
@@ -189,6 +194,7 @@ class MIIServer():
             ex_server_args=[f"--load-balancer {b64_config_str}"])
 
     def _launch_restful_gateway(self,
+                                deployment_name,
                                 model_name,
                                 model_path,
                                 ds_optimize,
@@ -196,7 +202,8 @@ class MIIServer():
                                 ds_config,
                                 mii_configs,
                                 port):
-        return self._launch_server_process(model_name,
+        return self._launch_server_process(deployment_name,
+                                           model_name,
                                            model_path,
                                            ds_optimize,
                                            ds_zero,
@@ -207,6 +214,7 @@ class MIIServer():
                                            ex_server_args=["--restful-gateway"])
 
     def _launch_server_process(self,
+                               deployment_name,
                                model_name,
                                model_path,
                                ds_optimize,
@@ -218,7 +226,8 @@ class MIIServer():
                                ds_launch_str=None,
                                ex_server_args=[]):
         launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
-        server_args_str = self._build_server_args(model_name,
+        server_args_str = self._build_server_args(deployment_name,
+                                                  model_name,
                                                   model_path,
                                                   ds_optimize,
                                                   ds_zero,
@@ -239,6 +248,7 @@ class MIIServer():
         return subprocess.Popen(cmd, env=mii_env)
 
     def _launch_deepspeed(self,
+                          deployment_name,
                           model_name,
                           model_path,
                           ds_optimize,
@@ -263,7 +273,8 @@ class MIIServer():
 
         ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
 
-        return self._launch_server_process(model_name,
+        return self._launch_server_process(deployment_name,
+                                           model_name,
                                            model_path,
                                            ds_optimize,
                                            ds_zero,
@@ -274,6 +285,7 @@ class MIIServer():
                                            ds_launch_str=ds_launch_str)
 
     def _initialize_service(self,
+                            deployment_name,
                             model_name,
                             model_path,
                             ds_optimize,
@@ -292,6 +304,7 @@ class MIIServer():
                     f'{repl_config.hostname} slots={mii_configs.replica_num}\n'.encode())
                 processes.append(
                     self._launch_deepspeed(
+                        deployment_name,
                         model_name,
                         model_path,
                         ds_optimize,
@@ -310,13 +323,26 @@ class MIIServer():
             # The deepspeed launcher determines the number of processes to launch based on GPUs available on the host or CUDA_VISIBLE_DEVICES,
             # and it is expected to assign one GPU to one process.
             processes.append(
-                self._launch_load_balancer(model_name,
+                self._launch_load_balancer(deployment_name,
+                                           model_name,
                                            model_path,
                                            ds_optimize,
                                            ds_zero,
                                            ds_config,
                                            mii_configs,
                                            lb_config))
+
+            if mii_configs.enable_restful_api:
+                # start rest api server
+                processes.append(
+                    self._launch_restful_gateway(deployment_name,
+                                                 model_name,
+                                                 model_path,
+                                                 ds_optimize,
+                                                 ds_zero,
+                                                 ds_config,
+                                                 mii_configs,
+                                                 mii_configs.port_number))
 
             return processes
         else:
@@ -326,7 +352,8 @@ class MIIServer():
                 )
 
             processes.append(
-                self._launch_deepspeed(model_name,
+                self._launch_deepspeed(deployment_name,
+                                       model_name,
                                        model_path,
                                        ds_optimize,
                                        ds_zero,

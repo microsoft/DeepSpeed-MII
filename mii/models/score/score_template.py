@@ -15,13 +15,15 @@ model = None
 def init():
     model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
 
+    deployment_name = configs[mii.constants.DEPLOYMENT_NAME_KEY]
     model_name = configs[mii.constants.MODEL_NAME_KEY]
     task_name = configs[mii.constants.TASK_NAME_KEY]
 
     assert model_name is not None, "The model name should be set before calling init"
     assert task_name is not None, "The task name should be set before calling init"
 
-    mii.MIIServer(task_name,
+    mii.MIIServer(deployment_name,
+                  task_name,
                   model_name,
                   model_path,
                   ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
