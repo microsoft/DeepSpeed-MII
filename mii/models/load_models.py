@@ -62,9 +62,12 @@ def load_models(task_name,
         assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
         inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
 
-        base_dir = inference_pipeline.checkpoint_dict['base_dir']
-        inf_config["base_dir"] = base_dir
-        inf_config["checkpoint"] = os.path.join(base_dir, "ds_inference_config.json")
+        base_dir = inference_pipeline.checkpoint_dict["base_dir"]
+
+        if base_dir is not None:
+            # We have DeepSpeed shards.
+            inf_config["base_dir"] = base_dir
+            inf_config["checkpoint"] = os.path.join(base_dir, "ds_inference_config.json")
 
         if mii_config.dtype == torch.int8:
             if "enable_qkv_quantization" in inspect.signature(

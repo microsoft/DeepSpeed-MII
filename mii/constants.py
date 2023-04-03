@@ -97,6 +97,8 @@ ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'
 CHECKPOINT_KEY = "checkpoint"
 
+PROVIDER_KEY = "provider"
+
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"
 

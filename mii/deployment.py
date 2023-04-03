@@ -23,7 +23,8 @@ def deploy(task,
            enable_zero=False,
            ds_config=None,
            mii_config={},
-           version=1):
+           version=1,
+           provider=None):
     """Deploy a task using specified model. For usage examples see:
 
         mii/examples/local/text-generation-example.py
@@ -60,6 +61,11 @@ def deploy(task,
             As of now, it can be used to set tensor-slicing degree using 'tensor_parallel' and port number for deployment using 'port_number'.
 
         version: Optional: Version to be set for AML deployment, useful if you want to deploy the same model with different settings.
+
+        provider: Override the provider produced by the heuristics.  Useful if you've sharded models yourself
+            (eg. BLOOMZ-176B) or fine tuned.  Supported values are: 'hugging-face', 'eleuther-ai', 'hugging-face-llm',
+            and 'diffusers'.
+
     Returns:
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
@@ -133,7 +139,8 @@ def deploy(task,
                       ds_config=ds_config,
                       mii_config=mii_config,
                       model_path=model_path,
-                      lb_config=lb_config)
+                      lb_config=lb_config,
+                      provider=provider)
 
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)

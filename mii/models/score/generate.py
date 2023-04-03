@@ -17,7 +17,8 @@ def create_score_file(deployment_name,
                       ds_config,
                       mii_config,
                       model_path,
-                      lb_config):
+                      lb_config,
+                      provider):
     config_dict = {}
     config_dict[mii.constants.DEPLOYMENT_NAME_KEY] = deployment_name
     config_dict[mii.constants.TASK_NAME_KEY] = mii.utils.get_task_name(task)
@@ -27,6 +28,7 @@ def create_score_file(deployment_name,
     config_dict[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
     config_dict[mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
+    config_dict[mii.constants.PROVIDER_KEY] = provider
 
     if lb_config is not None:
         config_dict[mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config

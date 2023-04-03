@@ -35,7 +35,8 @@ class MIIServer():
                  ds_zero=False,
                  ds_config=None,
                  mii_configs={},
-                 lb_config=None):
+                 lb_config=None,
+                 provider=None):
 
         mii_configs = mii.config.MIIConfig(**mii_configs)
 
@@ -57,7 +58,8 @@ class MIIServer():
                                              ds_zero,
                                              ds_config,
                                              mii_configs,
-                                             lb_config)
+                                             lb_config,
+                                             provider)
         deployment = lb_config.replica_configs if mii_configs.enable_load_balancing else [
             ReplicaConfig(hostname='localhost',
                           tensor_parallel_ports=[mii_configs.port_number],
@@ -110,7 +112,8 @@ class MIIServer():
                            ds_zero,
                            ds_config,
                            mii_configs,
-                           port):
+                           port,
+                           provider):
         # serialize mii config
         b64_config_str = config_to_b64_str(mii_configs)
 
@@ -118,14 +121,16 @@ class MIIServer():
         server_args_str += " --ds-optimize" if ds_optimize else ""
 
         # XXX: fetch model provider based on model name in a more general way
-        if model_name == "gpt-neox":
-            provider = mii.constants.MODEL_PROVIDER_NAME_EA
-        elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
-            provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
-        elif self.task == mii.Tasks.TEXT2IMG:
-            provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
-        else:
-            provider = mii.constants.MODEL_PROVIDER_NAME_HF
+        if not provider:
+            if model_name == "gpt-neox":
+                provider = mii.constants.MODEL_PROVIDER_NAME_EA
+            elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
+                provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
+            elif self.task == mii.Tasks.TEXT2IMG:
+                provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
+            else:
+                provider = mii.constants.MODEL_PROVIDER_NAME_HF
+
         server_args_str += f" --provider {provider}"
 
         server_args_str += f" --config {b64_config_str}"
@@ -176,7 +181,8 @@ class MIIServer():
                               ds_zero,
                               ds_config,
                               mii_configs,
-                              lb_config):
+                              lb_config,
+                              provider):
 
         # serialize mii config
         b64_config_str = config_to_b64_str(lb_config)
@@ -191,7 +197,8 @@ class MIIServer():
             mii_configs,
             mii_configs.port_number,
             "load balancer",
-            ex_server_args=[f"--load-balancer {b64_config_str}"])
+            ex_server_args=[f"--load-balancer {b64_config_str}"],
+            provider=provider)
 
     def _launch_restful_gateway(self,
                                 deployment_name,
@@ -201,7 +208,8 @@ class MIIServer():
                                 ds_zero,
                                 ds_config,
                                 mii_configs,
-                                port):
+                                port,
+                                provider):
         return self._launch_server_process(deployment_name,
                                            model_name,
                                            model_path,
@@ -211,7 +219,8 @@ class MIIServer():
                                            mii_configs,
                                            port,
                                            "restful api gateway",
-                                           ex_server_args=["--restful-gateway"])
+                                           ex_server_args=["--restful-gateway"],
+                                           provider=provider)
 
     def _launch_server_process(self,
                                deployment_name,
@@ -224,7 +233,8 @@ class MIIServer():
                                port,
                                msg_server_type,
                                ds_launch_str=None,
-                               ex_server_args=[]):
+                               ex_server_args=[],
+                               provider=None):
         launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
         server_args_str = self._build_server_args(deployment_name,
                                                   model_name,
@@ -233,7 +243,8 @@ class MIIServer():
                                                   ds_zero,
                                                   ds_config,
                                                   mii_configs,
-                                                  port)
+                                                  port,
+                                                  provider=provider)
         server_args_str += f" " + \
             " ".join(ex_server_args) if ex_server_args else ""
 
@@ -259,7 +270,8 @@ class MIIServer():
                           host,
                           port,
                           master_port,
-                          deploy_ranks):
+                          deploy_ranks,
+                          provider):
         # use different hostfiles for replica instances
         # pass /dev/null when no replica is used
         worker_str = f"-H {hostfile} "
@@ -282,7 +294,8 @@ class MIIServer():
                                            mii_configs,
                                            port,
                                            "MII server",
-                                           ds_launch_str=ds_launch_str)
+                                           ds_launch_str=ds_launch_str,
+                                           provider=provider)
 
     def _initialize_service(self,
                             deployment_name,
@@ -292,7 +305,8 @@ class MIIServer():
                             ds_zero,
                             ds_config,
                             mii_configs,
-                            lb_config):
+                            lb_config,
+                            provider):
 
         processes = []
         if mii_configs.enable_load_balancing:
@@ -330,7 +344,8 @@ class MIIServer():
                                            ds_zero,
                                            ds_config,
                                            mii_configs,
-                                           lb_config))
+                                           lb_config,
+                                           provider=provider))
 
             if mii_configs.enable_restful_api:
                 # start rest api server
@@ -342,7 +357,8 @@ class MIIServer():
                                                  ds_zero,
                                                  ds_config,
                                                  mii_configs,
-                                                 mii_configs.port_number))
+                                                 mii_configs.port_number,
+                                                 provider=provider))
 
             return processes
         else:
@@ -363,5 +379,6 @@ class MIIServer():
                                        'localhost',
                                        mii_configs.port_number,
                                        mii_configs.torch_dist_port,
-                                       mii_configs.deploy_rank))
+                                       mii_configs.deploy_rank,
+                                       provider))
         return processes

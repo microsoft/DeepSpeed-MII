@@ -121,7 +121,14 @@ def get_checkpoint_files_old(pretrained_model_name_or_path):
 
 def create_checkpoint_dict(model_name, model_path, mii_config):
     if USE_NEW_HF_CACHE:
-        model_path = snapshot_download(model_name, cache_dir=model_path)
+        if not model_name.startswith("/"):
+            # regular HF <organization>/<model>.
+            # Poke around hf_hub structure to get path of snapshot to use.
+            model_path = snapshot_download(model_name, cache_dir=model_path)
+        else:
+            # model_name points straight at snapshot.
+            model_path = model_name
+
     if mii_config.checkpoint_dict:
         mii_config.checkpoint_dict['base_dir'] = model_path
         return mii_config.checkpoint_dict
@@ -135,7 +142,13 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
             checkpoint_files = get_checkpoint_files(model_name, model_path)
         else:
             checkpoint_files = get_checkpoint_files_old(model_name)
-        data = {"type": "BLOOM", "checkpoints": checkpoint_files, "version": 1.0}
+
+        data = {
+            "type": "BLOOM",
+            "checkpoints": checkpoint_files,
+            "version": 1.0,
+            "base_dir": None,  # Not sharded!
+        }
         return data
 
 
@@ -154,6 +167,8 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     world_size = int(os.getenv('WORLD_SIZE', '1'))
 
+    checkpoint_dict = create_checkpoint_dict(model_name, model_path, mii_config)
+
     cache_path = mii_cache_path()
 
     tokenizer = _attempt_load(AutoTokenizer.from_pretrained,
@@ -162,12 +177,23 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
                               kwargs={"padding_side": 'left'})
     tokenizer.pad_token = tokenizer.eos_token
 
-    config = _attempt_load(AutoConfig.from_pretrained, model_name, cache_path)
+    is_sharded = checkpoint_dict["base_dir"] is not None
 
-    with OnDevice(dtype=torch.float16, device='meta', enabled=True):
-        model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
+    if is_sharded:
+        config = _attempt_load(AutoConfig.from_pretrained, model_name, cache_path)
+        with OnDevice(dtype=torch.float16, device='meta', enabled=True):
+            model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
+    else:
+        # https://github.com/microsoft/DeepSpeed/issues/2379#issuecomment-1416846334
+        #
+        # Wrt the bad outputs, in the provided script at the presharding
+        # step perhaps there could be an issue with the usage of
+        # from_config alongside save_mp_checkpoint_path and how this
+        # affects the checkpoints.
+        model = AutoModelForCausalLM.from_pretrained(model_name,
+                                                     cache_dir=cache_path,
+                                                     torch_dtype=torch.float16)
     model = model.eval()
-    checkpoint_dict = create_checkpoint_dict(model_name, model_path, mii_config)
     torch.distributed.barrier()
     inference_pipeline = BloomPipeline(model=model,
                                        tokenizer=tokenizer,
