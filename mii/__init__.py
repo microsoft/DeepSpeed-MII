@@ -1,3 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 import grpc
 from .server import MIIServer
 from .client import MIIClient, mii_query_handle

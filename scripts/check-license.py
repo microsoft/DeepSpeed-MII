@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-
 from __future__ import annotations
 '''Copyright The Microsoft DeepSpeed Team'''
 """
@@ -19,7 +18,8 @@ def err(s: str) -> None:
 
 
 COPYRIGHT = [
-    r"^\(\/\/\|#\) Copyright (c) Microsoft Corporation.$", r"^\(\/\/\|#\) SPDX-License-Identifier: Apache-2.0$",
+    r"^\(\/\/\|#\) Copyright (c) Microsoft Corporation.$",
+    r"^\(\/\/\|#\) SPDX-License-Identifier: Apache-2.0$",
     r"^\(\/\/\|#\) DeepSpeed Team$"
 ]
 
@@ -29,7 +29,13 @@ for f in sys.argv[1:]:
     for copyright_line in COPYRIGHT:
         if not success:
             break
-        res = subprocess.run(["git", "grep", "--quiet", "-e", copyright_line, f], capture_output=True)
+        res = subprocess.run(["git",
+                              "grep",
+                              "--quiet",
+                              "-e",
+                              copyright_line,
+                              f],
+                             capture_output=True)
         if res.returncode == 1:
             success = False
             failures.append(f)

@@ -1,3 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 deployment = \
 """$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
 name: <deployment-name>
