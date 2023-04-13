@@ -1,7 +1,9 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
+
 # flake8: noqa
-'''
-Copyright 2022 The Microsoft DeepSpeed Team
-'''
 import os
 import json
 import torch
