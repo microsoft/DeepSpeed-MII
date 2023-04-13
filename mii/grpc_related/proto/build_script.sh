@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 python3 -m grpc_tools.protoc -I./ --python_out=. --grpc_python_out=. ./modelresponse.proto
 
 # update import to be global wrt mii
