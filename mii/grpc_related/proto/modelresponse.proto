@@ -25,6 +25,8 @@ package modelresponse;
 
 service ModelResponse {
   rpc Terminate (google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc CreateSession (SessionID) returns (google.protobuf.Empty) {}
+  rpc DestroySession (SessionID) returns (google.protobuf.Empty) {}
   rpc GeneratorReply (MultiStringRequest) returns (MultiStringReply) {}
   rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
   rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
@@ -41,6 +43,10 @@ message Value {
         float fvalue = 3;
         bool bvalue = 4;
     }
+}
+
+message SessionID {
+  string session_id = 1;
 }
 
 message SingleStringRequest {

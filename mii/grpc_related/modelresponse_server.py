@@ -13,10 +13,10 @@ import sys
 import threading
 import time
 
-from mii.constants import GRPC_MAX_MSG_SIZE, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT
+from mii.constants import GRPC_MAX_MSG_SIZE, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
-from mii.utils import get_task
+from mii.utils import get_task, unpack_proto_query_kwargs
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -42,6 +42,7 @@ class ModelResponse(ServiceBase):
         super().__init__()
         self.inference_pipeline = inference_pipeline
         self.method_name_to_task = {m["method"]: t for t, m in GRPC_METHOD_TABLE.items()}
+        self.session_context = {}
 
     def _get_model_time(self, model, sum_times=False):
         model_times = []
@@ -60,6 +61,18 @@ class ModelResponse(ServiceBase):
             model_time = -1
         return model_time
 
+    def CreateSession(self, request, context):
+        if request.session_id in self.session_context:
+            raise ValueError(f"session {request.session_id} already exists")
+        self.session_context[request.session_id] = None
+        return google_dot_protobuf_dot_empty__pb2.Empty()
+
+    def DestroySession(self, request, context):
+        if request.session_id not in self.session_context:
+            raise ValueError(f"session {request.session_id} does not exist")
+        del self.session_context[request.session_id]
+        return google_dot_protobuf_dot_empty__pb2.Empty()
+
     def _run_inference(self, method_name, request_proto):
         if method_name not in self.method_name_to_task:
             raise ValueError(f"unknown method: {method_name}")
@@ -71,9 +84,21 @@ class ModelResponse(ServiceBase):
         conversions = GRPC_METHOD_TABLE[task]
         args, kwargs = conversions["unpack_request_from_proto"](request_proto)
 
+        session_id = kwargs.pop("session_id", None)
+        if session_id and "preprocess_session" in GRPC_METHOD_TABLE[task]:
+            args, kwargs = GRPC_METHOD_TABLE[task]["preprocess_session"](session_id, self.session_context, args, kwargs)
+
         start = time.time()
         response = self.inference_pipeline(*args, **kwargs)
         end = time.time()
+
+        if session_id and "postprocess_session" in GRPC_METHOD_TABLE[task]:
+            response = GRPC_METHOD_TABLE[task]["postprocess_session"](
+                session_id,
+                self.session_context,
+                args,
+                kwargs,
+                response)
 
         model_time = self._get_model_time(self.inference_pipeline.model,
                                           sum_times=True) if hasattr(
@@ -163,6 +188,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         ]
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
+        self.replica_sessions = {}
 
         # Start the asyncio loop in a separate thread
         def run_asyncio_loop(loop):
@@ -189,9 +215,29 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 return next_handler.unary_unary(request_proto, context)
 
             call_count = self.counter.get_and_increment()
-            ret = self.stubs[call_count % len(self.stubs)].invoke(
-                method_name,
-                request_proto)
+            replica_index = call_count % len(self.stubs)
+
+            if method_name == CREATE_SESSION_METHOD:
+                if request_proto.session_id in self.sessions:
+                    raise ValueError(
+                        f"session {request_proto.session_id} already exists")
+                self.replica_sessions[request_proto.session_id] = replica_index
+                self.stubs[replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
+                return google_dot_protobuf_dot_empty__pb2.Empty()
+
+            if method_name == DESTROY_SESSION_METHOD:
+                replica_index = self.replica_sessions.pop(request_proto.session_id)
+                self.stubs[replica_index].invoke(DESTROY_SESSION_METHOD, request_proto)
+                return google_dot_protobuf_dot_empty__pb2.Empty()
+
+            kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
+            if "session_id" in kwargs:
+                session_id = kwargs["session_id"]
+                if session_id not in self.replica_sessions:
+                    raise ValueError(f"session not found")
+                replica_index = self.replica_sessions[session_id]
+
+            ret = self.stubs[replica_index].invoke(method_name, request_proto)
             return ret
 
         return grpc.unary_unary_rpc_method_handler(

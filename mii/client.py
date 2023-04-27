@@ -86,6 +86,21 @@ class MIIClient():
     def terminate(self):
         self.asyncio_loop.run_until_complete(self.terminate_async())
 
+    async def create_session_async(self, session_id):
+        return await self.stub.CreateSession(
+            modelresponse_pb2.SessionID(session_id=session_id))
+
+    def create_session(self, session_id):
+        return self.asyncio_loop.run_until_complete(
+            self.create_session_async(session_id))
+
+    async def destroy_session_async(self, session_id):
+        await self.stub.DestroySession(modelresponse_pb2.SessionID(session_id=session_id)
+                                       )
+
+    def destroy_session(self, session_id):
+        self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
+
 
 class MIITensorParallelClient():
     """
@@ -132,6 +147,14 @@ class MIITensorParallelClient():
         """Terminates the deployment"""
         for client in self.clients:
             client.terminate()
+
+    def create_session(self, session_id):
+        for client in self.clients:
+            client.create_session(session_id)
+
+    def destroy_session(self, session_id):
+        for client in self.clients:
+            client.destroy_session(session_id)
 
 
 def terminate_restful_gateway(deployment_name):
