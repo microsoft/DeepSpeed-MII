@@ -189,11 +189,5 @@ GRPC_METHOD_TABLE = {
         "unpack_request_from_proto": proto_request_to_list,
         "pack_response_to_proto": text2img_pack_response_to_proto,
         "unpack_response_from_proto": text2img_unpack_response_from_proto
-    },
-    # Tasks.MULTI_TURN_CONVERSATION: {
-    #     "method": "MultiTurnConversationReply",
-    #     "pack_request_to_proto": multi_turn_conversation_pack_request_to_proto,
-    #     "unpack_request_from_proto": multi_turn_conversation_unpack_request_from_proto,
-    #     "pack_response_to_proto": single_string_response_to_proto
-    # }
+    }
 }
