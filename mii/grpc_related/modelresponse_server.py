@@ -42,6 +42,7 @@ class ModelResponse(ServiceBase):
         super().__init__()
         self.inference_pipeline = inference_pipeline
         self.method_name_to_task = {m["method"]: t for t, m in GRPC_METHOD_TABLE.items()}
+        self.lock = threading.Lock()
 
     def _get_model_time(self, model, sum_times=False):
         model_times = []
@@ -72,7 +73,8 @@ class ModelResponse(ServiceBase):
         args, kwargs = conversions["unpack_request_from_proto"](request_proto)
 
         start = time.time()
-        response = self.inference_pipeline(*args, **kwargs)
+        with self.lock:
+            response = self.inference_pipeline(*args, **kwargs)
         end = time.time()
 
         model_time = self._get_model_time(self.inference_pipeline.model,
