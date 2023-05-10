@@ -43,6 +43,7 @@ class ModelResponse(ServiceBase):
         self.inference_pipeline = inference_pipeline
         self.method_name_to_task = {m["method"]: t for t, m in GRPC_METHOD_TABLE.items()}
         self.session_context = {}
+        self.lock = threading.Lock()
 
     def _get_model_time(self, model, sum_times=False):
         model_times = []
@@ -89,7 +90,8 @@ class ModelResponse(ServiceBase):
             args, kwargs = GRPC_METHOD_TABLE[task]["preprocess_session"](session_id, self.session_context, args, kwargs)
 
         start = time.time()
-        response = self.inference_pipeline(*args, **kwargs)
+        with self.lock:
+            response = self.inference_pipeline(*args, **kwargs)
         end = time.time()
 
         if session_id and "postprocess_session" in GRPC_METHOD_TABLE[task]:
