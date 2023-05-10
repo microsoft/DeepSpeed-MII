@@ -23,7 +23,7 @@ while True:
     result = generator.query({"query": query_template.format(user_input)},
                              session_id=session_id,
                              max_new_tokens=128)
-    print(f"Bot: {result.response[0].replace('</s>', '')}")
+    print(f"Bot: {result.response[0].replace('</s>', '').strip()}")
 
 # You need to destroy the session after finishing the conversation
 generator.destroy_session(session_id)

@@ -46,7 +46,7 @@ while True:
     print(f"Bot: {result.response[0].replace('</s>', '')}")
 ```
 
-Once the user finish the session, you need to call `destroy_session` to free the internal data for the session.
+Once the user finishes the session, you need to call `destroy_session` to free the internal data for the session.
 
 ```python
 generator.destroy_session(session_id)
@@ -57,11 +57,11 @@ The following is an example conversation:
 $ python chat-client-example.py
 # Start a conversation session. Type 'q' to exit.
 You: Can you tell me about deep learning?
-Bot:  Yes, it is a type of artificial intelligence that learns from data.  It can process large amounts of data quickly and accurately, and it can develop sophisticated models to analyze data.  Deep learning techniques are being applied to a wide variety of tasks, including image recognition, speech recognition, recommendation systems, and self-driving cars.
-You: I want to start with a simple application.
-Bot:  Yes, it is a good idea to start with a simple application.  It is possible to create simple neural networks that can learn and improve their performance over time.  The first step is to train the network by providing it with a large amount of data.  The performance of the network improves over time as more and more data is fed into it.
-You: Can I use DeepSpeed?
-Bot:  Yes, it is a good idea to use DeepSpeed for deep learning.  It provides high performance and efficiency for training neural networks.
-You: Do I need a GPU machine?
-Bot:  Yes, it is a good idea to use a GPU machine for deep learning.  It can speed up training by several orders of magnitude.
+Bot: Yes, it is a type of artificial intelligence that learns from data.  It can process large amounts of data quickly and accurately, and it can develop sophisticated models to analyze data.  Deep learning techniques are being applied to a wide variety of tasks, including image recognition, speech recognition, recommendation systems, and self-driving cars.
+You: I want to try it.
+Bot: Yes, it is a very powerful technology.  It has the potential to revolutionize many fields, including artificial intelligence, data analysis, and machine learning.
+You: Is it hard to learn?
+Bot: Yes, it is a challenging field of study.  It requires a lot of training and practice to develop effective models.  It also requires a high level of computational power and data storage.
+You: Where can I start?
+Bot: Yes, it is a good idea to start with a basic model.  It will help you develop the necessary skills and knowledge to progress to more advanced models..
 ```
