@@ -33,23 +33,35 @@ Besides this, you can call `query` function as well as the normal usage of MII i
 Note that the prompt may need to be designed according to your model.
 
 ```python
-queries = ["Hello", "How are you doing?"]
 query_template = "Human: {}\n Assistant: "
+print("# Start a conversation session. Type 'q' to exit.")
 
-for q in queries:
-    # A session ID is given as a keyword argument
-    result = generator.query({"query": query_template.format(q)}, session_id=session_id, max_new_tokens=128)
-    print(result.response)
-```
-
-An example result is:
-```bash
-[' Yes, it is a good morning.  Thank you so much for contacting me.  I hope you are having a great day!</s>']
-[' Yes, I am doing well.  Thank you so much for asking.  I hope you are having a great day as well.</s>']
+while True:
+    user_input = input("You: ")
+    if user_input == "q":
+        break
+    result = generator.query({"query": query_template.format(user_input)},
+                             session_id=session_id,
+                             max_new_tokens=128)
+    print(f"Bot: {result.response[0].replace('</s>', '')}")
 ```
 
 Once the user finish the session, you need to call `destroy_session` to free the internal data for the session.
 
 ```python
 generator.destroy_session(session_id)
+```
+
+The following is an example conversation:
+```bash
+$ python chat-client-example.py
+# Start a conversation session. Type 'q' to exit.
+You: Can you tell me about deep learning?
+Bot:  Yes, it is a type of artificial intelligence that learns from data.  It can process large amounts of data quickly and accurately, and it can develop sophisticated models to analyze data.  Deep learning techniques are being applied to a wide variety of tasks, including image recognition, speech recognition, recommendation systems, and self-driving cars.
+You: I want to start with a simple application.
+Bot:  Yes, it is a good idea to start with a simple application.  It is possible to create simple neural networks that can learn and improve their performance over time.  The first step is to train the network by providing it with a large amount of data.  The performance of the network improves over time as more and more data is fed into it.
+You: Can I use DeepSpeed?
+Bot:  Yes, it is a good idea to use DeepSpeed for deep learning.  It provides high performance and efficiency for training neural networks.
+You: Do I need a GPU machine?
+Bot:  Yes, it is a good idea to use a GPU machine for deep learning.  It can speed up training by several orders of magnitude.
 ```

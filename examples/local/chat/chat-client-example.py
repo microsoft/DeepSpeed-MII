@@ -12,15 +12,18 @@ session_id = "chat_example_session"
 # You need to call `create_session` before you start a multi-turn conversation session
 generator.create_session(session_id)
 
-queries = ["Hello", "How are you doing?"]
+print("# Start a conversation session. Type 'q' to exit.")
 query_template = "Human: {}\n Assistant: "
+while True:
+    user_input = input("You: ")
+    if user_input == "q":
+        break
 
-for q in queries:
     # A session ID is given as a keyword argument
-    result = generator.query({"query": query_template.format(q)},
+    result = generator.query({"query": query_template.format(user_input)},
                              session_id=session_id,
                              max_new_tokens=128)
-    print(result.response)
+    print(f"Bot: {result.response[0].replace('</s>', '')}")
 
 # You need to destroy the session after finishing the conversation
 generator.destroy_session(session_id)
