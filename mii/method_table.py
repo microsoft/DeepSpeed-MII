@@ -52,6 +52,29 @@ def text_generation_pack_response_to_proto(response, time_taken, model_time_take
                                               model_time_taken=model_time_taken)
 
 
+def text_generation_preprocess_session(session_id, session_context, args, kwargs):
+    if session_id not in session_context:
+        raise ValueError(f"session {session_id} does not exist")
+    if session_context[session_id] is None:
+        session_context[session_id] = ""
+    if len(args[0]) != 1:
+        raise ValueError(f"You can pass only one prompt with a session_id")
+
+    args = ([session_context[session_id] + args[0][0]], )
+    return args, kwargs
+
+
+def text_generation_postprocess_session(session_id,
+                                        session_context,
+                                        args,
+                                        kwargs,
+                                        response):
+    generated_text = response[0][0]["generated_text"]
+    session_context[session_id] = generated_text
+    response[0][0]["generated_text"] = generated_text[len(args[0][0]):]
+    return response
+
+
 def question_answering_unpack_request_from_proto(request):
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     kwargs["question"] = request.question
@@ -126,7 +149,9 @@ GRPC_METHOD_TABLE = {
         "method": "GeneratorReply",
         "pack_request_to_proto": multi_string_request_to_proto,
         "unpack_request_from_proto": proto_request_to_list,
-        "pack_response_to_proto": text_generation_pack_response_to_proto
+        "pack_response_to_proto": text_generation_pack_response_to_proto,
+        "preprocess_session": text_generation_preprocess_session,
+        "postprocess_session": text_generation_postprocess_session
     },
     Tasks.TEXT_CLASSIFICATION: {
         "method": "ClassificationReply",
