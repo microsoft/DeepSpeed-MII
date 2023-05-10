@@ -17,6 +17,7 @@ from mii.constants import GRPC_MAX_MSG_SIZE, TERMINATE_METHOD, LB_MAX_WORKER_THR
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
 from mii.utils import get_task
+from mii.event_loop import get_event_loop
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -136,7 +137,7 @@ class ParallelStubInvoker:
             stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
             self.stubs.append(stub)
 
-        self.asyncio_loop = asyncio.get_event_loop()
+        self.asyncio_loop = get_event_loop()
 
     async def _invoke_async(self, method_name, proto_request):
         responses = []
@@ -156,7 +157,7 @@ class ParallelStubInvoker:
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
     def __init__(self, task_name, replica_configs):
         super().__init__()
-        self.asyncio_loop = asyncio.get_event_loop()
+        self.asyncio_loop = get_event_loop()
 
         self.stubs = [
             ParallelStubInvoker(replica.hostname,
@@ -165,13 +166,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         ]
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
-
-        # Start the asyncio loop in a separate thread
-        def run_asyncio_loop(loop):
-            asyncio.set_event_loop(loop)
-            loop.run_forever()
-
-        threading.Thread(target=run_asyncio_loop, args=(self.asyncio_loop, )).start()
 
     def choose_stub(self, call_count):
         return self.stubs[call_count % len(self.stubs)]
