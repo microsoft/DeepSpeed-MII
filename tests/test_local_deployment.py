@@ -167,7 +167,7 @@ def local_deployment(deployment_config, expected_failure):
             {},
         ),
         (
-            # This tests extra kwargs being passed to the underlying model.generate() method 
+            # This tests extra kwargs being passed to the underlying model.generate() method
             "conversational",
             "microsoft/DialoGPT-small",
             {
