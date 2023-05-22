@@ -104,10 +104,8 @@ def conversational_unpack_request_from_proto(request):
     conv = Conversation(text=request.text,
                         conversation_id=request.conversation_id,
                         past_user_inputs=request.past_user_inputs,
-                        generated_responses=request.generated_responses,
-                        **kwargs)
+                        generated_responses=request.generated_responses)
     args = (conv, )
-    kwargs = {}
     return args, kwargs
 
 
