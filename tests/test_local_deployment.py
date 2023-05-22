@@ -153,7 +153,7 @@ def local_deployment(deployment_config, expected_failure):
 @pytest.mark.local
 @pytest.mark.parametrize("dtype", ['fp16', 'fp32'])
 @pytest.mark.parametrize(
-    "task_name, model_name, query",
+    "task_name, model_name, query, kwargs",
     [
         (
             "conversational",
@@ -164,6 +164,21 @@ def local_deployment(deployment_config, expected_failure):
                 "past_user_inputs": [],
                 "generated_responses": [],
             },
+            {},
+        ),
+        (
+            # This tests extra kwargs being passed to the underlying model.generate() method 
+            "conversational",
+            "microsoft/DialoGPT-small",
+            {
+                "text": "DeepSpeed is the greatest",
+                "conversation_id": 3,
+                "past_user_inputs": [],
+                "generated_responses": [],
+            },
+            {
+                "do_sample": False  # This should have no effect on actual output
+            },
         ),
         (
             "fill-mask",
@@ -171,6 +186,7 @@ def local_deployment(deployment_config, expected_failure):
             {
                 "query": "Hello I'm a [MASK] model."
             },
+            {},
         ),
         (
             "question-answering",
@@ -179,6 +195,7 @@ def local_deployment(deployment_config, expected_failure):
                 "question": "What is the greatest?",
                 "context": "DeepSpeed is the greatest",
             },
+            {},
         ),
         (
             "text-generation",
@@ -186,6 +203,7 @@ def local_deployment(deployment_config, expected_failure):
             {
                 "query": ["DeepSpeed is the greatest"]
             },
+            {},
         ),
         (
             "text-generation",
@@ -194,24 +212,29 @@ def local_deployment(deployment_config, expected_failure):
                 "query": ["DeepSpeed is the greatest",
                           'Seattle is']
             },
+            {},
         ),
-        ("token-classification",
-         "Jean-Baptiste/roberta-large-ner-english",
-         {
-             "query": "My name is jean-baptiste and I live in montreal."
-         }),
+        (
+            "token-classification",
+            "Jean-Baptiste/roberta-large-ner-english",
+            {
+                "query": "My name is jean-baptiste and I live in montreal."
+            },
+            {},
+        ),
         (
             "text-classification",
             "roberta-large-mnli",
             {
                 "query": "DeepSpeed is the greatest"
             },
+            {},
         ),
     ],
 )
-def test_single_GPU(local_deployment, query):
+def test_single_GPU(local_deployment, query, kwargs):
     generator = mii.mii_query_handle(local_deployment.deployment_name)
-    result = generator.query(query)
+    result = generator.query(query, **kwargs)
     assert result
 
 
