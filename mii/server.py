@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from collections import defaultdict
 
 import mii
 from mii.utils import get_num_gpus, logger
@@ -298,11 +299,16 @@ class MIIServer():
         processes = []
         if mii_configs.enable_load_balancing:
 
+            host_gpus = defaultdict(list)
+            for repl_config in lb_config.replica_configs:
+                host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
+
             # Start replica instances
             for i, repl_config in enumerate(lb_config.replica_configs):
                 hostfile = tempfile.NamedTemporaryFile(delete=False)
                 hostfile.write(
-                    f'{repl_config.hostname} slots={mii_configs.replica_num}\n'.encode())
+                    f'{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n'
+                    .encode())
                 processes.append(
                     self._launch_deepspeed(
                         deployment_name,
