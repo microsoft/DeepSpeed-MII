@@ -18,21 +18,13 @@
 
 <!-- toc -->
 
-- [Contents](#contents)
-- [DeepSpeed Model Implementations for Inference](#deepspeed-model-implementations-for-inference)
+- [DeepSpeed MII](#deepspeed-model-implementations-for-inference)
 - [How does MII work?](#how-does-mii-work)
 - [Supported Models and Tasks](#supported-models-and-tasks)
 - [MII-Public and MII-Azure](#mii-public-and-mii-azure)
-- [Getting Started with MII](#getting-started-with-mii)
-  - [Installation](#installation)
-  - [Deploying MII-Public](#deploying-mii-public)
-  - [Deploying with MII-Azure](#deploying-with-mii-azure)
+- [Getting started with MII](#getting-started-with-mii)
 - [Quantifying Latency and Cost Reduction](#quantifying-latency-and-cost-reduction)
-  - [Latency Critical Scenarios](#latency-critical-scenarios)
-  - [Cost Sensitive Scenarios](#cost-sensitive-scenarios)
 - [Community Tutorials](#community-tutorials)
-- [Contributing](#contributing)
-- [Trademarks](#trademarks)
 
 <!-- tocstop -->
 
