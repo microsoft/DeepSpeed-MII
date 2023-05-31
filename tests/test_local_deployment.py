@@ -102,7 +102,7 @@ def mii_configs(
         'port_number': port_number,
         'load_with_sys_mem': load_with_sys_mem,
         'enable_load_balancing': enable_load_balancing,
-        'replica_num': num_gpu * enable_load_balancing,
+        'replica_num': num_gpu * enable_load_balancing // tensor_parallel,
         'hostfile': hostfile,
         'enable_restful_api': enable_restful_api,
         'restful_api_port': restful_api_port,
@@ -217,6 +217,7 @@ def test_single_GPU(local_deployment, query):
 
 @pytest.mark.local
 @pytest.mark.parametrize("enable_load_balancing", [True])
+@pytest.mark.parametrize("tensor_parallel", [1, 2])
 @pytest.mark.parametrize(
     "task_name, model_name, query",
     [
