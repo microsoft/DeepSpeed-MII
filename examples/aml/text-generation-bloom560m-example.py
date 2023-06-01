@@ -11,6 +11,6 @@ mii_configs = {
 }
 mii.deploy(task='text-generation',
            model="bigscience/bloom-560m",
-           deployment_name="bloom560m_deployment",
+           deployment_name="bloom560m-deployment",
            deployment_type=mii.constants.DeploymentType.AML,
            mii_config=mii_configs)
