@@ -10,6 +10,7 @@ from deepspeed.inference.engine import InferenceEngine
 from deepspeed import OnDevice
 from mii.utils import mii_cache_path
 
+from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from transformers.utils.hub import EntryNotFoundError
 from transformers.modeling_utils import get_checkpoint_shard_files
@@ -20,13 +21,12 @@ try:
 except ImportError:
     from huggingface_hub import snapshot_download
     USE_NEW_HF_CACHE = True
-'''
-TODO: The following class and functions are non-optimal (i.e., hacky) solutions
-to getting the Bloom models working and will be refactored in a future PR
-'''
 
 
-class BloomPipeline(object):
+class MetaTensorPipeline(object):
+    """
+    Class for loading LLMs using meta tensors and DeepSpeed
+    """
     def __init__(self, model, tokenizer, checkpoint_dict):
         self.model = model
         self.tokenizer = tokenizer
@@ -58,26 +58,7 @@ class BloomPipeline(object):
         return output_dicts
 
 
-def get_checkpoint_files(model_name, model_path):
-    model_file = os.path.join(model_path, WEIGHTS_NAME)
-    model_sharded_file = os.path.join(model_path, WEIGHTS_INDEX_NAME)
-
-    if os.path.isfile(model_file):
-        resolved_archive_files = [model_file]
-    elif os.path.isfile(model_sharded_file):
-        resolved_archive_files, sharded_metadata = get_checkpoint_shard_files(
-            model_name,
-            model_sharded_file,
-            cache_dir=model_path,
-            revision=None
-        )
-    else:
-        raise FileNotFoundError(f"Could not find checkpoint files for {model_name}")
-
-    return resolved_archive_files
-
-
-def get_checkpoint_files_old(pretrained_model_name_or_path):
+def get_checkpoint_files(pretrained_model_name_or_path):
     cache_dir = None
     is_sharded = False
     revision = None
@@ -125,7 +106,11 @@ def get_checkpoint_files_old(pretrained_model_name_or_path):
 
 def create_checkpoint_dict(model_name, model_path, mii_config):
     if USE_NEW_HF_CACHE:
-        model_path = snapshot_download(model_name, cache_dir=model_path)
+        model_path = snapshot_download(model_name,
+                                       cache_dir=model_path,
+                                       allow_patterns=["*"],
+                                       ignore_patterns=["*.safetensors"],
+                                       revision=None)
     if mii_config.checkpoint_dict:
         mii_config.checkpoint_dict['base_dir'] = model_path
         return mii_config.checkpoint_dict
@@ -136,10 +121,18 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
         return data
     else:
         if USE_NEW_HF_CACHE:
-            checkpoint_files = get_checkpoint_files(model_name, model_path)
+            checkpoint_files = [
+                str(entry).split('/')[-1]
+                for entry in Path(model_path).rglob("*.[bp][it][n]") if entry.is_file()
+            ]
         else:
-            checkpoint_files = get_checkpoint_files_old(model_name)
-        data = {"type": "BLOOM", "checkpoints": checkpoint_files, "version": 1.0}
+            checkpoint_files = get_checkpoint_files(model_name)
+        data = {
+            "type": "DS_MODEL",
+            "checkpoints": checkpoint_files,
+            "version": 1.0,
+            "base_dir": model_path
+        }
         return data
 
 
@@ -153,7 +146,7 @@ def _attempt_load(load_fn, model_name, cache_path, kwargs={}):
 
 
 # TODO: This function is a hack for the Bloom models and will be replaced with a LargeModel provider code path
-def load_hf_llm(model_path, model_name, task_name, mii_config):
+def hf_metatensor_provider(model_path, model_name, task_name, mii_config):
     deepspeed.init_distributed('nccl')
     local_rank = int(os.getenv('LOCAL_RANK', '0'))
     world_size = int(os.getenv('WORLD_SIZE', '1'))
@@ -173,7 +166,7 @@ def load_hf_llm(model_path, model_name, task_name, mii_config):
     model = model.eval()
     checkpoint_dict = create_checkpoint_dict(model_name, model_path, mii_config)
     torch.distributed.barrier()
-    inference_pipeline = BloomPipeline(model=model,
-                                       tokenizer=tokenizer,
-                                       checkpoint_dict=checkpoint_dict)
+    inference_pipeline = MetaTensorPipeline(model=model,
+                                            tokenizer=tokenizer,
+                                            checkpoint_dict=checkpoint_dict)
     return inference_pipeline
