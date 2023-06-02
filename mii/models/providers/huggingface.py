@@ -127,8 +127,11 @@ def create_checkpoint_dict(model_name, model_path, mii_config):
     if USE_NEW_HF_CACHE:
         model_path = snapshot_download(model_name,
                                        cache_dir=model_path,
-                                       allow_patterns=["*"],
-                                       ignore_patterns=["*.safetensors"],
+                                       allow_patterns=[
+                                           "*.bin",
+                                           "*.json",
+                                           "*.pt",
+                                       ],
                                        revision=None)
     if mii_config.checkpoint_dict:
         mii_config.checkpoint_dict['base_dir'] = model_path
