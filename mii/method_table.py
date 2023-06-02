@@ -3,6 +3,7 @@
 
 # DeepSpeed Team
 from transformers import Conversation
+from abc import ABC, abstractmethod
 
 from mii.constants import Tasks
 from mii.grpc_related.proto import modelresponse_pb2
@@ -22,7 +23,7 @@ def single_string_response_to_proto(response, time_taken, model_time_taken):
                                                model_time_taken=model_time_taken)
 
 
-def multi_string_request_to_proto(request_dict, **query_kwargs):
+def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.MultiStringRequest(
         request=request_dict['query'] if isinstance(request_dict['query'],
                                                     list) else [request_dict['query']],
@@ -35,7 +36,7 @@ def proto_request_to_single_input(request):
     return args, kwargs
 
 
-def proto_request_to_list(request):
+def proto_request_to_list(self, request):
     args = ([r for r in request.request], )
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     return args, kwargs
@@ -144,15 +145,91 @@ def text2img_unpack_response_from_proto(response):
     return ImageResponse(response)
 
 
+class TaskMethods(ABC):
+    @property
+    @abstractmethod
+    def method(self):
+        ...
+
+    def pack_request_to_proto(self, request_dict, **query_kwargs):
+        return request_dict, query_kwargs
+
+    def unpack_request_from_proto(self, request):
+        return request
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        return inference_pipeline(*args, **kwargs)
+
+    def pack_response_to_proto(self, response, time_taken, model_time_taken):
+        return response, time_taken, model_time_taken
+
+    def unpack_response_from_proto(self, response):
+        return response
+
+
+class TextGenerationMethods(TaskMethods):
+    session_context = {}
+
+    @property
+    def method(self):
+        return "GeneratorReply"
+
+    pack_request_to_proto = multi_string_request_to_proto
+    unpack_request_from_proto = proto_request_to_list
+
+    def create_session(self, session_id):
+        if session_id in self.session_context:
+            raise ValueError(f"session {session_id} already exists")
+        self.session_context[session_id] = None
+
+    def destroy_session(self, session_id):
+        if session_id not in self.session_context:
+            raise ValueError(f"session {session_id} does not exist")
+        del self.session_context[session_id]
+
+    def preprocess_session(self, session_id, args):
+        if session_id not in self.session_context:
+            raise ValueError(f"session {session_id} does not exist")
+        if self.session_context[session_id] is None:
+            self.session_context[session_id] = ""
+        if len(args[0]) != 1:
+            raise ValueError(f"You can pass only one prompt with a session_id")
+
+        args = ([self.session_context[session_id] + args[0][0]], )
+        return args
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        session_id = kwargs.pop("session_id", None)
+        if session_id:
+            args = self.preprocess_session(session_id, args)
+        response = inference_pipeline(*args, **kwargs)
+
+        if session_id:
+            response = self.postprocess_session(session_id, args, response)
+
+        return response
+
+    def postprocess_session(self, session_id, args, response):
+        generated_text = response[0][0]["generated_text"]
+        self.session_context[session_id] = generated_text
+        response[0][0]["generated_text"] = generated_text[len(args[0][0]):]
+        return response
+
+    def pack_response_to_proto(self, response, time_taken, model_time_taken):
+        text_responses = []
+        for response in response:
+            text = response[0]['generated_text']
+            text_responses.append(text)
+
+        return modelresponse_pb2.MultiStringReply(response=text_responses,
+                                                  time_taken=time_taken,
+                                                  model_time_taken=model_time_taken)
+
+
 GRPC_METHOD_TABLE = {
-    Tasks.TEXT_GENERATION: {
-        "method": "GeneratorReply",
-        "pack_request_to_proto": multi_string_request_to_proto,
-        "unpack_request_from_proto": proto_request_to_list,
-        "pack_response_to_proto": text_generation_pack_response_to_proto,
-        "preprocess_session": text_generation_preprocess_session,
-        "postprocess_session": text_generation_postprocess_session
-    },
+    Tasks.TEXT_GENERATION: TextGenerationMethods(),
+}
+"""
     Tasks.TEXT_CLASSIFICATION: {
         "method": "ClassificationReply",
         "pack_request_to_proto": single_string_request_to_proto,
@@ -191,3 +268,4 @@ GRPC_METHOD_TABLE = {
         "unpack_response_from_proto": text2img_unpack_response_from_proto
     }
 }
+"""

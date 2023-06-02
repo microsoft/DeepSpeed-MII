@@ -66,13 +66,10 @@ class MIIClient():
         if self.task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {self.task}")
 
-        conversions = GRPC_METHOD_TABLE[self.task]
-        proto_request = conversions["pack_request_to_proto"](request_dict,
-                                                             **query_kwargs)
-        proto_response = await getattr(self.stub, conversions["method"])(proto_request)
-        return conversions["unpack_response_from_proto"](
-            proto_response
-        ) if "unpack_response_from_proto" in conversions else proto_response
+        task_methods = GRPC_METHOD_TABLE[self.task]
+        proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
+        proto_response = await getattr(self.stub, task_methods.method)(proto_request)
+        return task_methods.unpack_response_from_proto(proto_response)
 
     def query(self, request_dict, **query_kwargs):
         return self.asyncio_loop.run_until_complete(

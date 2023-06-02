@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 
-from mii.constants import GRPC_MAX_MSG_SIZE, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT
+from mii.constants import GRPC_MAX_MSG_SIZE, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
 from mii.utils import get_task, unpack_proto_query_kwargs
@@ -41,8 +41,7 @@ class ModelResponse(ServiceBase):
     def __init__(self, inference_pipeline):
         super().__init__()
         self.inference_pipeline = inference_pipeline
-        self.method_name_to_task = {m["method"]: t for t, m in GRPC_METHOD_TABLE.items()}
-        self.session_context = {}
+        self.method_name_to_task = {m.method: t for t, m in GRPC_METHOD_TABLE.items()}
         self.lock = threading.Lock()
 
     def _get_model_time(self, model, sum_times=False):
@@ -63,15 +62,15 @@ class ModelResponse(ServiceBase):
         return model_time
 
     def CreateSession(self, request, context):
-        if request.session_id in self.session_context:
-            raise ValueError(f"session {request.session_id} already exists")
-        self.session_context[request.session_id] = None
+        # TODO improve this so the task is not hard-coded
+        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods.create_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def DestroySession(self, request, context):
-        if request.session_id not in self.session_context:
-            raise ValueError(f"session {request.session_id} does not exist")
-        del self.session_context[request.session_id]
+        # TODO improve this so the task is not hard-coded
+        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods.destroy_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def _run_inference(self, method_name, request_proto):
@@ -82,32 +81,20 @@ class ModelResponse(ServiceBase):
         if task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {task}")
 
-        conversions = GRPC_METHOD_TABLE[task]
-        args, kwargs = conversions["unpack_request_from_proto"](request_proto)
-
-        session_id = kwargs.pop("session_id", None)
-        if session_id and "preprocess_session" in GRPC_METHOD_TABLE[task]:
-            args, kwargs = GRPC_METHOD_TABLE[task]["preprocess_session"](session_id, self.session_context, args, kwargs)
+        task_methods = GRPC_METHOD_TABLE[task]
+        args, kwargs = task_methods.unpack_request_from_proto(request_proto)
 
         start = time.time()
         with self.lock:
-            response = self.inference_pipeline(*args, **kwargs)
+            response = task_methods.run_inference(self.inference_pipeline, args, kwargs)
         end = time.time()
-
-        if session_id and "postprocess_session" in GRPC_METHOD_TABLE[task]:
-            response = GRPC_METHOD_TABLE[task]["postprocess_session"](
-                session_id,
-                self.session_context,
-                args,
-                kwargs,
-                response)
 
         model_time = self._get_model_time(self.inference_pipeline.model,
                                           sum_times=True) if hasattr(
                                               self.inference_pipeline,
                                               "model") else -1
 
-        return conversions["pack_response_to_proto"](response, end - start, model_time)
+        return task_methods.pack_response_to_proto(response, end - start, model_time)
 
     def GeneratorReply(self, request, context):
         return self._run_inference("GeneratorReply", request)
