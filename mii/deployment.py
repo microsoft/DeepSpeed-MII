@@ -9,10 +9,10 @@ import mii
 
 from deepspeed.launcher.runner import fetch_hostfile
 
-from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT
+from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT, MODEL_PROVIDER_MAP
 from .utils import logger
 from .models.score import create_score_file
-from .config import ReplicaConfig, LoadBalancerConfig
+from .config import ReplicaConfig, LoadBalancerConfig, get_provider_name
 
 
 def deploy(task,
@@ -140,6 +140,9 @@ def deploy(task,
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
+    elif deployment_type == DeploymentType.NON_PERSISTENT:
+        provider = MODEL_PROVIDER_MAP[get_provider_name(model, task)]
+        mii.persistent_model[deployment_name] = load_models(task, model, model_path, enable_deepspeed, enable_zero, provider, mii_config)
     else:
         raise Exception(f"Unknown deployment type: {deployment_type}")
 
