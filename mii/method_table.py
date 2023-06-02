@@ -225,9 +225,144 @@ class TextGenerationMethods(TaskMethods):
                                                   time_taken=time_taken,
                                                   model_time_taken=model_time_taken)
 
+class TextClassificationMethods(TaskMethods):
+
+   @property
+   def method(self):
+       return "ClassificationReply"
+
+   pack_request_to_proto = single_string_request_to_proto
+   unpack_request_from_proto = proto_request_to_single_input
+   pack_response_to_proto = single_string_response_to_proto
+
+   def run_inference(self, inference_pipeline, args, kwargs):
+        session_id = kwargs.pop("session_id", None)
+        if session_id:
+            args = self.preprocess_session(session_id, args)
+        response = inference_pipeline(*args, **kwargs)
+
+        if session_id:
+            response = self.postprocess_session(session_id, args, response)
+
+        return response
+
+class QuestionAnsweringMethods(TaskMethods):
+
+    @property
+    def method(self):
+        return "QuestionAndAnswerReply"
+
+    pack_request_to_proto = question_answering_pack_request_to_proto
+    unpack_request_from_proto = question_answering_unpack_request_from_proto
+    pack_response_to_proto = single_string_response_to_proto
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        session_id = kwargs.pop("session_id", None)
+        if session_id:
+            args = self.preprocess_session(session_id, args)
+        response = inference_pipeline(*args, **kwargs)
+
+        if session_id:
+            response = self.postprocess_session(session_id, args, response)
+
+        return response
+
+class FillMaskMethods(TaskMethods):
+
+    @property
+    def method(self):
+        return "FillMaskReply"
+
+    pack_request_to_proto = single_string_request_to_proto
+    unpack_request_from_proto = proto_request_to_single_input
+    pack_response_to_proto = single_string_response_to_proto
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        session_id = kwargs.pop("session_id", None)
+        if session_id:
+            args = self.preprocess_session(session_id, args)
+        response = inference_pipeline(*args, **kwargs)
+
+        if session_id:
+            response = self.postprocess_session(session_id, args, response)
+
+        return response
+
+class TokenClassificationMethods(TaskMethods):
+
+    @property
+    def method(self):
+        return "TokenClassificationReply"
+
+    pack_request_to_proto = single_string_request_to_proto
+    unpack_request_from_proto = proto_request_to_single_input
+    pack_response_to_proto = single_string_response_to_proto
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        session_id = kwargs.pop("session_id", None)
+        if session_id:
+            args = self.preprocess_session(session_id, args)
+        response = inference_pipeline(*args, **kwargs)
+
+        if session_id:
+            response = self.postprocess_session(session_id, args, response)
+
+        return response
+
+
+class ConversationalMethods(TaskMethods):
+
+    @property
+    def method(self):
+        return "ConversationalReply"
+
+    pack_request_to_proto = conversational_pack_request_to_proto
+    unpack_request_from_proto = conversational_unpack_request_from_proto
+    pack_response_to_proto = conversational_pack_response_to_proto
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        session_id = kwargs.pop("session_id", None)
+        if session_id:
+            args = self.preprocess_session(session_id, args)
+        response = inference_pipeline(*args, **kwargs)
+
+        if session_id:
+            response = self.postprocess_session(session_id, args, response)
+
+        return response
+
+
+class Text2ImgMethods(TaskMethods):
+
+    @property
+    def method(self):
+        return "Txt2ImgReply"
+
+    pack_request_to_proto = multi_string_request_to_proto
+    unpack_request_from_proto = proto_request_to_list
+    pack_response_to_proto = text2img_pack_resonse_to_proto
+    unpack_response_from_proto = text2img_unpack_response_from_proto
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        session_id = kwargs.pop("session_id", None)
+        if session_id:
+            args = self.preprocess_session(session_id, args)
+        response = inference_pipeline(*args, **kwargs)
+
+        if session_id:
+            response = self.postprocess_session(session_id, args, response)
+
+        return response
+
 
 GRPC_METHOD_TABLE = {
     Tasks.TEXT_GENERATION: TextGenerationMethods(),
+    Tasks.TEXT_CLASSIFICATION: TextClassificationMethods(),
+    Tasks.QUESTION_ANSWERING: QuestionAnsweringMethods(),
+    Tasks.FILL_MASK: FillMaskMethods(),
+    Tasks.TOKEN_CLASSIFICATION: TokenClassificationMethods(),
+    Tasks.CONVERSATIONAL: ConversationalMethods(),
+    Tasks.TEXT2IMG: Text2ImgMethods(),
 }
 """
     Tasks.TEXT_CLASSIFICATION: {
