@@ -65,7 +65,8 @@ def text_generation_preprocess_session(self, session_id, session_context, args, 
     return args, kwargs
 
 
-def text_generation_postprocess_session(self, session_id,
+def text_generation_postprocess_session(self,
+                                        session_id,
                                         session_context,
                                         args,
                                         kwargs,
@@ -225,18 +226,18 @@ class TextGenerationMethods(TaskMethods):
                                                   time_taken=time_taken,
                                                   model_time_taken=model_time_taken)
 
+
 class TextClassificationMethods(TaskMethods):
+    @property
+    def method(self):
+        return "ClassificationReply"
 
-   @property
-   def method(self):
-       return "ClassificationReply"
+    pack_request_to_proto = single_string_request_to_proto
+    unpack_request_from_proto = proto_request_to_single_input
+    pack_response_to_proto = single_string_response_to_proto
 
-   pack_request_to_proto = single_string_request_to_proto
-   unpack_request_from_proto = proto_request_to_single_input
-   pack_response_to_proto = single_string_response_to_proto
 
 class QuestionAnsweringMethods(TaskMethods):
-
     @property
     def method(self):
         return "QuestionAndAnswerReply"
@@ -245,8 +246,8 @@ class QuestionAnsweringMethods(TaskMethods):
     unpack_request_from_proto = question_answering_unpack_request_from_proto
     pack_response_to_proto = single_string_response_to_proto
 
-class FillMaskMethods(TaskMethods):
 
+class FillMaskMethods(TaskMethods):
     @property
     def method(self):
         return "FillMaskReply"
@@ -255,8 +256,8 @@ class FillMaskMethods(TaskMethods):
     unpack_request_from_proto = proto_request_to_single_input
     pack_response_to_proto = single_string_response_to_proto
 
-class TokenClassificationMethods(TaskMethods):
 
+class TokenClassificationMethods(TaskMethods):
     @property
     def method(self):
         return "TokenClassificationReply"
@@ -267,7 +268,6 @@ class TokenClassificationMethods(TaskMethods):
 
 
 class ConversationalMethods(TaskMethods):
-
     @property
     def method(self):
         return "ConversationalReply"
@@ -278,7 +278,6 @@ class ConversationalMethods(TaskMethods):
 
 
 class Text2ImgMethods(TaskMethods):
-
     @property
     def method(self):
         return "Txt2ImgReply"
