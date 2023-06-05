@@ -11,13 +11,13 @@ from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
 from mii.models.utils import ImageResponse
 
 
-def single_string_request_to_proto(request_dict, **query_kwargs):
+def single_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.SingleStringRequest(
         request=request_dict['query'],
         query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
-def single_string_response_to_proto(response, time_taken, model_time_taken):
+def single_string_response_to_proto(self, response, time_taken, model_time_taken):
     return modelresponse_pb2.SingleStringReply(response=f"{response}",
                                                time_taken=time_taken,
                                                model_time_taken=model_time_taken)
@@ -30,7 +30,7 @@ def multi_string_request_to_proto(self, request_dict, **query_kwargs):
         query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
-def proto_request_to_single_input(request):
+def proto_request_to_single_input(self, request):
     args = (request.request, )
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     return args, kwargs
@@ -42,7 +42,7 @@ def proto_request_to_list(self, request):
     return args, kwargs
 
 
-def text_generation_pack_response_to_proto(response, time_taken, model_time_taken):
+def text_generation_pack_response_to_proto(self, response, time_taken, model_time_taken):
     text_responses = []
     for response in response:
         text = response[0]['generated_text']
@@ -53,7 +53,7 @@ def text_generation_pack_response_to_proto(response, time_taken, model_time_take
                                               model_time_taken=model_time_taken)
 
 
-def text_generation_preprocess_session(session_id, session_context, args, kwargs):
+def text_generation_preprocess_session(self, session_id, session_context, args, kwargs):
     if session_id not in session_context:
         raise ValueError(f"session {session_id} does not exist")
     if session_context[session_id] is None:
@@ -65,7 +65,7 @@ def text_generation_preprocess_session(session_id, session_context, args, kwargs
     return args, kwargs
 
 
-def text_generation_postprocess_session(session_id,
+def text_generation_postprocess_session(self, session_id,
                                         session_context,
                                         args,
                                         kwargs,
@@ -76,7 +76,7 @@ def text_generation_postprocess_session(session_id,
     return response
 
 
-def question_answering_unpack_request_from_proto(request):
+def question_answering_unpack_request_from_proto(self, request):
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     kwargs["question"] = request.question
     kwargs["context"] = request.context
@@ -84,13 +84,13 @@ def question_answering_unpack_request_from_proto(request):
     return args, kwargs
 
 
-def question_answering_pack_request_to_proto(request_dict, **query_kwargs):
+def question_answering_pack_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.QARequest(question=request_dict['question'],
                                        context=request_dict['context'],
                                        query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
-def conversational_pack_request_to_proto(request_dict, **query_kwargs):
+def conversational_pack_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.ConversationRequest(
         text=request_dict['text'],
         conversation_id=request_dict['conversation_id']
@@ -100,7 +100,7 @@ def conversational_pack_request_to_proto(request_dict, **query_kwargs):
         query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
-def conversational_unpack_request_from_proto(request):
+def conversational_unpack_request_from_proto(self, request):
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     conv = Conversation(text=request.text,
                         conversation_id=request.conversation_id,
@@ -112,7 +112,7 @@ def conversational_unpack_request_from_proto(request):
     return args, kwargs
 
 
-def conversational_pack_response_to_proto(conv, time_taken, model_time_taken):
+def conversational_pack_response_to_proto(self, conv, time_taken, model_time_taken):
     return modelresponse_pb2.ConversationReply(
         conversation_id=conv.uuid,
         past_user_inputs=conv.past_user_inputs,
@@ -121,7 +121,7 @@ def conversational_pack_response_to_proto(conv, time_taken, model_time_taken):
         model_time_taken=model_time_taken)
 
 
-def text2img_pack_response_to_proto(response, time_taken, model_time_taken):
+def text2img_pack_response_to_proto(self, response, time_taken, model_time_taken):
     images_bytes = []
     nsfw_content_detected = []
     response_count = len(response.images)
@@ -141,7 +141,7 @@ def text2img_pack_response_to_proto(response, time_taken, model_time_taken):
                                         time_taken=time_taken)
 
 
-def text2img_unpack_response_from_proto(response):
+def text2img_unpack_response_from_proto(self, response):
     return ImageResponse(response)
 
 
@@ -235,17 +235,6 @@ class TextClassificationMethods(TaskMethods):
    unpack_request_from_proto = proto_request_to_single_input
    pack_response_to_proto = single_string_response_to_proto
 
-   def run_inference(self, inference_pipeline, args, kwargs):
-        session_id = kwargs.pop("session_id", None)
-        if session_id:
-            args = self.preprocess_session(session_id, args)
-        response = inference_pipeline(*args, **kwargs)
-
-        if session_id:
-            response = self.postprocess_session(session_id, args, response)
-
-        return response
-
 class QuestionAnsweringMethods(TaskMethods):
 
     @property
@@ -255,17 +244,6 @@ class QuestionAnsweringMethods(TaskMethods):
     pack_request_to_proto = question_answering_pack_request_to_proto
     unpack_request_from_proto = question_answering_unpack_request_from_proto
     pack_response_to_proto = single_string_response_to_proto
-
-    def run_inference(self, inference_pipeline, args, kwargs):
-        session_id = kwargs.pop("session_id", None)
-        if session_id:
-            args = self.preprocess_session(session_id, args)
-        response = inference_pipeline(*args, **kwargs)
-
-        if session_id:
-            response = self.postprocess_session(session_id, args, response)
-
-        return response
 
 class FillMaskMethods(TaskMethods):
 
@@ -277,17 +255,6 @@ class FillMaskMethods(TaskMethods):
     unpack_request_from_proto = proto_request_to_single_input
     pack_response_to_proto = single_string_response_to_proto
 
-    def run_inference(self, inference_pipeline, args, kwargs):
-        session_id = kwargs.pop("session_id", None)
-        if session_id:
-            args = self.preprocess_session(session_id, args)
-        response = inference_pipeline(*args, **kwargs)
-
-        if session_id:
-            response = self.postprocess_session(session_id, args, response)
-
-        return response
-
 class TokenClassificationMethods(TaskMethods):
 
     @property
@@ -297,17 +264,6 @@ class TokenClassificationMethods(TaskMethods):
     pack_request_to_proto = single_string_request_to_proto
     unpack_request_from_proto = proto_request_to_single_input
     pack_response_to_proto = single_string_response_to_proto
-
-    def run_inference(self, inference_pipeline, args, kwargs):
-        session_id = kwargs.pop("session_id", None)
-        if session_id:
-            args = self.preprocess_session(session_id, args)
-        response = inference_pipeline(*args, **kwargs)
-
-        if session_id:
-            response = self.postprocess_session(session_id, args, response)
-
-        return response
 
 
 class ConversationalMethods(TaskMethods):
@@ -320,17 +276,6 @@ class ConversationalMethods(TaskMethods):
     unpack_request_from_proto = conversational_unpack_request_from_proto
     pack_response_to_proto = conversational_pack_response_to_proto
 
-    def run_inference(self, inference_pipeline, args, kwargs):
-        session_id = kwargs.pop("session_id", None)
-        if session_id:
-            args = self.preprocess_session(session_id, args)
-        response = inference_pipeline(*args, **kwargs)
-
-        if session_id:
-            response = self.postprocess_session(session_id, args, response)
-
-        return response
-
 
 class Text2ImgMethods(TaskMethods):
 
@@ -340,19 +285,8 @@ class Text2ImgMethods(TaskMethods):
 
     pack_request_to_proto = multi_string_request_to_proto
     unpack_request_from_proto = proto_request_to_list
-    pack_response_to_proto = text2img_pack_resonse_to_proto
+    pack_response_to_proto = text2img_pack_response_to_proto
     unpack_response_from_proto = text2img_unpack_response_from_proto
-
-    def run_inference(self, inference_pipeline, args, kwargs):
-        session_id = kwargs.pop("session_id", None)
-        if session_id:
-            args = self.preprocess_session(session_id, args)
-        response = inference_pipeline(*args, **kwargs)
-
-        if session_id:
-            response = self.postprocess_session(session_id, args, response)
-
-        return response
 
 
 GRPC_METHOD_TABLE = {
