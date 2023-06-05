@@ -62,13 +62,8 @@ class ModelResponse(ServiceBase):
         return model_time
 
     def CreateSession(self, request, context):
-        # TODO improve this so the task is not hard-coded
-        task = self.inference_pipeline.task
-        if task != "text-generation":
-            raise Exception("Incorrect task: Cannot create session")
-        else:
-            task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
-            task_methods.create_session(request.session_id)
+        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods.create_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def DestroySession(self, request, context):
