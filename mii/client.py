@@ -8,7 +8,7 @@ import requests
 import mii
 from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.constants import GRPC_MAX_MSG_SIZE
+from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 
 
@@ -88,6 +88,7 @@ class MIIClient():
             modelresponse_pb2.SessionID(session_id=session_id))
 
     def create_session(self, session_id):
+        assert self.task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
         return self.asyncio_loop.run_until_complete(
             self.create_session_async(session_id))
 
@@ -96,6 +97,7 @@ class MIIClient():
                                        )
 
     def destroy_session(self, session_id):
+        assert self.task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
 
