@@ -42,110 +42,6 @@ def proto_request_to_list(self, request):
     return args, kwargs
 
 
-def text_generation_pack_response_to_proto(self, response, time_taken, model_time_taken):
-    text_responses = []
-    for response in response:
-        text = response[0]['generated_text']
-        text_responses.append(text)
-
-    return modelresponse_pb2.MultiStringReply(response=text_responses,
-                                              time_taken=time_taken,
-                                              model_time_taken=model_time_taken)
-
-
-def text_generation_preprocess_session(self, session_id, session_context, args, kwargs):
-    if session_id not in session_context:
-        raise ValueError(f"session {session_id} does not exist")
-    if session_context[session_id] is None:
-        session_context[session_id] = ""
-    if len(args[0]) != 1:
-        raise ValueError(f"You can pass only one prompt with a session_id")
-
-    args = ([session_context[session_id] + args[0][0]], )
-    return args, kwargs
-
-
-def text_generation_postprocess_session(self,
-                                        session_id,
-                                        session_context,
-                                        args,
-                                        kwargs,
-                                        response):
-    generated_text = response[0][0]["generated_text"]
-    session_context[session_id] = generated_text
-    response[0][0]["generated_text"] = generated_text[len(args[0][0]):]
-    return response
-
-
-def question_answering_unpack_request_from_proto(self, request):
-    kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-    kwargs["question"] = request.question
-    kwargs["context"] = request.context
-    args = ()
-    return args, kwargs
-
-
-def question_answering_pack_request_to_proto(self, request_dict, **query_kwargs):
-    return modelresponse_pb2.QARequest(question=request_dict['question'],
-                                       context=request_dict['context'],
-                                       query_kwargs=kwarg_dict_to_proto(query_kwargs))
-
-
-def conversational_pack_request_to_proto(self, request_dict, **query_kwargs):
-    return modelresponse_pb2.ConversationRequest(
-        text=request_dict['text'],
-        conversation_id=request_dict['conversation_id']
-        if 'conversation_id' in request_dict else None,
-        past_user_inputs=request_dict['past_user_inputs'],
-        generated_responses=request_dict['generated_responses'],
-        query_kwargs=kwarg_dict_to_proto(query_kwargs))
-
-
-def conversational_unpack_request_from_proto(self, request):
-    kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-    conv = Conversation(text=request.text,
-                        conversation_id=request.conversation_id,
-                        past_user_inputs=request.past_user_inputs,
-                        generated_responses=request.generated_responses,
-                        **kwargs)
-    args = (conv, )
-    kwargs = {}
-    return args, kwargs
-
-
-def conversational_pack_response_to_proto(self, conv, time_taken, model_time_taken):
-    return modelresponse_pb2.ConversationReply(
-        conversation_id=conv.uuid,
-        past_user_inputs=conv.past_user_inputs,
-        generated_responses=conv.generated_responses,
-        time_taken=time_taken,
-        model_time_taken=model_time_taken)
-
-
-def text2img_pack_response_to_proto(self, response, time_taken, model_time_taken):
-    images_bytes = []
-    nsfw_content_detected = []
-    response_count = len(response.images)
-    for i in range(response_count):
-        img = response.images[i]
-        img_bytes = img.tobytes()
-        images_bytes.append(img_bytes)
-        nsfw_content_detected.append(response.nsfw_content_detected[i])
-    img_mode = response.images[0].mode
-    img_size_w, img_size_h = response.images[0].size
-
-    return modelresponse_pb2.ImageReply(images=images_bytes,
-                                        nsfw_content_detected=nsfw_content_detected,
-                                        mode=img_mode,
-                                        size_w=img_size_w,
-                                        size_h=img_size_h,
-                                        time_taken=time_taken)
-
-
-def text2img_unpack_response_from_proto(self, response):
-    return ImageResponse(response)
-
-
 class TaskMethods(ABC):
     @property
     @abstractmethod
@@ -242,9 +138,20 @@ class QuestionAnsweringMethods(TaskMethods):
     def method(self):
         return "QuestionAndAnswerReply"
 
-    pack_request_to_proto = question_answering_pack_request_to_proto
-    unpack_request_from_proto = question_answering_unpack_request_from_proto
     pack_response_to_proto = single_string_response_to_proto
+
+    def pack_request_to_proto(self, request_dict, **query_kwargs):
+        return modelresponse_pb2.QARequest(
+            question=request_dict['question'],
+            context=request_dict['context'],
+            query_kwargs=kwarg_dict_to_proto(query_kwargs))
+
+    def unpack_request_from_proto(self, request):
+        kwargs = unpack_proto_query_kwargs(request.query_kwargs)
+        kwargs["question"] = request.question
+        kwargs["context"] = request.context
+        args = ()
+        return args, kwargs
 
 
 class FillMaskMethods(TaskMethods):
@@ -272,9 +179,33 @@ class ConversationalMethods(TaskMethods):
     def method(self):
         return "ConversationalReply"
 
-    pack_request_to_proto = conversational_pack_request_to_proto
-    unpack_request_from_proto = conversational_unpack_request_from_proto
-    pack_response_to_proto = conversational_pack_response_to_proto
+    def pack_response_to_proto(self, conv, time_taken, model_time_taken):
+        return modelresponse_pb2.ConversationReply(
+            conversation_id=conv.uuid,
+            past_user_inputs=conv.past_user_inputs,
+            generated_responses=conv.generated_responses,
+            time_taken=time_taken,
+            model_time_taken=model_time_taken)
+
+    def unpack_request_from_proto(self, request):
+        kwargs = unpack_proto_query_kwargs(request.query_kwargs)
+        conv = Conversation(text=request.text,
+                            conversation_id=request.conversation_id,
+                            past_user_inputs=request.past_user_inputs,
+                            generated_responses=request.generated_responses,
+                            **kwargs)
+        args = (conv, )
+        kwargs = {}
+        return args, kwargs
+
+    def pack_request_to_proto(self, request_dict, **query_kwargs):
+        return modelresponse_pb2.ConversationRequest(
+            text=request_dict['text'],
+            conversation_id=request_dict['conversation_id']
+            if 'conversation_id' in request_dict else None,
+            past_user_inputs=request_dict['past_user_inputs'],
+            generated_responses=request_dict['generated_responses'],
+            query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
 class Text2ImgMethods(TaskMethods):
@@ -284,8 +215,28 @@ class Text2ImgMethods(TaskMethods):
 
     pack_request_to_proto = multi_string_request_to_proto
     unpack_request_from_proto = proto_request_to_list
-    pack_response_to_proto = text2img_pack_response_to_proto
-    unpack_response_from_proto = text2img_unpack_response_from_proto
+
+    def pack_response_to_proto(self, response, time_taken, model_time_taken):
+        images_bytes = []
+        nsfw_content_detected = []
+        response_count = len(response.images)
+        for i in range(response_count):
+            img = response.images[i]
+            img_bytes = img.tobytes()
+            images_bytes.append(img_bytes)
+            nsfw_content_detected.append(response.nsfw_content_detected[i])
+        img_mode = response.images[0].mode
+        img_size_w, img_size_h = response.images[0].size
+
+        return modelresponse_pb2.ImageReply(images=images_bytes,
+                                            nsfw_content_detected=nsfw_content_detected,
+                                            mode=img_mode,
+                                            size_w=img_size_w,
+                                            size_h=img_size_h,
+                                            time_taken=time_taken)
+
+    def unpack_response_from_proto(self, response):
+        return ImageResponse(response)
 
 
 GRPC_METHOD_TABLE = {
@@ -297,43 +248,3 @@ GRPC_METHOD_TABLE = {
     Tasks.CONVERSATIONAL: ConversationalMethods(),
     Tasks.TEXT2IMG: Text2ImgMethods(),
 }
-"""
-    Tasks.TEXT_CLASSIFICATION: {
-        "method": "ClassificationReply",
-        "pack_request_to_proto": single_string_request_to_proto,
-        "unpack_request_from_proto": proto_request_to_single_input,
-        "pack_response_to_proto": single_string_response_to_proto
-    },
-    Tasks.QUESTION_ANSWERING: {
-        "method": "QuestionAndAnswerReply",
-        "pack_request_to_proto": question_answering_pack_request_to_proto,
-        "unpack_request_from_proto": question_answering_unpack_request_from_proto,
-        "pack_response_to_proto": single_string_response_to_proto
-    },
-    Tasks.FILL_MASK: {
-        "method": "FillMaskReply",
-        "pack_request_to_proto": single_string_request_to_proto,
-        "unpack_request_from_proto": proto_request_to_single_input,
-        "pack_response_to_proto": single_string_response_to_proto
-    },
-    Tasks.TOKEN_CLASSIFICATION: {
-        "method": "TokenClassificationReply",
-        "pack_request_to_proto": single_string_request_to_proto,
-        "unpack_request_from_proto": proto_request_to_single_input,
-        "pack_response_to_proto": single_string_response_to_proto
-    },
-    Tasks.CONVERSATIONAL: {
-        "method": "ConversationalReply",
-        "pack_request_to_proto": conversational_pack_request_to_proto,
-        "unpack_request_from_proto": conversational_unpack_request_from_proto,
-        "pack_response_to_proto": conversational_pack_response_to_proto
-    },
-    Tasks.TEXT2IMG: {
-        "method": "Txt2ImgReply",
-        "pack_request_to_proto": multi_string_request_to_proto,
-        "unpack_request_from_proto": proto_request_to_list,
-        "pack_response_to_proto": text2img_pack_response_to_proto,
-        "unpack_response_from_proto": text2img_unpack_response_from_proto
-    }
-}
-"""
