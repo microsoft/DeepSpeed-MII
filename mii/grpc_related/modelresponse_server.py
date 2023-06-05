@@ -67,13 +67,8 @@ class ModelResponse(ServiceBase):
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def DestroySession(self, request, context):
-        # TODO improve this so the task is not hard-coded
-        task = self.inference_pipeline.task
-        if task != "text-generation":
-            raise Exception("Incorrect task: Cannot destroy session")
-        else:
-            task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
-            task_methods.destroy_session(request.session_id)
+        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods.destroy_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def _run_inference(self, method_name, request_proto):
