@@ -5,7 +5,7 @@
 import mii
 
 # gpt2
-name = "microsoft/DialoGPT-medium"
+name = "microsoft/DialoGPT-large"
 
 print(f"Querying {name}...")
 
