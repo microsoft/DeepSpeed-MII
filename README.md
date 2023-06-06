@@ -221,7 +221,8 @@ To use MII on AML resources, you must have the Azure-CLI installed with an activ
 1. Install Azure-CLI. Follow the official [installation instructions](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli#install).
 2. Run `az login` and follow the instructions to login to your Azure account. This account should be linked to the resources you plan to deploy on.
 3. Set the default subscription with `az account set --subscription <YOUR-SUBSCRIPTION-ID>`. You can find your subscription ID in the "overview" tab on your resource group page from the Azure web portal.
-4. Install the AML plugin for Azure-CLI with `az extension add --name ml`
+4. Set the default resource group and workspace name with `az config defaults.group <YOUR-RESOURCE-GROUP> defaults.workspace <YOUR-WORKSPACE>`
+5. Install the AML plugin for Azure-CLI with `az extension add --name ml`
 
 **Deployment**
 ```python
