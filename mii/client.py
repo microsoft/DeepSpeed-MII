@@ -7,7 +7,7 @@ import grpc
 import requests
 import mii
 from mii.utils import get_task
-from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc, ModelResponse
+from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 
@@ -34,13 +34,13 @@ def mii_query_handle(deployment_name):
     Returns:
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
-    if len(mii.persistent_model) != 0:
-        assert deployment_name in mii.persistent_model, f"Could not find '{deployment_name}'"
-        inference_pipeline, task = mii.persistent_model[deployment_name]
+    if len(mii.non_persistent_model) != 0:
+        assert deployment_name in mii.non_persistent_model, f"Could not find '{deployment_name}'"
+        inference_pipeline, task = mii.non_persistent_model[deployment_name]
         assert task is not None, "The task name should be set before calling init"
-        return MIIPersistentClient(task, inference_pipeline)
+        return MIINonPersistentClient(task, inference_pipeline, deployment_name)
     
-    else
+    else:
         task_name, mii_configs = _get_deployment_info(deployment_name)
         if mii_configs.enable_load_balancing:
             return MIIClient(task_name, "localhost", mii_configs.port_number)
@@ -162,16 +162,19 @@ class MIITensorParallelClient():
         for client in self.clients:
             client.destroy_session(session_id)
 
-class MIIPersistentClient():
+class MIINonPersistentClient():
     def __init__(self, task, inference_pipeline, deployment_name):
         self.inference_pipeline = inference_pipeline
-        self.persistent_model = ModelResponse(inference_pipeline)
         self.task = task
         self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
         task_methods = GRPC_METHOD_TABLE[self.task]
-        return task_methods.run_inference(request_dict, **query_kwargs)
+        if self.task == Tasks.QUESTION_ANSWERING:
+            return task_methods.run_inference(self.inference_pipeline, request_dict, **query_kwargs)
+     
+        query = request_dict['query']
+        return task_methods.run_inference(self.inference_pipeline, query, **query_kwargs)
 
     def terminate(self):
         print("Terminating ...")
