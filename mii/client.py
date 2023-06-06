@@ -35,15 +35,20 @@ def mii_query_handle(deployment_name):
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
     if len(mii.persistent_model) != 0:
-        
-    task_name, mii_configs = _get_deployment_info(deployment_name)
-    if mii_configs.enable_load_balancing:
-        return MIIClient(task_name, "localhost", mii_configs.port_number)
-    else:
-        return MIITensorParallelClient(
-            task_name,
-            "localhost",
-            [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
+        assert deployment_name in mii.persistent_model, f"Could not find '{deployment_name}'"
+        inference_pipeline, task = mii.persistent_model[deployment_name]
+        assert task is not None, "The task name should be set before calling init"
+        return MIIPersistentClient(task, inference_pipeline)
+    
+    else
+        task_name, mii_configs = _get_deployment_info(deployment_name)
+        if mii_configs.enable_load_balancing:
+            return MIIClient(task_name, "localhost", mii_configs.port_number)
+        else:
+            return MIITensorParallelClient(
+                task_name,
+                "localhost",
+                [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
 
 
 def create_channel(host, port):
@@ -158,34 +163,19 @@ class MIITensorParallelClient():
             client.destroy_session(session_id)
 
 class MIIPersistentClient():
-    def __init__(self, task_name, inference_pipeline):
+    def __init__(self, task, inference_pipeline, deployment_name):
         self.inference_pipeline = inference_pipeline
         self.persistent_model = ModelResponse(inference_pipeline)
-        self.task = self.persistent_model.task_name
-
-    def _request_async_response(self, request_dict, **query_kwargs):
-        if self.task not in GRPC_METHOD_TABLE:
-            raise ValueError(f"unknown task: {self.task}")
-
-        conversions = GRPC_METHOD_TABLE[self.task]
-        proto_request = conversions["pack_request_to_proto"](request_dict,
-                                                             **query_kwargs)
-        return self.persistent_model._run_inference(GRPC_METHOD_TABLE[self.task]["method"], proto_request)
-        
-        """proto_response = await getattr(self.stub, conversions["method"])(proto_request)
-        return conversions["unpack_response_from_proto"](
-            proto_response
-        ) if "unpack_response_from_proto" in conversions else proto_response
-        """
+        self.task = task
+        self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
-        return self.asyncio_loop.run_until_complete(
-            self._request_async_response(request_dict,
-                                         **query_kwargs))
+        task_methods = GRPC_METHOD_TABLE[self.task]
+        return task_methods.run_inference(request_dict, **query_kwargs)
 
     def terminate(self):
         print("Terminating ...")
-        self.persistent_model.Terminate()
+        del mii.persistent_model[self.deployment_name]
 
 
 
