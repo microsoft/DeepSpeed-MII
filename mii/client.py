@@ -8,7 +8,7 @@ import requests
 import mii
 from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.constants import GRPC_MAX_MSG_SIZE
+from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 
 
@@ -66,13 +66,10 @@ class MIIClient():
         if self.task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {self.task}")
 
-        conversions = GRPC_METHOD_TABLE[self.task]
-        proto_request = conversions["pack_request_to_proto"](request_dict,
-                                                             **query_kwargs)
-        proto_response = await getattr(self.stub, conversions["method"])(proto_request)
-        return conversions["unpack_response_from_proto"](
-            proto_response
-        ) if "unpack_response_from_proto" in conversions else proto_response
+        task_methods = GRPC_METHOD_TABLE[self.task]
+        proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
+        proto_response = await getattr(self.stub, task_methods.method)(proto_request)
+        return task_methods.unpack_response_from_proto(proto_response)
 
     def query(self, request_dict, **query_kwargs):
         return self.asyncio_loop.run_until_complete(
@@ -91,6 +88,7 @@ class MIIClient():
             modelresponse_pb2.SessionID(session_id=session_id))
 
     def create_session(self, session_id):
+        assert self.task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
         return self.asyncio_loop.run_until_complete(
             self.create_session_async(session_id))
 
@@ -99,6 +97,7 @@ class MIIClient():
                                        )
 
     def destroy_session(self, session_id):
+        assert self.task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
 
