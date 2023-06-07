@@ -8,7 +8,7 @@ import torch
 from types import SimpleNamespace
 import json
 import requests
-from utils import validate_config, dtype, tensor_parallel, load_with_sys_mem, enable_deepspeed, enable_zero, ds_config
+from .utils import validate_config, dtype, tensor_parallel, load_with_sys_mem, enable_deepspeed, enable_zero, ds_config
 import mii
 
 
