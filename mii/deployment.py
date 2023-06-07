@@ -10,8 +10,9 @@ import mii
 from deepspeed.launcher.runner import fetch_hostfile
 
 from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT, MODEL_PROVIDER_MAP
-from .utils import logger, get_task, get_provider_name
+from .utils import logger, get_task, get_task_name, get_provider_name
 from .models.score import create_score_file
+from .models import load_models
 from .config import ReplicaConfig, LoadBalancerConfig
 
 
@@ -125,16 +126,17 @@ def deploy(task,
         lb_config = LoadBalancerConfig(port=mii_config.port_number,
                                        replica_configs=replica_configs)
 
-    create_score_file(deployment_name=deployment_name,
-                      deployment_type=deployment_type,
-                      task=task,
-                      model_name=model,
-                      ds_optimize=enable_deepspeed,
-                      ds_zero=enable_zero,
-                      ds_config=ds_config,
-                      mii_config=mii_config,
-                      model_path=model_path,
-                      lb_config=lb_config)
+    if deployment_type != DeploymentType.NON_PERSISTENT:
+        create_score_file(deployment_name=deployment_name,
+                          deployment_type=deployment_type,
+                          task=task,
+                          model_name=model,
+                          ds_optimize=enable_deepspeed,
+                          ds_zero=enable_zero,
+                          ds_config=ds_config,
+                          mii_config=mii_config,
+                          model_path=model_path,
+                          lb_config=lb_config)
 
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
@@ -143,7 +145,15 @@ def deploy(task,
     elif deployment_type == DeploymentType.NON_PERSISTENT:
         assert not mii_config.enable_load_balancing, "Cannot use Load Balancing with Non persistent deployment"
         provider = MODEL_PROVIDER_MAP[get_provider_name(model, task)]
-        mii.non_persistent_models[deployment_name] = (load_models(task, model, model_path, enable_deepspeed, enable_zero, provider, mii_config), task)
+        mii.non_persistent_models[deployment_name] = (load_models(
+            get_task_name(task),
+            model,
+            model_path,
+            enable_deepspeed,
+            enable_zero,
+            provider,
+            mii_config),
+                                                      task)
     else:
         raise Exception(f"Unknown deployment type: {deployment_type}")
 

@@ -208,6 +208,7 @@ def get_num_gpus(mii_configs):
     ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
     return num_gpus
 
+
 def get_provider_name(model_name, task):
     if model_name == "gpt-neox":
         provider = mii.constants.MODEL_PROVIDER_NAME_EA
@@ -218,6 +219,7 @@ def get_provider_name(model_name, task):
     else:
         provider = mii.constants.MODEL_PROVIDER_NAME_HF
     return provider
+
 
 log_levels = {
     "debug": logging.DEBUG,

@@ -11,6 +11,7 @@ class DeploymentType(enum.Enum):
     AML = 2
     NON_PERSISTENT = 3
 
+
 MII_CONFIGS_KEY = 'mii_configs'
 
 

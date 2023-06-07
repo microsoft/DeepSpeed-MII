@@ -12,6 +12,7 @@ from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 from transformers import Conversation
 
+
 def _get_deployment_info(deployment_name):
     configs = mii.utils.import_score_file(deployment_name).configs
     task = configs[mii.constants.TASK_NAME_KEY]
@@ -38,7 +39,7 @@ def mii_query_handle(deployment_name):
         assert deployment_name in mii.non_persistent_models, f"Could not find '{deployment_name}'"
         inference_pipeline, task = mii.non_persistent_models[deployment_name]
         return MIINonPersistentClient(task, deployment_name)
-    
+
     else:
         task_name, mii_configs = _get_deployment_info(deployment_name)
         if mii_configs.enable_load_balancing:
@@ -47,7 +48,10 @@ def mii_query_handle(deployment_name):
             return MIITensorParallelClient(
                 task_name,
                 "localhost",
-                [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
+                [
+                    mii_configs.port_number + i
+                    for i in range(mii_configs.tensor_parallel)
+                ])
 
 
 def create_channel(host, port):
@@ -161,6 +165,7 @@ class MIITensorParallelClient():
         for client in self.clients:
             client.destroy_session(session_id)
 
+
 class MIINonPersistentClient():
     def __init__(self, task, deployment_name):
         self.task = task
@@ -168,34 +173,35 @@ class MIINonPersistentClient():
 
     def query(self, request_dict, **query_kwargs):
         task_methods = GRPC_METHOD_TABLE[self.task]
-        inference_pipeline = mii.non_persistent_models[deployment_name][0]
-        
+        inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
+
         if self.task == Tasks.QUESTION_ANSWERING:
-            return task_methods.run_inference(inference_pipeline, request_dict, **query_kwargs)
-        
-        elif self.task == Tasks.Conversational:
+            return task_methods.run_inference(inference_pipeline,
+                                              request_dict,
+                                              **query_kwargs)
+
+        elif self.task == Tasks.CONVERSATIONAL and 'text' in request_dict and 'conversation_id' in request_dict and 'past_user_inputs' in request_dict and 'generated_responses' in request_dict:
             kwargs = unpack_proto_query_kwargs(query_kwargs)
             text = request_dict['text']
             conversation_id = request_dict['conversation_id']
             past_user_inputs = request_dict['past_user_inputs']
             generated_responses = request_dict['generated_responses']
             conv = Conversation(text=text,
-                                conversation_id = conversation_id,
-                                past_user_inputs = past_user_inputs,
-                                generated_responses = generated_responses,
+                                conversation_id=conversation_id,
+                                past_user_inputs=past_user_inputs,
+                                generated_responses=generated_responses,
                                 **kwargs)
-            args = (Conv, )
+            args = (conv, )
             kwargs = {}
             return task_methods.run_inference(inference_pipeline, args, kwargs)
-        
+
         else:
             query = request_dict['query']
             return task_methods.run_inference(inference_pipeline, query, **query_kwargs)
 
     def terminate(self):
         print("Terminating ...")
-        del mii.persistent_models[self.deployment_name]
-
+        #del mii.non_persistent_models[self.deployment_name]
 
 
 def terminate_restful_gateway(deployment_name):
