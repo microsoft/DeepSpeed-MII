@@ -6,11 +6,11 @@ import asyncio
 import grpc
 import requests
 import mii
-from mii.utils import get_task
+from mii.utils import get_task, unpack_proto_query_kwargs
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
-
+from transformers import Conversation
 
 def _get_deployment_info(deployment_name):
     configs = mii.utils.import_score_file(deployment_name).configs
@@ -34,11 +34,10 @@ def mii_query_handle(deployment_name):
     Returns:
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
-    if len(mii.non_persistent_model) != 0:
-        assert deployment_name in mii.non_persistent_model, f"Could not find '{deployment_name}'"
-        inference_pipeline, task = mii.non_persistent_model[deployment_name]
-        assert task is not None, "The task name should be set before calling init"
-        return MIINonPersistentClient(task, inference_pipeline, deployment_name)
+    if deployment_name in mii.non_persistent_models:
+        assert deployment_name in mii.non_persistent_models, f"Could not find '{deployment_name}'"
+        inference_pipeline, task = mii.non_persistent_models[deployment_name]
+        return MIINonPersistentClient(task, deployment_name)
     
     else:
         task_name, mii_configs = _get_deployment_info(deployment_name)
@@ -163,22 +162,39 @@ class MIITensorParallelClient():
             client.destroy_session(session_id)
 
 class MIINonPersistentClient():
-    def __init__(self, task, inference_pipeline, deployment_name):
-        self.inference_pipeline = inference_pipeline
+    def __init__(self, task, deployment_name):
         self.task = task
         self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
         task_methods = GRPC_METHOD_TABLE[self.task]
+        inference_pipeline = mii.non_persistent_models[deployment_name][0]
+        
         if self.task == Tasks.QUESTION_ANSWERING:
-            return task_methods.run_inference(self.inference_pipeline, request_dict, **query_kwargs)
-     
-        query = request_dict['query']
-        return task_methods.run_inference(self.inference_pipeline, query, **query_kwargs)
+            return task_methods.run_inference(inference_pipeline, request_dict, **query_kwargs)
+        
+        elif self.task == Tasks.Conversational:
+            kwargs = unpack_proto_query_kwargs(query_kwargs)
+            text = request_dict['text']
+            conversation_id = request_dict['conversation_id']
+            past_user_inputs = request_dict['past_user_inputs']
+            generated_responses = request_dict['generated_responses']
+            conv = Conversation(text=text,
+                                conversation_id = conversation_id,
+                                past_user_inputs = past_user_inputs,
+                                generated_responses = generated_responses,
+                                **kwargs)
+            args = (Conv, )
+            kwargs = {}
+            return task_methods.run_inference(inference_pipeline, args, kwargs)
+        
+        else:
+            query = request_dict['query']
+            return task_methods.run_inference(inference_pipeline, query, **query_kwargs)
 
     def terminate(self):
         print("Terminating ...")
-        del mii.persistent_model[self.deployment_name]
+        del mii.persistent_models[self.deployment_name]
 
 
 

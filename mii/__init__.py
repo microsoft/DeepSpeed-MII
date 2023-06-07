@@ -14,7 +14,7 @@ from .config import MIIConfig, LoadBalancerConfig
 from .grpc_related.proto import modelresponse_pb2_grpc
 
 __version__ = "0.0.0"
-non_persistent_model = {}
+non_persistent_models = {}
 try:
     from .version import __version__
 except ImportError:

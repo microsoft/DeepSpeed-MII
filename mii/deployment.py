@@ -143,7 +143,7 @@ def deploy(task,
     elif deployment_type == DeploymentType.NON_PERSISTENT:
         assert not mii_config.enable_load_balancing, "Cannot use Load Balancing with Non persistent deployment"
         provider = MODEL_PROVIDER_MAP[get_provider_name(model, task)]
-        mii.non_persistent_model[deployment_name] = (load_models(task, model, model_path, enable_deepspeed, enable_zero, provider, mii_config), get_task(task))
+        mii.non_persistent_models[deployment_name] = (load_models(task, model, model_path, enable_deepspeed, enable_zero, provider, mii_config), task)
     else:
         raise Exception(f"Unknown deployment type: {deployment_type}")
 
