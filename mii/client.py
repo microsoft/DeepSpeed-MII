@@ -176,11 +176,15 @@ class MIINonPersistentClient():
         inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
 
         if self.task == Tasks.QUESTION_ANSWERING:
+            if 'question' not in request_dict or 'context' not in request_dict:
+                return
+
             return task_methods.run_inference(inference_pipeline,
                                               request_dict,
                                               query_kwargs)
 
         elif self.task == Tasks.CONVERSATIONAL and 'text' in request_dict and 'conversation_id' in request_dict and 'past_user_inputs' in request_dict and 'generated_responses' in request_dict:
+            kwargs = {}
             text = request_dict['text']
             conversation_id = request_dict['conversation_id']
             past_user_inputs = request_dict['past_user_inputs']
@@ -191,7 +195,6 @@ class MIINonPersistentClient():
                                 generated_responses=generated_responses,
                                 **kwargs)
             args = (conv, )
-            kwargs = {}
             return task_methods.run_inference(inference_pipeline, args, kwargs)
 
         else:
