@@ -6,7 +6,7 @@ import asyncio
 import grpc
 import requests
 import mii
-from mii.utils import get_task, unpack_proto_query_kwargs, kwarg_dict_to_proto
+from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
@@ -175,13 +175,12 @@ class MIINonPersistentClient():
         task_methods = GRPC_METHOD_TABLE[self.task]
         inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
 
-        if self.task == Tasks.QUESTION_ANSWERING and 'question' in request_dict and 'context' in request_dict:
+        if self.task == Tasks.QUESTION_ANSWERING:
             return task_methods.run_inference(inference_pipeline,
                                               request_dict,
                                               query_kwargs)
 
         elif self.task == Tasks.CONVERSATIONAL and 'text' in request_dict and 'conversation_id' in request_dict and 'past_user_inputs' in request_dict and 'generated_responses' in request_dict:
-            kwargs = unpack_proto_query_kwargs(query_kwargs)
             text = request_dict['text']
             conversation_id = request_dict['conversation_id']
             past_user_inputs = request_dict['past_user_inputs']

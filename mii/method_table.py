@@ -163,6 +163,9 @@ class FillMaskMethods(TaskMethods):
     unpack_request_from_proto = proto_request_to_single_input
     pack_response_to_proto = single_string_response_to_proto
 
+    def run_inference(self, inference_pipeline, args, kwargs):
+        return inference_pipeline(args, **kwargs)
+
 
 class TokenClassificationMethods(TaskMethods):
     @property
