@@ -6,28 +6,8 @@ import pytest
 import os
 import torch
 from types import SimpleNamespace
-import json
-import requests
-from .utils import validate_config, dtype, tensor_parallel, load_with_sys_mem, enable_deepspeed, enable_zero, ds_config
+from .utils import *  # noqa: F401
 import mii
-
-
-def validate_config(config):
-    if (config.model in ['bert-base-uncased']) and (config.mii_config['dtype']
-                                                    == 'fp16'):
-        pytest.skip(f"Model f{config.model} not supported for FP16")
-    elif config.mii_config['dtype'] == "fp32" and "bloom" in config.model:
-        pytest.skip('bloom does not support fp32')
-
-
-''' These fixtures provide default values for the deployment config '''
-
-
-@pytest.fixture(scope="function", params=[False])
-def enable_load_balancing(request):
-    return request.param
-
-
 ''' These fixtures provide a local deployment and ensure teardown '''
 
 
@@ -77,11 +57,6 @@ def deployment_config(task_name: str,
                              ds_config=ds_config)
     validate_config(config)
     return config
-
-
-@pytest.fixture(scope="function", params=[None])
-def expected_failure(request):
-    return request.param
 
 
 @pytest.fixture(scope="function")

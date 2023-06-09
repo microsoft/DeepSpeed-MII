@@ -10,7 +10,7 @@ import mii
 from deepspeed.launcher.runner import fetch_hostfile
 
 from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT, MODEL_PROVIDER_MAP
-from .utils import logger, get_task, get_task_name, get_provider_name
+from .utils import logger, get_task_name, get_provider_name
 from .models.score import create_score_file
 from .models import load_models
 from .config import ReplicaConfig, LoadBalancerConfig

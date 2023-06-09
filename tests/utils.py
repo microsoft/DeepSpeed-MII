@@ -1,3 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 import pytest
 
 
@@ -7,6 +11,9 @@ def validate_config(config):
         pytest.skip(f"Model f{config.model} not supported for FP16")
     elif config.mii_config['dtype'] == "fp32" and "bloom" in config.model:
         pytest.skip('bloom does not support fp32')
+
+
+''' These fixtures provide default values for the deployment config '''
 
 
 @pytest.fixture(scope="function", params=['fp16'])
@@ -41,4 +48,9 @@ def ds_config(request):
 
 @pytest.fixture(scope="function", params=[None])
 def expected_failure(request):
-    return request.paramm
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[False])
+def enable_load_balancing(request):
+    return request.param
