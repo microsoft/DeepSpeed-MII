@@ -196,7 +196,7 @@ class MIINonPersistentClient():
                                 generated_responses=generated_responses,
                                 **kwargs)
             args = (conv, )
-            return task_methods.run_inference(inference_pipeline, args, kwargs, True)
+            return task_methods.run_inference(inference_pipeline, args, kwargs)
 
         else:
             query = request_dict['query']
