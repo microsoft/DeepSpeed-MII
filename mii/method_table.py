@@ -55,7 +55,7 @@ class TaskMethods(ABC):
         return request
 
     def run_inference(self, inference_pipeline, args, kwargs):
-        return inference_pipeline(args, **kwargs)
+        return inference_pipeline(*args, **kwargs)
 
     def pack_response_to_proto(self, response, time_taken, model_time_taken):
         return response, time_taken, model_time_taken
