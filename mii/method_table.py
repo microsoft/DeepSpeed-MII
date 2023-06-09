@@ -54,8 +54,11 @@ class TaskMethods(ABC):
     def unpack_request_from_proto(self, request):
         return request
 
-    def run_inference(self, inference_pipeline, args, kwargs):
-        return inference_pipeline(*args, **kwargs)
+    def run_inference(self, inference_pipeline, args, kwargs, is_non_persistent=False):
+        if is_non_persistent:
+            return inference_pipeline(args, **kwargs)
+        else:
+            return inference_pipeline(*args, **kwargs)
 
     def pack_response_to_proto(self, response, time_taken, model_time_taken):
         return response, time_taken, model_time_taken
@@ -95,11 +98,14 @@ class TextGenerationMethods(TaskMethods):
         args = ([self.session_context[session_id] + args[0][0]], )
         return args
 
-    def run_inference(self, inference_pipeline, args, kwargs):
+    def run_inference(self, inference_pipeline, args, kwargs, is_non_persistent=False):
         session_id = kwargs.pop("session_id", None)
         if session_id:
             args = self.preprocess_session(session_id, args)
-        response = inference_pipeline(args, **kwargs)
+        response = inference_pipeline(
+            *args,
+            **kwargs) if not is_non_persistent else inference_pipeline(args,
+                                                                       **kwargs)
 
         if session_id:
             response = self.postprocess_session(session_id, args, response)

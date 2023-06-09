@@ -181,7 +181,8 @@ class MIINonPersistentClient():
 
             return task_methods.run_inference(inference_pipeline,
                                               request_dict,
-                                              query_kwargs)
+                                              query_kwargs,
+                                              True)
 
         elif self.task == Tasks.CONVERSATIONAL and 'text' in request_dict and 'conversation_id' in request_dict and 'past_user_inputs' in request_dict and 'generated_responses' in request_dict:
             kwargs = {}
@@ -195,12 +196,12 @@ class MIINonPersistentClient():
                                 generated_responses=generated_responses,
                                 **kwargs)
             args = (conv, )
-            return task_methods.run_inference(inference_pipeline, args, kwargs)
+            return task_methods.run_inference(inference_pipeline, args, kwargs, True)
 
         else:
             query = request_dict['query']
             kwargs = {}
-            return task_methods.run_inference(inference_pipeline, query, kwargs)
+            return task_methods.run_inference(inference_pipeline, query, kwargs, True)
 
     def terminate(self):
         print("Terminating ...")
