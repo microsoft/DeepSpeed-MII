@@ -8,7 +8,7 @@ import logging
 import importlib
 import torch
 import mii
-
+from transformers import Conversation
 from huggingface_hub import HfApi
 
 from mii.constants import (CONVERSATIONAL_NAME,
@@ -219,6 +219,19 @@ def get_provider_name(model_name, task):
     else:
         provider = mii.constants.MODEL_PROVIDER_NAME_HF
     return provider
+
+
+def create_conversation(request, **kwargs):
+    text = getattr(request, 'text')
+    conversation_id = getattr(request, 'conversation_id')
+    past_user_inputs = getattr(request, 'past_user_inputs')
+    generated_responses = getattr(request, 'generated_responses')
+    conv = Conversation(text=text,
+                        conversation_id=conversation_id,
+                        past_user_inputs=past_user_inputs,
+                        generated_responses=generated_responses,
+                        **kwargs)
+    return conv
 
 
 log_levels = {

@@ -6,11 +6,10 @@ import asyncio
 import grpc
 import requests
 import mii
-from mii.utils import get_task
+from mii.utils import get_task, create_conversation
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
-from transformers import Conversation
 
 
 def _get_deployment_info(deployment_name):
@@ -40,18 +39,14 @@ def mii_query_handle(deployment_name):
         inference_pipeline, task = mii.non_persistent_models[deployment_name]
         return MIINonPersistentClient(task, deployment_name)
 
+    task_name, mii_configs = _get_deployment_info(deployment_name)
+    if mii_configs.enable_load_balancing:
+        return MIIClient(task_name, "localhost", mii_configs.port_number)
     else:
-        task_name, mii_configs = _get_deployment_info(deployment_name)
-        if mii_configs.enable_load_balancing:
-            return MIIClient(task_name, "localhost", mii_configs.port_number)
-        else:
-            return MIITensorParallelClient(
-                task_name,
-                "localhost",
-                [
-                    mii_configs.port_number + i
-                    for i in range(mii_configs.tensor_parallel)
-                ])
+        return MIITensorParallelClient(
+            task_name,
+            "localhost",
+            [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
 
 
 def create_channel(host, port):
@@ -177,7 +172,8 @@ class MIINonPersistentClient():
 
         if self.task == Tasks.QUESTION_ANSWERING:
             if 'question' not in request_dict or 'context' not in request_dict:
-                return
+                raise Exception(
+                    "Question Answering Task requires 'question' and 'context' keys")
 
             return task_methods.run_inference(inference_pipeline,
                                               request_dict,
@@ -186,15 +182,7 @@ class MIINonPersistentClient():
 
         elif self.task == Tasks.CONVERSATIONAL and 'text' in request_dict and 'conversation_id' in request_dict and 'past_user_inputs' in request_dict and 'generated_responses' in request_dict:
             kwargs = {}
-            text = request_dict['text']
-            conversation_id = request_dict['conversation_id']
-            past_user_inputs = request_dict['past_user_inputs']
-            generated_responses = request_dict['generated_responses']
-            conv = Conversation(text=text,
-                                conversation_id=conversation_id,
-                                past_user_inputs=past_user_inputs,
-                                generated_responses=generated_responses,
-                                **kwargs)
+            conv = create_conversation(request_dict, query_kwargs)
             args = (conv, )
             return task_methods.run_inference(inference_pipeline, args, kwargs)
 
