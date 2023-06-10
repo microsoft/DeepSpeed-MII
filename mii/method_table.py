@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-from transformers import Conversation
 from abc import ABC, abstractmethod
 
 from mii.constants import Tasks
 from mii.grpc_related.proto import modelresponse_pb2
-from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
+from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs, create_conversation
 from mii.models.utils import ImageResponse
 
 
@@ -198,11 +197,7 @@ class ConversationalMethods(TaskMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        conv = Conversation(text=request.text,
-                            conversation_id=request.conversation_id,
-                            past_user_inputs=request.past_user_inputs,
-                            generated_responses=request.generated_responses,
-                            **kwargs)
+        conv = create_conversation(request, **kwargs)
         args = (conv, )
         kwargs = {}
         return args, kwargs
