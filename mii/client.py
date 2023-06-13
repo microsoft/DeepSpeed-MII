@@ -174,22 +174,19 @@ class MIINonPersistentClient():
             if 'question' not in request_dict or 'context' not in request_dict:
                 raise Exception(
                     "Question Answering Task requires 'question' and 'context' keys")
-
-            return task_methods.run_inference(inference_pipeline,
-                                              request_dict,
-                                              query_kwargs,
-                                              True)
+            args = (request_dict["question"], request_dict["context"])
+            kwargs = query_kwargs
 
         elif self.task == Tasks.CONVERSATIONAL and 'text' in request_dict and 'conversation_id' in request_dict and 'past_user_inputs' in request_dict and 'generated_responses' in request_dict:
-            kwargs = {}
             conv = create_conversation(request_dict, **query_kwargs)
             args = (conv, )
-            return task_methods.run_inference(inference_pipeline, args, kwargs)
+            kwargs = {}
 
         else:
-            query = request_dict['query']
-            kwargs = {}
-            return task_methods.run_inference(inference_pipeline, query, kwargs, True)
+            args = (request_dict['query'],)
+            kwargs = query_kwargs
+
+        return task_methods.run_inference(inference_pipeline, args, query_kwargs)
 
     def terminate(self):
         print("Terminating ...")
