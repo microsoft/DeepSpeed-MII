@@ -53,11 +53,8 @@ class TaskMethods(ABC):
     def unpack_request_from_proto(self, request):
         return request
 
-    def run_inference(self, inference_pipeline, args, kwargs, is_non_persistent=False):
-        if is_non_persistent:
-            return inference_pipeline(args, **kwargs)
-        else:
-            return inference_pipeline(*args, **kwargs)
+    def run_inference(self, inference_pipeline, args, kwargs):
+        return inference_pipeline(*args, **kwargs)
 
     def pack_response_to_proto(self, response, time_taken, model_time_taken):
         return response, time_taken, model_time_taken
@@ -98,7 +95,6 @@ class TextGenerationMethods(TaskMethods):
         return args
 
     def run_inference(self, inference_pipeline, args, kwargs, is_non_persistent=False):
-        print("\nARGS", args, "\n")
         session_id = kwargs.pop("session_id", None)
         if session_id:
             args = self.preprocess_session(session_id, args)
@@ -165,9 +161,6 @@ class FillMaskMethods(TaskMethods):
     pack_request_to_proto = single_string_request_to_proto
     unpack_request_from_proto = proto_request_to_single_input
     pack_response_to_proto = single_string_response_to_proto
-
-    def run_inference(self, inference_pipeline, args, kwargs, is_non_persistent=False):
-        return inference_pipeline(args, **kwargs)
 
 
 class TokenClassificationMethods(TaskMethods):
