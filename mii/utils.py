@@ -227,24 +227,19 @@ def create_conversation(request, **kwargs):
         conversation_id = request['conversation_id']
         past_user_inputs = request['past_user_inputs']
         generated_responses = request['generated_responses']
-        conv = Conversation(text=text,
-                            conversation_id=conversation_id,
-                            past_user_inputs=past_user_inputs,
-                            generated_responses=generated_responses,
-                            **kwargs)
-        return conv
 
     else:
         text = getattr(request, 'text')
         conversation_id = getattr(request, 'conversation_id')
         past_user_inputs = getattr(request, 'past_user_inputs')
         generated_responses = getattr(request, 'generated_responses')
-        conv = Conversation(text=text,
-                            conversation_id=conversation_id,
-                            past_user_inputs=past_user_inputs,
-                            generated_responses=generated_responses,
-                            **kwargs)
-        return conv
+
+    conv = Conversation(text=text,
+                        conversation_id=conversation_id,
+                        past_user_inputs=past_user_inputs,
+                        generated_responses=generated_responses,
+                        **kwargs)
+    return conv
 
 
 log_levels = {
