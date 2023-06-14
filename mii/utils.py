@@ -223,7 +223,7 @@ def get_provider_name(model_name, task):
 
 def create_conversation(request, **kwargs):
     if isinstance(request, dict):
-        assert 'text' in request and 'past_user_input' in request and 'generated_response' in request, "Conversation requires 'text', 'past_user_input', and 'generated_response' keys"
+        assert 'text' in request and 'past_user_inputs' in request and 'generated_responses' in request, "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
         text = request['text']
         conversation_id = request[
             'conversation_id'] if 'conversation_id' in request else None
