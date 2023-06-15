@@ -6,7 +6,7 @@ import asyncio
 import grpc
 import requests
 import mii
-from mii.utils import get_task, create_conversation
+from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
@@ -35,7 +35,6 @@ def mii_query_handle(deployment_name):
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
     if deployment_name in mii.non_persistent_models:
-        assert deployment_name in mii.non_persistent_models, f"Could not find '{deployment_name}'"
         inference_pipeline, task = mii.non_persistent_models[deployment_name]
         return MIINonPersistentClient(task, deployment_name)
 
@@ -178,9 +177,9 @@ class MIINonPersistentClient():
             kwargs = query_kwargs
 
         elif self.task == Tasks.CONVERSATIONAL:
-            conv = create_conversation(request_dict, **query_kwargs)
+            conv = task_methods.create_conversation(request_dict, **query_kwargs)
             args = (conv, )
-            kwargs = query_kwargs
+            kwargs = {}
 
         else:
             args = (request_dict['query'], )

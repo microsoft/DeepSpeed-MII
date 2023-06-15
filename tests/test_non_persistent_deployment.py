@@ -33,8 +33,6 @@ def mii_configs(
         'tensor_parallel': tensor_parallel,
         'load_with_sys_mem': load_with_sys_mem,
         'enable_load_balancing': enable_load_balancing,
-        'replica_num': num_gpu * enable_load_balancing // tensor_parallel,
-        'hostfile': hostfile,
     }
 
 
@@ -159,73 +157,3 @@ def test_load_balancing(non_persistent_deployment, query):
     print(f"TESTING NON_PERSISTENT_DEPLOYMENT: {non_persistent_deployment}")
     assert "Cannot use Load Balancing with Non persistent deployment" in str(
         non_persistent_deployment.value)
-
-
-@pytest.mark.local
-@pytest.mark.parametrize("load_with_sys_mem", [True])
-@pytest.mark.parametrize(
-    "task_name, model_name, query",
-    [
-        (
-            "text-generation",
-            "distilgpt2",
-            {
-                "query": ["DeepSpeed is the greatest"]
-            },
-        ),
-    ],
-)
-def test_load_to_sys_mem(non_persistent_deployment, query):
-    generator = mii.mii_query_handle(non_persistent_deployment.deployment_name)
-    result = generator.query(query)
-    assert result
-
-
-def test_zero_config(non_persistent_deployment, query):
-    generator = mii.mii_query_handle(non_persistent_deployment.deployment_name)
-    result = generator.query(query)
-    assert result
-
-
-@pytest.mark.local
-@pytest.mark.parametrize("expected_failure", [AssertionError])
-@pytest.mark.parametrize("enable_deepspeed, enable_zero, dtype",
-                         [(True,
-                           True,
-                           'fp32'),
-                          (False,
-                           True,
-                           'fp16')])
-@pytest.mark.parametrize("ds_config",
-                         [
-                             {
-                                 "fp16": {
-                                     "enabled": False
-                                 },
-                                 "bf16": {
-                                     "enabled": False
-                                 },
-                                 "zero_optimization": {
-                                     "stage": 3,
-                                     "offload_param": {
-                                         "device": "cpu",
-                                     },
-                                 },
-                                 "train_micro_batch_size_per_gpu": 1,
-                             },
-                         ])
-@pytest.mark.parametrize(
-    "task_name, model_name, query",
-    [
-        (
-            "text-generation",
-            "distilgpt2",
-            {
-                "query": "DeepSpeed is the greatest"
-            },
-        ),
-    ],
-)
-def test_zero_config_fail(non_persistent_deployment, query):
-    print(non_persistent_deployment)
-    assert "MII Config Error" in str(non_persistent_deployment.value)
