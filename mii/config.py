@@ -55,7 +55,6 @@ class MIIConfig(BaseModel):
     max_tokens: int = 1024
     enable_restful_api: bool = False
     restful_api_port: int = 51080
-    enable_load_balancing: bool = False
     replica_num: int = 1
     hostfile: str = DLTS_HOSTFILE
 
@@ -91,13 +90,6 @@ class MIIConfig(BaseModel):
             if not value.get(k, ''):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return value
-
-    @root_validator
-    def auto_enable_load_balancing(cls, values):
-        if values["enable_restful_api"] and not values["enable_load_balancing"]:
-            logger.warn("Restful API is enabled, enabling Load Balancing")
-            values["enable_load_balancing"] = True
-        return values
 
     class Config:
         validate_all = True

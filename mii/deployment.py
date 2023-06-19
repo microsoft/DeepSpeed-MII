@@ -104,26 +104,25 @@ def deploy(task,
 
     # add fields for replica deployment
     lb_config = None
-    if mii_config.enable_load_balancing:
-        replica_pool = _allocate_processes(mii_config.hostfile,
-                                           mii_config.tensor_parallel,
-                                           mii_config.replica_num)
-        replica_configs = []
-        for i, (hostname, gpu_indices) in enumerate(replica_pool):
-            # Reserver port for a LB proxy when replication is enabled
-            port_offset = 1 if mii_config.enable_load_balancing else 0
-            base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-            tensor_parallel_ports = list(
-                range(base_port,
-                      base_port + mii_config.tensor_parallel))
-            torch_dist_port = mii_config.torch_dist_port + i
-            replica_configs.append(
-                ReplicaConfig(hostname=hostname,
-                              tensor_parallel_ports=tensor_parallel_ports,
-                              torch_dist_port=torch_dist_port,
-                              gpu_indices=gpu_indices))
-        lb_config = LoadBalancerConfig(port=mii_config.port_number,
-                                       replica_configs=replica_configs)
+    replica_pool = _allocate_processes(mii_config.hostfile,
+                                       mii_config.tensor_parallel,
+                                       mii_config.replica_num)
+    replica_configs = []
+    for i, (hostname, gpu_indices) in enumerate(replica_pool):
+        # Reserver port for a LB proxy when replication is enabled
+        port_offset = 1
+        base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+        tensor_parallel_ports = list(
+            range(base_port,
+                  base_port + mii_config.tensor_parallel))
+        torch_dist_port = mii_config.torch_dist_port + i
+        replica_configs.append(
+            ReplicaConfig(hostname=hostname,
+                          tensor_parallel_ports=tensor_parallel_ports,
+                          torch_dist_port=torch_dist_port,
+                          gpu_indices=gpu_indices))
+    lb_config = LoadBalancerConfig(port=mii_config.port_number,
+                                   replica_configs=replica_configs)
 
     create_score_file(deployment_name=deployment_name,
                       deployment_type=deployment_type,
@@ -165,6 +164,7 @@ def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
     assert resource_pool is not None and len(
         resource_pool) > 0, f'No hosts found in {hostfile_path}'
 
+    print(resource_pool)
     replica_pool = []
     allocated_num = 0
     for host, slots in resource_pool.items():

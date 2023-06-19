@@ -35,14 +35,14 @@ def mii_query_handle(deployment_name):
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
     task_name, mii_configs = _get_deployment_info(deployment_name)
-    if mii_configs.enable_load_balancing:
-        return MIIClient(task_name, "localhost", mii_configs.port_number)
+    return MIIClient(task_name, "localhost", mii_configs.port_number)
+    """
     else:
         return MIITensorParallelClient(
             task_name,
             "localhost",
             [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
-
+    """
 
 def create_channel(host, port):
     return grpc.aio.insecure_channel(f'{host}:{port}',
