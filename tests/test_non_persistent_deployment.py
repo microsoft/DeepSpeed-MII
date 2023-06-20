@@ -8,7 +8,6 @@ import torch
 from types import SimpleNamespace
 from .utils import *  # noqa: F401
 import mii
-''' These fixtures provide a local deployment and ensure teardown '''
 
 
 @pytest.fixture(scope="function")
