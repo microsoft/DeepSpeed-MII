@@ -164,7 +164,6 @@ def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
     assert resource_pool is not None and len(
         resource_pool) > 0, f'No hosts found in {hostfile_path}'
 
-    print(resource_pool)
     replica_pool = []
     allocated_num = 0
     for host, slots in resource_pool.items():
