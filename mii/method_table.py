@@ -94,7 +94,7 @@ class TextGenerationMethods(TaskMethods):
         args = ([self.session_context[session_id] + args[0][0]], )
         return args
 
-    def run_inference(self, inference_pipeline, args, kwargs, is_non_persistent=False):
+    def run_inference(self, inference_pipeline, args, kwargs):
         session_id = kwargs.pop("session_id", None)
         if session_id:
             args = self.preprocess_session(session_id, args)
