@@ -5,11 +5,9 @@
 import torch
 from typing import Union, List
 from enum import Enum
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, validator
 
 from deepspeed.launcher.runner import DLTS_HOSTFILE
-
-from .utils import logger
 
 
 class DtypeEnum(Enum):

@@ -44,6 +44,7 @@ def mii_query_handle(deployment_name):
             [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
     """
 
+
 def create_channel(host, port):
     return grpc.aio.insecure_channel(f'{host}:{port}',
                                      options=[('grpc.max_send_message_length',

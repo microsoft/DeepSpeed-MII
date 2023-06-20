@@ -14,7 +14,6 @@ from collections import defaultdict
 
 import mii
 from mii.utils import get_num_gpus, logger
-from mii.config import ReplicaConfig
 
 
 def config_to_b64_str(config):
@@ -305,7 +304,7 @@ class MIIServer():
                 f'{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n'
                 .encode())
             processes.append(
-                    self._launch_deepspeed(
+                self._launch_deepspeed(
                     deployment_name,
                     model_name,
                     model_path,
@@ -316,8 +315,7 @@ class MIIServer():
                     hostfile.name,
                     repl_config.hostname,
                     repl_config.tensor_parallel_ports[0],
-                    mii_configs.torch_dist_port + (100 * i) +
-                    repl_config.gpu_indices[0],
+                    mii_configs.torch_dist_port + (100 * i) + repl_config.gpu_indices[0],
                     repl_config.gpu_indices))
 
             # start load balancer here.
@@ -326,13 +324,13 @@ class MIIServer():
             # and it is expected to assign one GPU to one process.
         processes.append(
             self._launch_load_balancer(deployment_name,
-                                        model_name,
-                                        model_path,
-                                        ds_optimize,
-                                        ds_zero,
-                                        ds_config,
-                                        mii_configs,
-                                        lb_config))
+                                       model_name,
+                                       model_path,
+                                       ds_optimize,
+                                       ds_zero,
+                                       ds_config,
+                                       mii_configs,
+                                       lb_config))
 
         if mii_configs.enable_restful_api:
             # start rest api server
