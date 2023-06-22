@@ -144,7 +144,7 @@ def deploy(task,
         return _deploy_local(deployment_name, model_path=model_path)
     elif deployment_type == DeploymentType.NON_PERSISTENT:
         assert not mii_config.enable_load_balancing, "Cannot use Load Balancing with Non persistent deployment"
-        assert int(os.getenv('WORLD_SIZE', '1')) == mii_config.tensor_parallel, "World Size does not equal number of tensors"
+        assert int(os.getenv('WORLD_SIZE', '1')) == mii_config.tensor_parallel, "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
         provider = MODEL_PROVIDER_MAP[get_provider_name(model, task)]
         mii.non_persistent_models[deployment_name] = (load_models(
             get_task_name(task),
