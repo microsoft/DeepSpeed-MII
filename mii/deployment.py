@@ -188,13 +188,7 @@ def deploy_non_persistent(task,
     deploy(task,
            model,
            deployment_name,
-           deployment_type,
-           model_path,
-           enable_deepspeed,
-           enable_zero,
-           ds_config,
-           mii_config,
-           version)
+           **kwargs)
     return mii.mii_query_handle(deployment_name)
 
 
