@@ -178,6 +178,24 @@ mii.deploy(...
     mii_config=mii_configs)
 ```
 
+**Non-persistent Deployment**
+
+You can enable a non-persistent deployment which allows you to make queries without standing up a server. The non-persistent deployment acts as a simplified interface to DeepSpeed-inference for use cases that do not require creating a persistent model server process. Changing the `deployment_type` to `NON_PERSISTENT` in `mii.deploy(...)` will activate this option.
+
+```python
+...
+mii.deploy(deployment_name = DEPLOYMENT_NAME,
+	   deployment_type=mii.constants.DeploymentType.NON_PERSISTENT
+	   ...
+	   )
+
+generator = mii.mii_query_handle(DEPLOYMENT_NAME)
+result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30})
+
+```
+
+You can find a complete example [here]("https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/non_persistent")
+
 Any HTTP client can be used to call the APIs. An example of using curl is:
 ```bash
 # Assume deployment_name and restful_api_port are set to bloom560m_deployment and 28080 respectively:
