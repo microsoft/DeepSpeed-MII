@@ -176,14 +176,6 @@ def _deploy_aml(deployment_name, model_name, version):
     print("Please run 'deploy.sh' to bring your deployment online")
 
 
-def deploy_non_persistent(task, model, deployment_name, **kwargs):
-    if "deployment_type" not in kwargs:
-        kwargs["deployment_type"] = DeploymentType.NON_PERSISTENT
-    assert kwargs.get("deployment_type") == DeploymentType.NON_PERSISTENT, "Only non-persistent deployment type can be used with `deploy_non_persistent`"
-    deploy(task, model, deployment_name, **kwargs)
-    return mii.mii_query_handle(deployment_name)
-
-
 def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
     resource_pool = fetch_hostfile(hostfile_path)
     assert resource_pool is not None and len(

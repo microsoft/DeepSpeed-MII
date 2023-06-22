@@ -130,8 +130,8 @@ def non_persistent_deployment(deployment_config, expected_failure):
         ),
     ],
 )
-def test_single_GPU(deployment_config, query):
-    generator = mii.deploy_non_persistent(**deployment_config.__dict__)
+def test_single_GPU(non_persistent_deployment, query):
+    generator = mii.mii_query_handle(non_persistent_deployment.deployment_name)
     result = generator.query(query)
     assert result
 
