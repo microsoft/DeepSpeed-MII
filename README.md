@@ -190,7 +190,7 @@ mii.deploy(deployment_name = DEPLOYMENT_NAME,
 	   )
 
 generator = mii.mii_query_handle(DEPLOYMENT_NAME)
-retult = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30})
+result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30})
 
 ```
 
