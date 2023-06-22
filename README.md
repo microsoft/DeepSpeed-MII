@@ -180,7 +180,7 @@ mii.deploy(...
 
 **Non-persistent Deployment**
 
-You can enable a non-persistent deployment which allows you to make queries without standing up a server. This can be achieved by setting `deployment_type` to `NON_PERSISTENT` in `mii.deploy(...)`.
+You can enable a non-persistent deployment which allows you to make queries without standing up a server. The non-persistent deployment acts as a simplified interface to DeepSpeed-inference for use cases that do not require creating a persistent model server process. Changing the `deployment_type` to `NON_PERSISTENT` in `mii.deploy(...)` will activate this option.
 
 ```python
 ...
