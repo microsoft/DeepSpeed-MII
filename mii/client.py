@@ -22,7 +22,7 @@ def _get_deployment_info(deployment_name):
     return task, mii_configs
 
 
-def mii_query_handle(deployment_name):
+def mii_query_handle(deployment_name, non_persistent=False):
     """Get a query handle for a local deployment:
 
         mii/examples/local/gpt2-query-example.py
@@ -34,7 +34,9 @@ def mii_query_handle(deployment_name):
     Returns:
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
-    if deployment_name in mii.non_persistent_models:
+
+    if non_persistent:
+        assert deployment_name in mii.non_persistent_models, f"deployment: {deployment_name} not found"
         inference_pipeline, task = mii.non_persistent_models[deployment_name]
         return MIINonPersistentClient(task, deployment_name)
 
@@ -188,7 +190,7 @@ class MIINonPersistentClient():
         return task_methods.run_inference(inference_pipeline, args, query_kwargs)
 
     def terminate(self):
-        print("Terminating ...")
+        print(f"Terminating {self.deployment_name}...")
         del mii.non_persistent_models[self.deployment_name]
 
 

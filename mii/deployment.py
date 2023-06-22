@@ -175,6 +175,29 @@ def _deploy_aml(deployment_name, model_name, version):
     print("Please run 'deploy.sh' to bring your deployment online")
 
 
+def deploy_non_persistent(task,
+                          model,
+                          deployment_name,
+                          deployment_type=DeploymentType.LOCAL,
+                          model_path=None,
+                          enable_deepspeed=True,
+                          enable_zero=False,
+                          ds_config=None,
+                          mii_config={},
+                          version=1):
+    deploy(task,
+           model,
+           deployment_name,
+           deployment_type,
+           model_path,
+           enable_deepspeed,
+           enable_zero,
+           ds_config,
+           mii_config,
+           version)
+    return mii.mii_query_handle(deployment_name, True)
+
+
 def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
     resource_pool = fetch_hostfile(hostfile_path)
     assert resource_pool is not None and len(
