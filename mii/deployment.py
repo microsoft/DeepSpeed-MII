@@ -195,7 +195,7 @@ def deploy_non_persistent(task,
            ds_config,
            mii_config,
            version)
-    return mii.mii_query_handle(deployment_name, True)
+    return mii.mii_query_handle(deployment_name)
 
 
 def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
