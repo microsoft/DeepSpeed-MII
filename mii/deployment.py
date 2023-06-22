@@ -178,13 +178,10 @@ def _deploy_aml(deployment_name, model_name, version):
 def deploy_non_persistent(task,
                           model,
                           deployment_name,
-                          deployment_type=DeploymentType.LOCAL,
-                          model_path=None,
-                          enable_deepspeed=True,
-                          enable_zero=False,
-                          ds_config=None,
-                          mii_config={},
-                          version=1):
+                          **kwargs):
+    if "deployment_type" not in kwargs:
+        kwargs["deployment_type"] = DeploymentType.NON_PERSISTENT
+    assert kwargs.get("deployment_type") == DeploymentType.NON_PERSISTENT, "Only non-persistent deployment type can be used with `deploy_non_persistent`"
     deploy(task,
            model,
            deployment_name,
