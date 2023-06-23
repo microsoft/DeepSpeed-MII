@@ -209,8 +209,6 @@ def get_num_gpus(mii_configs):
 def get_provider_name(model_name, task):
     if model_name == "gpt-neox":
         provider = mii.constants.MODEL_PROVIDER_NAME_EA
-    elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
-        provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
     elif task == mii.Tasks.TEXT2IMG:
         provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
     else:
