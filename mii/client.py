@@ -34,6 +34,11 @@ def mii_query_handle(deployment_name):
     Returns:
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
+
+    if deployment_name in mii.non_persistent_models:
+        inference_pipeline, task = mii.non_persistent_models[deployment_name]
+        return MIINonPersistentClient(task, deployment_name)
+
     task_name, mii_configs = _get_deployment_info(deployment_name)
     if mii_configs.enable_load_balancing:
         return MIIClient(task_name, "localhost", mii_configs.port_number)
@@ -154,6 +159,39 @@ class MIITensorParallelClient():
     def destroy_session(self, session_id):
         for client in self.clients:
             client.destroy_session(session_id)
+
+
+class MIINonPersistentClient():
+    def __init__(self, task, deployment_name):
+        self.task = task
+        self.deployment_name = deployment_name
+
+    def query(self, request_dict, **query_kwargs):
+        assert self.deployment_name in mii.non_persistent_models, f"deployment: {self.deployment_name} not found"
+        task_methods = GRPC_METHOD_TABLE[self.task]
+        inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
+
+        if self.task == Tasks.QUESTION_ANSWERING:
+            if 'question' not in request_dict or 'context' not in request_dict:
+                raise Exception(
+                    "Question Answering Task requires 'question' and 'context' keys")
+            args = (request_dict["question"], request_dict["context"])
+            kwargs = query_kwargs
+
+        elif self.task == Tasks.CONVERSATIONAL:
+            conv = task_methods.create_conversation(request_dict, **query_kwargs)
+            args = (conv, )
+            kwargs = {}
+
+        else:
+            args = (request_dict['query'], )
+            kwargs = query_kwargs
+
+        return task_methods.run_inference(inference_pipeline, args, query_kwargs)
+
+    def terminate(self):
+        print(f"Terminating {self.deployment_name}...")
+        del mii.non_persistent_models[self.deployment_name]
 
 
 def terminate_restful_gateway(deployment_name):

@@ -8,48 +8,13 @@ import torch
 from types import SimpleNamespace
 import json
 import requests
-
+from .utils import *  # noqa: F401
 import mii
-
-
-def validate_config(config):
-    if (config.model in ['bert-base-uncased']) and (config.mii_config['dtype']
-                                                    == 'fp16'):
-        pytest.skip(f"Model f{config.model} not supported for FP16")
-    elif config.mii_config['dtype'] == "fp32" and "bloom" in config.model:
-        pytest.skip('bloom does not support fp32')
-
-
 ''' These fixtures provide default values for the deployment config '''
-
-
-@pytest.fixture(scope="function", params=['fp16'])
-def dtype(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[1])
-def tensor_parallel(request):
-    return request.param
 
 
 @pytest.fixture(scope="function", params=[50050])
 def port_number(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def meta_tensor(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def load_with_sys_mem(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def enable_load_balancing(request):
     return request.param
 
 
@@ -60,21 +25,6 @@ def enable_restful_api(request):
 
 @pytest.fixture(scope="function", params=[0])
 def restful_api_port(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[True])
-def enable_deepspeed(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def enable_zero(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[{}])
-def ds_config(request):
     return request.param
 
 
@@ -135,11 +85,6 @@ def deployment_config(task_name: str,
                              ds_config=ds_config)
     validate_config(config)
     return config
-
-
-@pytest.fixture(scope="function", params=[None])
-def expected_failure(request):
-    return request.param
 
 
 @pytest.fixture(scope="function")

@@ -13,7 +13,7 @@ from pathlib import Path
 from collections import defaultdict
 
 import mii
-from mii.utils import get_num_gpus, logger
+from mii.utils import get_num_gpus, logger, get_provider_name
 from mii.config import ReplicaConfig
 
 
@@ -120,12 +120,7 @@ class MIIServer():
         server_args_str += " --ds-optimize" if ds_optimize else ""
 
         # XXX: fetch model provider based on model name in a more general way
-        if model_name == "gpt-neox":
-            provider = mii.constants.MODEL_PROVIDER_NAME_EA
-        elif self.task == mii.Tasks.TEXT2IMG:
-            provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
-        else:
-            provider = mii.constants.MODEL_PROVIDER_NAME_HF
+        provider = get_provider_name(model_name, self.task)
         server_args_str += f" --provider {provider}"
 
         server_args_str += f" --config {b64_config_str}"
