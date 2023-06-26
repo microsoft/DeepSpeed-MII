@@ -9,6 +9,7 @@ import enum
 class DeploymentType(enum.Enum):
     LOCAL = 1
     AML = 2
+    NON_PERSISTENT = 3
 
 
 MII_CONFIGS_KEY = 'mii_configs'
@@ -62,7 +63,8 @@ SUPPORTED_MODEL_TYPES = {
     'opt': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
     'bloom': ModelProvider.HUGGING_FACE_LLM,
-    'stable-diffusion': ModelProvider.DIFFUSERS
+    'stable-diffusion': ModelProvider.DIFFUSERS,
+    'llama': ModelProvider.HUGGING_FACE
 }
 
 SUPPORTED_TASKS = [
