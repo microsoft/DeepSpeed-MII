@@ -4,7 +4,6 @@
 # DeepSpeed Team
 import pytest
 import os
-import torch
 from types import SimpleNamespace
 from .utils import *  # noqa: F401
 import mii
@@ -17,12 +16,6 @@ def mii_configs(
     tensor_parallel: int,
     load_with_sys_mem: bool,
 ):
-
-    # Create a hostfile for DeepSpeed launcher when load_balancing is enabled
-    hostfile = os.path.join(tmpdir, "hostfile")
-    num_gpu = torch.cuda.device_count()
-    with open(hostfile, "w") as f:
-        f.write(f"localhost slots={num_gpu}")
 
     return {
         'dtype': dtype,
