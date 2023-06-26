@@ -105,7 +105,6 @@ def deploy(task,
         model_path = "model"
 
     # add fields for replica deployment
-    lb_config = None
     replica_pool = _allocate_processes(mii_config.hostfile,
                                        mii_config.tensor_parallel,
                                        mii_config.replica_num)

@@ -63,8 +63,7 @@ class MIIServer():
                                              ds_config,
                                              mii_configs,
                                              lb_config)
-        deployment = lb_config.replica_configs
-        self._wait_until_server_is_live(processes, deployment)
+        self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):
