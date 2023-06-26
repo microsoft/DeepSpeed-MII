@@ -37,6 +37,7 @@ def mii_configs(
     dtype: str,
     tensor_parallel: int,
     port_number: int,
+    meta_tensor: bool,
     load_with_sys_mem: bool,
     enable_load_balancing: bool,
     enable_restful_api: bool,
@@ -55,6 +56,7 @@ def mii_configs(
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
         'port_number': port_number,
+        'meta_tensor': meta_tensor,
         'load_with_sys_mem': load_with_sys_mem,
         'enable_load_balancing': enable_load_balancing,
         'replica_num': num_gpu * enable_load_balancing // tensor_parallel,
@@ -184,6 +186,34 @@ def test_load_balancing(local_deployment, query):
     generator = mii.mii_query_handle(local_deployment.deployment_name)
     for _ in range(10):
         result = generator.query(query)
+    assert result
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("meta_tensor", [True])
+@pytest.mark.parametrize("tensor_parallel", [1, 2])
+@pytest.mark.parametrize(
+    "task_name, model_name, query",
+    [
+        (
+            "text-generation",
+            "bigscience/bloom-560m",
+            {
+                "query": ["DeepSpeed is the greatest"]
+            },
+        ),
+        (
+            "text-generation",
+            "facebook/opt-350m",
+            {
+                "query": ["DeepSpeed is the greatest"]
+            },
+        ),
+    ],
+)
+def test_meta_tensor(local_deployment, query):
+    generator = mii.mii_query_handle(local_deployment.deployment_name)
+    result = generator.query(query)
     assert result
 
 

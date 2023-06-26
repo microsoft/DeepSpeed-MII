@@ -97,8 +97,6 @@ def _get_supported_models_name(task):
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
             models = _get_hf_models_by_type(model_type, task_name)
-        elif provider == ModelProvider.HUGGING_FACE_LLM:
-            models = _get_hf_models_by_type(model_type, task_name)
         elif provider == ModelProvider.ELEUTHER_AI:
             if task_name == TEXT_GENERATION_NAME:
                 models = [model_type]
@@ -211,8 +209,6 @@ def get_num_gpus(mii_configs):
 def get_provider_name(model_name, task):
     if model_name == "gpt-neox":
         provider = mii.constants.MODEL_PROVIDER_NAME_EA
-    elif ("bigscience/bloom" == model_name) or ("microsoft/bloom" in model_name):
-        provider = mii.constants.MODEL_PROVIDER_NAME_HF_LLM
     elif task == mii.Tasks.TEXT2IMG:
         provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
     else:
