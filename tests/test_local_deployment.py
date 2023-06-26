@@ -43,12 +43,7 @@ def mii_configs(
     restful_api_port: int,
 ):
 
-    # Create a hostfile for DeepSpeed launcher when load_balancing is enabled
-    hostfile = os.path.join(tmpdir, "hostfile")
     num_gpu = torch.cuda.device_count()
-    with open(hostfile, "w") as f:
-        f.write(f"localhost slots={num_gpu}")
-
     return {
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
@@ -56,7 +51,6 @@ def mii_configs(
         'meta_tensor': meta_tensor,
         'load_with_sys_mem': load_with_sys_mem,
         'replica_num': num_gpu // tensor_parallel,
-        'hostfile': hostfile,
         'enable_restful_api': enable_restful_api,
         'restful_api_port': restful_api_port,
     }
