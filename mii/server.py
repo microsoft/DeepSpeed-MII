@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import torch
 from pathlib import Path
 from collections import defaultdict
 
@@ -48,8 +49,11 @@ class MIIServer():
         self.port_number = mii_configs.port_number
 
         if mii_configs.hostfile is None:
-            raise ValueError(
-                "hostfile must be provided if enable_load_balancing == True")
+            hostfile = tempfile.NamedTemporaryFile()
+            num_gpu = torch.cuda.device_count()
+            with open(hostfile, "w") as f:
+                f.write(f"localhost slots={num_gpu}")
+            mii.configs.hostfile = hostfile
 
         processes = self._initialize_service(deployment_name,
                                              model_name,

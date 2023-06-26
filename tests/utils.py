@@ -49,8 +49,3 @@ def ds_config(request):
 @pytest.fixture(scope="function", params=[None])
 def expected_failure(request):
     return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def enable_load_balancing(request):
-    return request.param

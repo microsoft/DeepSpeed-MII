@@ -53,7 +53,7 @@ def mii_configs(
         'tensor_parallel': tensor_parallel,
         'port_number': port_number,
         'load_with_sys_mem': load_with_sys_mem,
-        'replica_num': num_gpu * 1 // tensor_parallel,
+        'replica_num': num_gpu // tensor_parallel,
         'hostfile': hostfile,
         'enable_restful_api': enable_restful_api,
         'restful_api_port': restful_api_port,

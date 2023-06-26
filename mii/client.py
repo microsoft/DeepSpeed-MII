@@ -41,13 +41,6 @@ def mii_query_handle(deployment_name):
 
     task_name, mii_configs = _get_deployment_info(deployment_name)
     return MIIClient(task_name, "localhost", mii_configs.port_number)
-    """
-    else:
-        return MIITensorParallelClient(
-            task_name,
-            "localhost",
-            [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
-    """
 
 
 def create_channel(host, port):
