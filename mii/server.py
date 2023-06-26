@@ -14,7 +14,6 @@ from collections import defaultdict
 
 import mii
 from mii.utils import get_num_gpus, logger, get_provider_name
-from mii.config import ReplicaConfig
 
 
 def config_to_b64_str(config):
