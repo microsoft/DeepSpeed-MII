@@ -9,8 +9,6 @@ from pydantic import BaseModel, validator, root_validator
 
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 
-from .utils import logger
-
 
 class DtypeEnum(Enum):
     # The torch dtype must always be the first value (so we return torch.dtype)
@@ -91,13 +89,6 @@ class MIIConfig(BaseModel):
             if not value.get(k, ''):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return value
-
-    @root_validator
-    def auto_enable_load_balancing(cls, values):
-        if values["enable_restful_api"] and not values["enable_load_balancing"]:
-            logger.warn("Restful API is enabled, enabling Load Balancing")
-            values["enable_load_balancing"] = True
-        return values
 
     @root_validator
     def meta_tensor_or_sys_mem(cls, values):
