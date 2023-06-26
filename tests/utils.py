@@ -16,6 +16,11 @@ def validate_config(config):
 ''' These fixtures provide default values for the deployment config '''
 
 
+@pytest.fixture(scope="function", params=[False])
+def meta_tensor(request):
+    return request.param
+
+
 @pytest.fixture(scope="function", params=['fp16'])
 def dtype(request):
     return request.param

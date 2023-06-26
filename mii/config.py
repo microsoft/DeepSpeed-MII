@@ -41,6 +41,7 @@ class MIIConfig(BaseModel):
     tensor_parallel: int = 1
     port_number: int = 50050
     dtype: DtypeEnum = torch.float32
+    meta_tensor: bool = False
     load_with_sys_mem: bool = False
     enable_cuda_graph: bool = False
     checkpoint_dict: Union[dict, None] = None
@@ -88,6 +89,21 @@ class MIIConfig(BaseModel):
             if not value.get(k, ''):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return value
+
+    @root_validator
+    def auto_enable_load_balancing(cls, values):
+        if values["enable_restful_api"] and not values["enable_load_balancing"]:
+            logger.warn("Restful API is enabled, enabling Load Balancing")
+            values["enable_load_balancing"] = True
+        return values
+
+    @root_validator
+    def meta_tensor_or_sys_mem(cls, values):
+        if values.get("meta_tensor") and values.get("load_with_sys_mem"):
+            raise ValueError(
+                "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
+            )
+        return values
 
     class Config:
         validate_all = True
