@@ -9,12 +9,12 @@ import subprocess
 import sys
 import tempfile
 import time
+import torch
 from pathlib import Path
 from collections import defaultdict
 
 import mii
 from mii.utils import get_num_gpus, logger, get_provider_name
-from mii.config import ReplicaConfig
 
 
 def config_to_b64_str(config):
@@ -48,9 +48,12 @@ class MIIServer():
 
         self.port_number = mii_configs.port_number
 
-        if mii_configs.enable_load_balancing and mii_configs.hostfile is None:
-            raise ValueError(
-                "hostfile must be provided if enable_load_balancing == True")
+        if mii_configs.hostfile is None:
+            hostfile = tempfile.NamedTemporaryFile(delete=False)
+            num_gpu = torch.cuda.device_count()
+            with open(hostfile, "w") as f:
+                f.write(f"localhost slots={num_gpu}")
+            mii.configs.hostfile = hostfile
 
         processes = self._initialize_service(deployment_name,
                                              model_name,
@@ -60,12 +63,7 @@ class MIIServer():
                                              ds_config,
                                              mii_configs,
                                              lb_config)
-        deployment = lb_config.replica_configs if mii_configs.enable_load_balancing else [
-            ReplicaConfig(hostname='localhost',
-                          tensor_parallel_ports=[mii_configs.port_number],
-                          torch_dist_port=mii_configs.torch_dist_port)
-        ]
-        self._wait_until_server_is_live(processes, deployment)
+        self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):
@@ -290,78 +288,56 @@ class MIIServer():
                             lb_config):
 
         processes = []
-        if mii_configs.enable_load_balancing:
 
-            host_gpus = defaultdict(list)
-            for repl_config in lb_config.replica_configs:
-                host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
+        host_gpus = defaultdict(list)
+        for repl_config in lb_config.replica_configs:
+            host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
-            # Start replica instances
-            for i, repl_config in enumerate(lb_config.replica_configs):
-                hostfile = tempfile.NamedTemporaryFile(delete=False)
-                hostfile.write(
-                    f'{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n'
-                    .encode())
-                processes.append(
-                    self._launch_deepspeed(
-                        deployment_name,
-                        model_name,
-                        model_path,
-                        ds_optimize,
-                        ds_zero,
-                        ds_config,
-                        mii_configs,
-                        hostfile.name,
-                        repl_config.hostname,
-                        repl_config.tensor_parallel_ports[0],
-                        mii_configs.torch_dist_port + (100 * i) +
-                        repl_config.gpu_indices[0],
-                        repl_config.gpu_indices))
+        # Start replica instances
+        for i, repl_config in enumerate(lb_config.replica_configs):
+            hostfile = tempfile.NamedTemporaryFile(delete=False)
+            hostfile.write(
+                f'{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n'
+                .encode())
+            processes.append(
+                self._launch_deepspeed(
+                    deployment_name,
+                    model_name,
+                    model_path,
+                    ds_optimize,
+                    ds_zero,
+                    ds_config,
+                    mii_configs,
+                    hostfile.name,
+                    repl_config.hostname,
+                    repl_config.tensor_parallel_ports[0],
+                    mii_configs.torch_dist_port + (100 * i) + repl_config.gpu_indices[0],
+                    repl_config.gpu_indices))
 
             # start load balancer here.
             # we don't use deepspeed launcher for the load balancer because it does not need a GPU.
             # The deepspeed launcher determines the number of processes to launch based on GPUs available on the host or CUDA_VISIBLE_DEVICES,
             # and it is expected to assign one GPU to one process.
-            processes.append(
-                self._launch_load_balancer(deployment_name,
-                                           model_name,
-                                           model_path,
-                                           ds_optimize,
-                                           ds_zero,
-                                           ds_config,
-                                           mii_configs,
-                                           lb_config))
-
-            if mii_configs.enable_restful_api:
-                # start rest api server
-                processes.append(
-                    self._launch_restful_gateway(deployment_name,
-                                                 model_name,
-                                                 model_path,
-                                                 ds_optimize,
-                                                 ds_zero,
-                                                 ds_config,
-                                                 mii_configs,
-                                                 mii_configs.port_number))
-
-            return processes
-        else:
-            if self._is_socket_open("localhost", self.port_number):
-                raise RuntimeError(
-                    f"Server is already running on port {self.port_number}, please shutdown or use different port."
-                )
-
-            processes.append(
-                self._launch_deepspeed(deployment_name,
+        processes.append(
+            self._launch_load_balancer(deployment_name,
                                        model_name,
                                        model_path,
                                        ds_optimize,
                                        ds_zero,
                                        ds_config,
                                        mii_configs,
-                                       '/dev/null',
-                                       'localhost',
-                                       mii_configs.port_number,
-                                       mii_configs.torch_dist_port,
-                                       mii_configs.deploy_rank))
+                                       lb_config))
+
+        if mii_configs.enable_restful_api:
+            # start rest api server
+            processes.append(
+                self._launch_restful_gateway(deployment_name,
+                                             model_name,
+                                             model_path,
+                                             ds_optimize,
+                                             ds_zero,
+                                             ds_config,
+                                             mii_configs,
+                                             mii_configs.port_number))
+
         return processes

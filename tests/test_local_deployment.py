@@ -39,28 +39,18 @@ def mii_configs(
     port_number: int,
     meta_tensor: bool,
     load_with_sys_mem: bool,
-    enable_load_balancing: bool,
     enable_restful_api: bool,
     restful_api_port: int,
 ):
 
-    # Create a hostfile for DeepSpeed launcher when load_balancing is enabled
-    hostfile = os.path.join(tmpdir, "hostfile")
     num_gpu = torch.cuda.device_count()
-    enable_load_balancing = enable_load_balancing or enable_restful_api
-    if enable_load_balancing:
-        with open(hostfile, "w") as f:
-            f.write(f"localhost slots={num_gpu}")
-
     return {
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
         'port_number': port_number,
         'meta_tensor': meta_tensor,
         'load_with_sys_mem': load_with_sys_mem,
-        'enable_load_balancing': enable_load_balancing,
-        'replica_num': num_gpu * enable_load_balancing // tensor_parallel,
-        'hostfile': hostfile,
+        'replica_num': num_gpu // tensor_parallel,
         'enable_restful_api': enable_restful_api,
         'restful_api_port': restful_api_port,
     }
@@ -164,28 +154,6 @@ def local_deployment(deployment_config, expected_failure):
 def test_single_GPU(local_deployment, query):
     generator = mii.mii_query_handle(local_deployment.deployment_name)
     result = generator.query(query)
-    assert result
-
-
-@pytest.mark.local
-@pytest.mark.parametrize("enable_load_balancing", [True])
-@pytest.mark.parametrize("tensor_parallel", [1, 2])
-@pytest.mark.parametrize(
-    "task_name, model_name, query",
-    [
-        (
-            "text-generation",
-            "bigscience/bloom-560m",
-            {
-                "query": ["DeepSpeed is the greatest"]
-            },
-        ),
-    ],
-)
-def test_load_balancing(local_deployment, query):
-    generator = mii.mii_query_handle(local_deployment.deployment_name)
-    for _ in range(10):
-        result = generator.query(query)
     assert result
 
 

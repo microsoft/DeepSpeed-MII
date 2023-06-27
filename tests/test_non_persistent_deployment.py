@@ -4,7 +4,6 @@
 # DeepSpeed Team
 import pytest
 import os
-import torch
 from types import SimpleNamespace
 from .utils import *  # noqa: F401
 import mii
@@ -16,22 +15,12 @@ def mii_configs(
     dtype: str,
     tensor_parallel: int,
     load_with_sys_mem: bool,
-    enable_load_balancing: bool,
 ):
-
-    # Create a hostfile for DeepSpeed launcher when load_balancing is enabled
-    hostfile = os.path.join(tmpdir, "hostfile")
-    num_gpu = torch.cuda.device_count()
-    enable_load_balancing = enable_load_balancing
-    if enable_load_balancing:
-        with open(hostfile, "w") as f:
-            f.write(f"localhost slots={num_gpu}")
 
     return {
         'dtype': dtype,
         'tensor_parallel': tensor_parallel,
         'load_with_sys_mem': load_with_sys_mem,
-        'enable_load_balancing': enable_load_balancing,
     }
 
 
@@ -134,25 +123,3 @@ def test_single_GPU(non_persistent_deployment, query):
     generator = mii.mii_query_handle(non_persistent_deployment.deployment_name)
     result = generator.query(query)
     assert result
-
-
-@pytest.mark.local
-@pytest.mark.parametrize("enable_load_balancing", [True])
-@pytest.mark.parametrize("expected_failure", [AssertionError])
-@pytest.mark.parametrize("tensor_parallel", [1, 2])
-@pytest.mark.parametrize(
-    "task_name, model_name, query",
-    [
-        (
-            "text-generation",
-            "bigscience/bloom-560m",
-            {
-                "query": ["DeepSpeed is the greatest"]
-            },
-        ),
-    ],
-)
-def test_load_balancing(non_persistent_deployment, query):
-    print(f"TESTING NON_PERSISTENT_DEPLOYMENT: {non_persistent_deployment}")
-    assert "Cannot use Load Balancing with Non persistent deployment" in str(
-        non_persistent_deployment.value)

@@ -40,13 +40,7 @@ def mii_query_handle(deployment_name):
         return MIINonPersistentClient(task, deployment_name)
 
     task_name, mii_configs = _get_deployment_info(deployment_name)
-    if mii_configs.enable_load_balancing:
-        return MIIClient(task_name, "localhost", mii_configs.port_number)
-    else:
-        return MIITensorParallelClient(
-            task_name,
-            "localhost",
-            [mii_configs.port_number + i for i in range(mii_configs.tensor_parallel)])
+    return MIIClient(task_name, "localhost", mii_configs.port_number)
 
 
 def create_channel(host, port):
