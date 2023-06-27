@@ -137,14 +137,13 @@ mii.terminate("bloom560m_deployment")
 **Load balancing over multiple replicas**
 
 You can launch a load balancer and multiple replica of MII servers.
-When `enable_load_balancing` is set to `True`, `mii.deploy()` launches the load balancer server and `replica_num` number of replicas.
+When you specify a value for `replica_num`, `mii.deploy()` launches the load balancer server and `replica_num` number of replicas.
 Note that each replica consists of `tensor_parallel` server processes that are deployed on the same server.
 
 ```python
 mii_configs = {
 ...
     "tensor_parallel": tensor_parallel,
-    "enable_load_balancing": True,
     "replica_num": replica_num,
     "hostfile": hostfile
 }
