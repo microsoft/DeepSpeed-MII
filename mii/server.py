@@ -49,7 +49,7 @@ class MIIServer():
         self.port_number = mii_configs.port_number
 
         if mii_configs.hostfile is None:
-            hostfile = tempfile.NamedTemporaryFile()
+            hostfile = tempfile.NamedTemporaryFile(delete=False)
             num_gpu = torch.cuda.device_count()
             with open(hostfile, "w") as f:
                 f.write(f"localhost slots={num_gpu}")
