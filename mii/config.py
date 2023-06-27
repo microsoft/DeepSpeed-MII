@@ -123,4 +123,16 @@ class LoadBalancerConfig(BaseModel):
 
     class Config:
         validate_all = True
-        validate_assignment = True
+validate_assignment = True
+
+
+class Deployment(BaseModel):
+    deployment_name: str
+    task: str
+    model: str
+    enable_deepspeed: bool = True
+    enable_zero: bool = True
+    GPU_index_map: dict = None
+    mii_config: dict = None
+    ds_config: dict = None
+    version: int = 1

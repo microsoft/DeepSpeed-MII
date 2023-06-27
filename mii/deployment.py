@@ -16,16 +16,10 @@ from .models import load_models
 from .config import ReplicaConfig, LoadBalancerConfig
 
 
-def deploy(task,
-           model,
-           deployment_name,
+def deploy(deployment_tag,
+           deployments,
            deployment_type=DeploymentType.LOCAL,
-           model_path=None,
-           enable_deepspeed=True,
-           enable_zero=False,
-           ds_config=None,
-           mii_config={},
-           version=1):
+           model_path=None):
     """Deploy a task using specified model. For usage examples see:
 
         mii/examples/local/text-generation-example.py
@@ -66,15 +60,19 @@ def deploy(task,
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
     """
-
+    mii.multi_model_deployments[deployment_tag] = deployments
+    ports = set()
     # parse and validate mii config
-    mii_config = mii.config.MIIConfig(**mii_config)
-    if enable_zero:
-        if ds_config.get("fp16", {}).get("enabled", False):
-            assert (mii_config.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
-        else:
-            assert (mii_config.dtype == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
-    assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
+    for deployment in deployments:
+        mii_config = mii.config.MIIConfig(**deployment.mii_config)
+        assert mii_config.port_number not in ports, f"duplicate port numbers not allowed - {mii.config.port_number}"
+        ports.add(mii_config.port_number)
+        if deployment.enable_zero:
+            if deployment.ds_config.get("fp16", {}).get("enabled", False):
+                assert (mii_config.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
+            else:
+                assert (mii_config.dtype == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
+        assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
     # aml only allows certain characters for deployment names
     if deployment_type == DeploymentType.AML:
@@ -82,21 +80,22 @@ def deploy(task,
                             string.digits + '-')
         assert set(deployment_name) <= allowed_chars, "AML deployment names can only contain a-z, A-Z, 0-9, and '-'"
 
-    task = mii.utils.get_task(task)
+    for deployment in deployments:
+        deployment.task = mii.utils.get_task(deployment.task)
 
-    if not mii_config.skip_model_check:
-        mii.utils.check_if_task_and_model_is_valid(task, model)
+        if not mii_config.skip_model_check:
+            mii.utils.check_if_task_and_model_is_valid(deployment.task, deployment.model)
+            if enable_deepspeed:
+                mii.utils.check_if_task_and_model_is_supported(deployment.task, deployment.model)
+
         if enable_deepspeed:
-            mii.utils.check_if_task_and_model_is_supported(task, model)
-
-    if enable_deepspeed:
-        logger.info(
-            f"************* MII is using DeepSpeed Optimizations to accelerate your model *************"
-        )
-    else:
-        logger.info(
-            f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
-        )
+            logger.info(
+                    f"************* MII is using DeepSpeed Optimizations to accelerate your model: {deployment.model} *************"
+            )
+        else:
+            logger.info(
+                    f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance for: {deployment.model} *************"
+            )
 
     # In local deployments use default path if no model path set
     if model_path is None and deployment_type == DeploymentType.LOCAL:
@@ -126,21 +125,16 @@ def deploy(task,
                                    replica_configs=replica_configs)
 
     if deployment_type != DeploymentType.NON_PERSISTENT:
-        create_score_file(deployment_name=deployment_name,
+        create_score_file(deployment_tag=deployment_tag,
+                          deployments=deployments,
                           deployment_type=deployment_type,
-                          task=task,
-                          model_name=model,
-                          ds_optimize=enable_deepspeed,
-                          ds_zero=enable_zero,
-                          ds_config=ds_config,
-                          mii_config=mii_config,
                           model_path=model_path,
                           lb_config=lb_config)
 
     if deployment_type == DeploymentType.AML:
-        _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
+        _deploy_aml(deployment_tag=deployment_tag, model_name=model, version=version)
     elif deployment_type == DeploymentType.LOCAL:
-        return _deploy_local(deployment_name, model_path=model_path)
+        return _deploy_local(deployment_tag, model_path=model_path)
     elif deployment_type == DeploymentType.NON_PERSISTENT:
         assert int(os.getenv('WORLD_SIZE', '1')) == mii_config.tensor_parallel, "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
         provider = MODEL_PROVIDER_MAP[get_provider_name(model, task)]
@@ -157,14 +151,14 @@ def deploy(task,
         raise Exception(f"Unknown deployment type: {deployment_type}")
 
 
-def _deploy_local(deployment_name, model_path):
-    mii.utils.import_score_file(deployment_name).init()
+def _deploy_local(deployment_tag, model_path):
+    mii.utils.import_score_file(deployment_tag).init()
 
 
-def _deploy_aml(deployment_name, model_name, version):
+def _deploy_aml(deployment_tag, model_name, version):
     acr_name = mii.aml_related.utils.get_acr_name()
     mii.aml_related.utils.generate_aml_scripts(acr_name=acr_name,
-                                               deployment_name=deployment_name,
+                                               deployment_name=deployment_tag,
                                                model_name=model_name,
                                                version=version)
     print(

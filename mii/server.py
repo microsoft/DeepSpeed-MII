@@ -29,14 +29,9 @@ def config_to_b64_str(config):
 class MIIServer():
     '''Initialize the model, setup the server for the model under model_path'''
     def __init__(self,
-                 deployment_name,
-                 task_name,
-                 model_name,
+                 deployment_tag,
+                 deployments,
                  model_path,
-                 ds_optimize=True,
-                 ds_zero=False,
-                 ds_config=None,
-                 mii_configs={},
                  lb_config=None):
 
         mii_configs = mii.config.MIIConfig(**mii_configs)
