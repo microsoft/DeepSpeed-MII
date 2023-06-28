@@ -132,8 +132,8 @@ class Deployment(BaseModel):
     task: str
     model: str
     enable_deepspeed: bool = True
-    enable_zero: bool = True
+    enable_zero: bool = False
     GPU_index_map: dict = None
-    mii_config: MIIConfig = None
+    mii_config: MIIConfig = MIIConfig.parse_obj({})
     ds_config: dict = None
     version: int = 1

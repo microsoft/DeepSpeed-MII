@@ -78,9 +78,10 @@ def deploy(task=None,
     ports = set()
     # parse and validate mii config
     for deployment in deployments:
-        mii_config = mii.config.MIIConfig(**deployment.mii_config)
-        assert mii_config.port_number not in ports, f"duplicate port numbers not allowed - {mii.config.port_number}"
-        ports.add(mii_config.port_number)
+        mii_config = deployment.mii_config
+        print(mii_config)
+        assert mii_config.port_number not in ports, f"duplicate port numbers not allowed - {mii_config.port_number}"
+        #ports.add(mii_config.port_number)
         if deployment.enable_zero:
             if deployment.ds_config.get("fp16", {}).get("enabled", False):
                 assert (mii_config.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"

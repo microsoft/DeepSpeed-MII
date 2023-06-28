@@ -173,6 +173,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                                 replica.tensor_parallel_ports)
             for replica in replica_configs
         ]
+        print(self.stubs)
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
         self.replica_sessions = {}
