@@ -13,7 +13,7 @@ def create_score_file(deployment_tag,
                       deployment_type,
                       deployments,
                       model_path,
-                      lb_config)
+                      lb_config):
     
     config_dict = {}
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
@@ -46,7 +46,7 @@ def create_score_file(deployment_tag,
     source_with_config += f"configs = {pprint.pformat(config_dict, indent=4)}"
 
     with open(generated_score_path(deployment_tag, deployment_type), "w") as fd:
-        fd.write(source_with_config):
+        fd.write(source_with_config)
         fd.write("\n")
 
 

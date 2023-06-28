@@ -50,13 +50,9 @@ class MIIServer():
                 f.write(f"localhost slots={num_gpu}")
             mii.configs.hostfile = hostfile
 
-        processes = self._initialize_service(deployment_name,
-                                             model_name,
+        processes = self._initialize_service(deployment_tag,
+                                             deployments,
                                              model_path,
-                                             ds_optimize,
-                                             ds_zero,
-                                             ds_config,
-                                             mii_configs,
                                              lb_config)
         self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
@@ -273,13 +269,9 @@ class MIIServer():
                                            ds_launch_str=ds_launch_str)
 
     def _initialize_service(self,
-                            deployment_name,
-                            model_name,
+                            deployment_tag,
+                            deployments,
                             model_path,
-                            ds_optimize,
-                            ds_zero,
-                            ds_config,
-                            mii_configs,
                             lb_config):
 
         processes = []
@@ -290,19 +282,20 @@ class MIIServer():
 
         # Start replica instances
         for i, repl_config in enumerate(lb_config.replica_configs):
+            name = repl_config.deployment_name
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             hostfile.write(
                 f'{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n'
                 .encode())
             processes.append(
                 self._launch_deepspeed(
-                    deployment_name,
-                    model_name,
+                    name,
+                    deployments[name].model,
                     model_path,
-                    ds_optimize,
-                    ds_zero,
-                    ds_config,
-                    mii_configs,
+                    deployments[name].enable_deepspeed,
+                    deployments[name].enable_zero,
+                    deployments[name].ds_config,
+                    deployments[name].mii_configs,
                     hostfile.name,
                     repl_config.hostname,
                     repl_config.tensor_parallel_ports[0],

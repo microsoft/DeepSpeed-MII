@@ -16,8 +16,15 @@ from .models import load_models
 from .config import ReplicaConfig, LoadBalancerConfig
 
 
-def deploy(deployment_tag,
-           deployments,
+def deploy(task=None,
+           model=None,
+           deployment_name=None,
+           enable_deepspeed=True,
+           enable_zero=False,
+           ds_config=None,
+           mii_config={},
+           deployment_tag=None,
+           deployments=[],
            deployment_type=DeploymentType.LOCAL,
            model_path=None):
     """Deploy a task using specified model. For usage examples see:
@@ -60,6 +67,13 @@ def deploy(deployment_tag,
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
     """
+    if len(deployments == 0):
+        assert model is not None and task is not None and deployment_name is not None, "model, task, and deployment name must be set to deploy sigular model"
+        deployments = [Deployment(deployment_name, task, model, enable_deepspeed, enable_zero, None, mii_config, ds_config, version)]
+        deployment_tag = deployment_name + "_tag"
+    else:
+        assert deployment_tag is not None, "deployment_tag must be set to deploy multiple models"
+
     mii.multi_model_deployments[deployment_tag] = deployments
     ports = set()
     # parse and validate mii config

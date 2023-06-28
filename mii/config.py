@@ -107,6 +107,7 @@ class MIIConfig(BaseModel):
 
 
 class ReplicaConfig(BaseModel):
+    deployment_name: str = ""
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
     torch_dist_port: int = None
