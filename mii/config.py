@@ -134,6 +134,6 @@ class Deployment(BaseModel):
     enable_deepspeed: bool = True
     enable_zero: bool = True
     GPU_index_map: dict = None
-    mii_config: dict = None
+    mii_config: MIIConfig = None
     ds_config: dict = None
     version: int = 1

@@ -17,7 +17,9 @@ model = None
 def init():
     model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
     deployment_tag = configs[mii.constants.DEPLOYMENT_TAG_KEY]
-    deployments = mii.multi_model_deployments[deployment_tag]
+    deployments = []
+    for deployment in configs.values():
+        deployments.append(Deployment(deployment[mii.constants.DEPLOYMENT_NAME_KEY], deployment[mii.constants.TASK_NAME_KEY], deployment[mii.constants.DEPLOYMENT_MODEL_NAME_KEY], deloyment[mii.constants.ENABLE_DEEPSPEED_KEY], deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY], None, deployment[mii.constants.MII_CONFIGS_KEY], deployment[mii.constants.DS_CONFIG_KEY], 1))
 
     deployment_name = configs[mii.constants.DEPLOYMENT_NAME_KEY]
     model_name = configs[mii.constants.MODEL_NAME_KEY]

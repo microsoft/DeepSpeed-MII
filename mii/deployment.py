@@ -67,8 +67,8 @@ def deploy(task=None,
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
     """
-    if len(deployments == 0):
-        assert model is not None and task is not None and deployment_name is not None, "model, task, and deployment name must be set to deploy sigular model"
+    if not deployments:
+        assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
         deployments = [Deployment(deployment_name, task, model, enable_deepspeed, enable_zero, None, mii_config, ds_config, version)]
         deployment_tag = deployment_name + "_tag"
     else:
