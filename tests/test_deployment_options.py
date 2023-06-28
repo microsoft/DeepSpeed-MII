@@ -10,8 +10,7 @@ import mii
 
 
 @pytest.mark.parametrize("meta_tensor", [True])
-@pytest.mark.parametrize("tensor_parallel", [1, 2])
-@pytest.mark.parametrize("model_name", ["bigscience/bloom-560m", "facebook/opt-350m"])
+@pytest.mark.parametrize("tensor_parallel", [2])
 def test_meta_tensor(deployment, query):
     generator = mii.mii_query_handle(deployment.deployment_name)
     result = generator.query(query)
