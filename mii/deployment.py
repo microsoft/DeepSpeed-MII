@@ -119,30 +119,33 @@ def deploy(task=None,
         model_path = "model"
 
     # add fields for replica deployment
-    replica_pool = _allocate_processes(mii_config.hostfile,
-                                       mii_config.tensor_parallel,
-                                       mii_config.replica_num)
     replica_configs = []
-    for i, (hostname, gpu_indices) in enumerate(replica_pool):
-        # Reserver port for a LB proxy when replication is enabled
-        port_offset = 1
-        base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-        tensor_parallel_ports = list(
-            range(base_port,
-                  base_port + mii_config.tensor_parallel))
-        torch_dist_port = mii_config.torch_dist_port + i
-        replica_configs.append(
-            ReplicaConfig(hostname=hostname,
-                          tensor_parallel_ports=tensor_parallel_ports,
-                          torch_dist_port=torch_dist_port,
-                          gpu_indices=gpu_indices))
+    for deployment in deployments:
+        mii_config = deployment.mii_config
+        replica_pool = _allocate_processes(mii_config.hostfile,
+                                           mii_config.tensor_parallel,
+                                           mii_config.replica_num)
+
+        for i, (hostname, gpu_indices) in enumerate(replica_pool):
+            # Reserver port for a LB proxy when replication is enabled
+            port_offset = 1
+            base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+            tensor_parallel_ports = list(
+                range(base_port,
+                    base_port + mii_config.tensor_parallel))
+            torch_dist_port = mii_config.torch_dist_port + i
+            replica_configs.append(
+                ReplicaConfig(hostname=hostname,
+                              tensor_parallel_ports=tensor_parallel_ports,
+                              torch_dist_port=torch_dist_port,
+                              gpu_indices=gpu_indices))
     lb_config = LoadBalancerConfig(port=mii_config.port_number,
                                    replica_configs=replica_configs)
 
     if deployment_type != DeploymentType.NON_PERSISTENT:
         create_score_file(deployment_tag=deployment_tag,
-                          deployments=deployments,
                           deployment_type=deployment_type,
+                          deployments=deployments,
                           model_path=model_path,
                           lb_config=lb_config)
 

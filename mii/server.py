@@ -34,14 +34,14 @@ class MIIServer():
                  model_path,
                  lb_config=None):
 
-        mii_configs = mii.config.MIIConfig(**mii_configs)
+        #mii_configs = mii.config.MIIConfig(**mii_configs)
 
-        self.task = mii.utils.get_task(task_name)
+        #self.task = mii.utils.get_task(task_name)
 
-        self.num_gpus = get_num_gpus(mii_configs)
-        assert self.num_gpus > 0, "GPU count must be greater than 0"
+        for deployment in deployments:
+            assert get_num_gpus(deployment.mii_configs) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
 
-        self.port_number = mii_configs.port_number
+        #self.port_number = mii_configs.port_number
 
         if mii_configs.hostfile is None:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
@@ -104,12 +104,17 @@ class MIIServer():
                            port):
         # serialize mii config
         b64_config_str = config_to_b64_str(mii_configs)
-
-        server_args_str = f"--deployment-name {deployment_name} --task-name {mii.utils.get_task_name(self.task)} --model {model_name} --model-path {model_path} --port {port}"
+        
+        task = ""
+        for deployment in deployments:
+            if deployment_name == deployment.deployment_name:
+                task = deployment.task
+                break
+        server_args_str = f"--deployment-name {deployment_name} --task-name {mii.utils.get_task_name(task)} --model {model_name} --model-path {model_path} --port {port}"
         server_args_str += " --ds-optimize" if ds_optimize else ""
 
         # XXX: fetch model provider based on model name in a more general way
-        provider = get_provider_name(model_name, self.task)
+        provider = get_provider_name(model_name, task)
         server_args_str += f" --provider {provider}"
 
         server_args_str += f" --config {b64_config_str}"
@@ -134,7 +139,7 @@ class MIIServer():
                     f"Expected a string path to an existing deepspeed config, or a dictionary. Received: {ds_config}"
                 )
             server_args_str += f" --ds-config {ds_config_path}"
-        printable_config = f"task-name {mii.utils.get_task_name(self.task)} model {model_name} model-path {model_path} port {self.port_number} provider {provider}"
+        printable_config = f"task-name task  model {model_name} model-path {model_path} port 50050 provider {provider}"
         logger.info(f"MII using multi-gpu deepspeed launcher:\n" +
                     self.print_helper(printable_config))
         return server_args_str

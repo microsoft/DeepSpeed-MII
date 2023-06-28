@@ -20,13 +20,13 @@ def create_score_file(deployment_tag,
     config_dict[mii.constants.DEPLOYMENT_TAG_KEY] = deployment_tag
     for deployment in deployments:
         config_dict[deployment.deployment_name] = {}
-        config_dict[deployment.deployment_name][mii.constants.DEPLOYMENT_NAME_KEY] = deployment_name
-        config_dict[deployment.deployment_name][mii.constants.TASK_NAME_KEY] = mii.utils.get_task_name(task)
-        config_dict[deployment.deployment_name][mii.constants.MODEL_NAME_KEY] = model_name
-        config_dict[deployment.deployment_name][mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
-        config_dict[deployment.deployment_name][mii.constants.MII_CONFIGS_KEY] = mii_config.dict()
-        config_dict[deployment.deployment_name][mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
-        config_dict[deployment.deployment_name][mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
+        config_dict[deployment.deployment_name][mii.constants.DEPLOYMENT_NAME_KEY] = deployment.deployment_name
+        config_dict[deployment.deployment_name][mii.constants.TASK_NAME_KEY] = mii.utils.get_task_name(deployment.task)
+        config_dict[deployment.deployment_name][mii.constants.MODEL_NAME_KEY] = deployment.model
+        config_dict[deployment.deployment_name][mii.constants.ENABLE_DEEPSPEED_KEY] = deployment.enable_deepspeed
+        config_dict[deployment.deployment_name][mii.constants.MII_CONFIGS_KEY] = deployment.mii_config.dict()
+        config_dict[deployment.deployment_name][mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = deployment.enable_zero
+        config_dict[deployment.deployment_name][mii.constants.DEEPSPEED_CONFIG_KEY] = deployment.ds_config
 
         if lb_config is not None:
             config_dict[deployment.deployment_name][mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config
