@@ -168,11 +168,12 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         super().__init__()
         self.asyncio_loop = asyncio.get_event_loop()
 
-        self.stubs = [
-            ParallelStubInvoker(replica.hostname,
-                                replica.tensor_parallel_ports)
-            for replica in replica_configs
-        ]
+        self.stubs = {}
+        for repl in replica_configs:
+            stubs[repl.deployment_name] = [ParallelStubInvoker(replica.hostname,
+                                                               replica.tensor_parallel_ports)
+                                                    for replica in replica_configs
+                                          ]
         print(self.stubs)
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
