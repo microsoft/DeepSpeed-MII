@@ -169,16 +169,24 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         self.asyncio_loop = asyncio.get_event_loop()
 
         self.stubs = {}
+        self.counter = {}
         for repl in replica_configs:
-            stubs[repl.deployment_name] = [ParallelStubInvoker(replica.hostname,
+            stubs[repl.deployment_name] = []
+            self.counter[repl.deployment_name] = AtomicCounter()
+
+
+        for repl in replica_configs:
+            stubs[repl.deployment_name].extend(ParallelStubInvoker(replica.hostname,
                                                                replica.tensor_parallel_ports)
                                                     for replica in replica_configs
-                                          ]
+                                                    )
         print(self.stubs)
+        """
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
         self.replica_sessions = {}
-
+        """
+    
         # Start the asyncio loop in a separate thread
         def run_asyncio_loop(loop):
             asyncio.set_event_loop(loop)
