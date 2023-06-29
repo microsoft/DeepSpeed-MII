@@ -9,6 +9,7 @@ import requests
 import mii
 
 
+@pytest.mark.deepspeed
 @pytest.mark.parametrize("meta_tensor", [True])
 @pytest.mark.parametrize("tensor_parallel", [2])
 def test_meta_tensor(deployment, query):
@@ -49,6 +50,7 @@ def test_replicas(deployment, query, replica_num):
         assert result
 
 
+@pytest.mark.deepspeed
 @pytest.mark.parametrize("enable_deepspeed", [False])
 @pytest.mark.parametrize("enable_zero", [True])
 @pytest.mark.parametrize("ds_config",
@@ -75,6 +77,7 @@ def test_zero_config(deployment, query):
     assert result
 
 
+@pytest.mark.deepspeed
 @pytest.mark.parametrize("expected_failure", [AssertionError])
 @pytest.mark.parametrize("enable_deepspeed, enable_zero, dtype",
                          [(True,
