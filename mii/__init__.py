@@ -15,7 +15,6 @@ from .grpc_related.proto import modelresponse_pb2_grpc
 
 __version__ = "0.0.0"
 non_persistent_models = {}
-multi_model_deployments = {}
 try:
     from .version import __version__
 except ImportError:

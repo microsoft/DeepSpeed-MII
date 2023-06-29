@@ -28,8 +28,8 @@ def create_score_file(deployment_tag,
         config_dict[deployment.deployment_name][mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = deployment.enable_zero
         config_dict[deployment.deployment_name][mii.constants.DEEPSPEED_CONFIG_KEY] = deployment.ds_config
 
-        if lb_config is not None:
-            config_dict[deployment.deployment_name][mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config
+    if lb_config is not None:
+        config_dict[mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config
 
         if len(mii.__path__) > 1:
             logger.warning(

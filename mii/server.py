@@ -37,18 +37,17 @@ class MIIServer():
         #mii_configs = mii.config.MIIConfig(**mii_configs)
 
         #self.task = mii.utils.get_task(task_name)
-
+        self.deployments = deployments
         for deployment in deployments:
-            assert get_num_gpus(deployment.mii_configs) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
-
-        #self.port_number = mii_configs.port_number
-
-        if mii_configs.hostfile is None:
-            hostfile = tempfile.NamedTemporaryFile(delete=False)
-            num_gpu = torch.cuda.device_count()
-            with open(hostfile, "w") as f:
-                f.write(f"localhost slots={num_gpu}")
-            mii.configs.hostfile = hostfile
+            assert get_num_gpus(deployment.mii_config) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
+            mii_configs = deployment.mii_config
+            deployment.task = mii.utils.get_task(deployment.task)
+            if mii_configs.hostfile is None:
+                hostfile = tempfile.NamedTemporaryFile(delete=False)
+                num_gpu = torch.cuda.device_count()
+                with open(hostfile, "w") as f:
+                    f.write(f"localhost slots={num_gpu}")
+                mii.configs.hostfile = hostfile
 
         processes = self._initialize_service(deployment_tag,
                                              deployments,
@@ -106,7 +105,7 @@ class MIIServer():
         b64_config_str = config_to_b64_str(mii_configs)
         
         task = ""
-        for deployment in deployments:
+        for deployment in self.deployments:
             if deployment_name == deployment.deployment_name:
                 task = deployment.task
                 break
@@ -139,7 +138,7 @@ class MIIServer():
                     f"Expected a string path to an existing deepspeed config, or a dictionary. Received: {ds_config}"
                 )
             server_args_str += f" --ds-config {ds_config_path}"
-        printable_config = f"task-name task  model {model_name} model-path {model_path} port 50050 provider {provider}"
+        printable_config = f"task-name {task} model {model_name} model-path {model_path} port {port} provider {provider}"
         logger.info(f"MII using multi-gpu deepspeed launcher:\n" +
                     self.print_helper(printable_config))
         return server_args_str
@@ -288,6 +287,12 @@ class MIIServer():
         # Start replica instances
         for i, repl_config in enumerate(lb_config.replica_configs):
             name = repl_config.deployment_name
+            deployment = None
+            print (f"IN SERVER NAME -> {name}")
+            for dep in deployments:
+                print(f"\nDEPLOYMENT_NAME {dep.deployment_name}")
+                if dep.deployment_name == name:
+                    deployment = dep
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             hostfile.write(
                 f'{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n'
@@ -295,16 +300,16 @@ class MIIServer():
             processes.append(
                 self._launch_deepspeed(
                     name,
-                    deployments[name].model,
+                    deployment.model,
                     model_path,
-                    deployments[name].enable_deepspeed,
-                    deployments[name].enable_zero,
-                    deployments[name].ds_config,
-                    deployments[name].mii_configs,
+                    deployment.enable_deepspeed,
+                    deployment.enable_zero,
+                    deployment.ds_config,
+                    deployment.mii_config,
                     hostfile.name,
                     repl_config.hostname,
                     repl_config.tensor_parallel_ports[0],
-                    mii_configs.torch_dist_port + (100 * i) + repl_config.gpu_indices[0],
+                    deployment.mii_config.torch_dist_port + (100 * i) + repl_config.gpu_indices[0],
                     repl_config.gpu_indices))
 
             # start load balancer here.

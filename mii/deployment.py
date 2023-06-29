@@ -74,7 +74,6 @@ def deploy(task=None,
     else:
         assert deployment_tag is not None, "deployment_tag must be set to deploy multiple models"
 
-    mii.multi_model_deployments[deployment_tag] = deployments
     ports = set()
     # parse and validate mii config
     for deployment in deployments:
@@ -135,7 +134,8 @@ def deploy(task=None,
                     base_port + mii_config.tensor_parallel))
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
-                ReplicaConfig(hostname=hostname,
+                ReplicaConfig(deployment_name = deployment.deployment_name,
+                              hostname=hostname,
                               tensor_parallel_ports=tensor_parallel_ports,
                               torch_dist_port=torch_dist_port,
                               gpu_indices=gpu_indices))
