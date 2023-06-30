@@ -317,25 +317,27 @@ class MIIServer():
             # The deepspeed launcher determines the number of processes to launch based on GPUs available on the host or CUDA_VISIBLE_DEVICES,
             # and it is expected to assign one GPU to one process.
         processes.append(
-            self._launch_load_balancer(deployment_name,
-                                       model_name,
+            self._launch_load_balancer(self.deployments[0].deployment_name,
+                                       self.deployments[0].model,
                                        model_path,
-                                       ds_optimize,
-                                       ds_zero,
-                                       ds_config,
-                                       mii_configs,
+                                       self.deployments[0].enable_deepspeed,
+                                       self.deployments[0].enable_zero,
+                                       self.deployments[0].ds_config,
+                                       self.deployments[0].mii_config,
                                        lb_config))
 
-        if mii_configs.enable_restful_api:
-            # start rest api server
-            processes.append(
-                self._launch_restful_gateway(deployment_name,
-                                             model_name,
-                                             model_path,
-                                             ds_optimize,
-                                             ds_zero,
-                                             ds_config,
-                                             mii_configs,
-                                             mii_configs.port_number))
+        for deployment in self.deployments:
+            if deployment.mii_config.enable_restful_api:
+                # start rest api server
+                processes.append(
+                    self._launch_restful_gateway(deployment.deployment_name,
+                                                 deployment.model,
+                                                 model_path,
+                                                 deployment.enable_deepspeed,
+                                                 deployment.enable_zero,
+                                                 deployment.ds_config,
+                                                 deployment.mii_config,
+                                                 deployment.mii_config.port_number))
+                break
 
         return processes

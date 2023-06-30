@@ -171,16 +171,15 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         self.stubs = {}
         self.counter = {}
         for repl in replica_configs:
-            stubs[repl.deployment_name] = []
+            self.stubs[repl.deployment_name] = []
             self.counter[repl.deployment_name] = AtomicCounter()
 
 
         for repl in replica_configs:
-            stubs[repl.deployment_name].extend(ParallelStubInvoker(replica.hostname,
+            self.stubs[repl.deployment_name].extend(ParallelStubInvoker(replica.hostname,
                                                                replica.tensor_parallel_ports)
-                                                    for replica in replica_configs
-                                                    )
-        print(self.stubs)
+                                                               for replica in replica_configs if replica.deployment_name == repl.deployment_name)
+        print(f"\nSTUBS-> {self.stubs}\nCOUNTERS-> {self.counter}")
         """
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
@@ -200,7 +199,14 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
     def intercept_service(self, continuation, handler_call_details):
         next_handler = continuation(handler_call_details)
         assert next_handler.unary_unary is not None
+        deployment_name = ""
+        #USE KWARGS LIKE THEY ARE USED TO MAKE SESSIONS TO GET THE DEPLOYMENT NAME TO HASH THE COUNTERS/STUBS
+        kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
+        assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
+        deployment_name = kwargs['deployment_name']
 
+        print(f"\nDEPLOYMENT NAME WITHIN INTERCEPTOR -> {deployment_name}")
+        
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
 
@@ -211,30 +217,29 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
 
-            call_count = self.counter.get_and_increment()
-            replica_index = call_count % len(self.stubs)
+            call_count = self.counter[deployment_name].get_and_increment()
+            replica_index = call_count % len(self.stubs[deployment_name])
 
             if method_name == CREATE_SESSION_METHOD:
                 if request_proto.session_id in self.sessions:
                     raise ValueError(
                         f"session {request_proto.session_id} already exists")
                 self.replica_sessions[request_proto.session_id] = replica_index
-                self.stubs[replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
+                self.stubs[deployment_name][replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == DESTROY_SESSION_METHOD:
                 replica_index = self.replica_sessions.pop(request_proto.session_id)
-                self.stubs[replica_index].invoke(DESTROY_SESSION_METHOD, request_proto)
+                self.stubs[deployment_name][replica_index].invoke(DESTROY_SESSION_METHOD, request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
-            kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
             if "session_id" in kwargs:
                 session_id = kwargs["session_id"]
                 if session_id not in self.replica_sessions:
                     raise ValueError(f"session not found")
                 replica_index = self.replica_sessions[session_id]
 
-            ret = self.stubs[replica_index].invoke(method_name, request_proto)
+            ret = self.stubs[deployment_name][replica_index].invoke(method_name, request_proto)
             return ret
 
         return grpc.unary_unary_rpc_method_handler(
