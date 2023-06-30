@@ -12,17 +12,17 @@ from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 
 
-def _get_deployment_info(deployment_name):
-    configs = mii.utils.import_score_file(deployment_name).configs
-    task = configs[mii.constants.TASK_NAME_KEY]
-    mii_configs_dict = configs[mii.constants.MII_CONFIGS_KEY]
+def _get_deployment_info(deployment_tag, deployment_name):
+    configs = mii.utils.import_score_file(deployment_tag).configs
+    task = configs[deployment_name][mii.constants.TASK_NAME_KEY]
+    mii_configs_dict = configs[deployment_name][mii.constants.MII_CONFIGS_KEY]
     mii_configs = mii.config.MIIConfig(**mii_configs_dict)
 
     assert task is not None, "The task name should be set before calling init"
     return task, mii_configs
 
 
-def mii_query_handle(deployment_name):
+def mii_query_handle(deployment_tag, deployment_name):
     """Get a query handle for a local deployment:
 
         mii/examples/local/gpt2-query-example.py
@@ -39,7 +39,7 @@ def mii_query_handle(deployment_name):
         inference_pipeline, task = mii.non_persistent_models[deployment_name]
         return MIINonPersistentClient(task, deployment_name)
 
-    task_name, mii_configs = _get_deployment_info(deployment_name)
+    task_name, mii_configs = _get_deployment_info(deployment_tag, deployment_name)
     return MIIClient(task_name, "localhost", mii_configs.port_number)
 
 
@@ -60,7 +60,8 @@ class MIIClient():
         channel = create_channel(host, port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
         self.task = get_task(task_name)
-
+        
+        print(f"IN CLEINT TASK -> {self.task}\n STUB -> {self.stub}")
     async def _request_async_response(self, request_dict, **query_kwargs):
         if self.task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {self.task}")

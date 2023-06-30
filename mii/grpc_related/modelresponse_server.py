@@ -16,7 +16,7 @@ import time
 from mii.constants import GRPC_MAX_MSG_SIZE, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
-from mii.utils import get_task, unpack_proto_query_kwargs
+from mii.utils import get_task, unpack_proto_query_kwargs, kwarg_dict_to_proto
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -199,15 +199,37 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
     def intercept_service(self, continuation, handler_call_details):
         next_handler = continuation(handler_call_details)
         assert next_handler.unary_unary is not None
-        deployment_name = ""
         #USE KWARGS LIKE THEY ARE USED TO MAKE SESSIONS TO GET THE DEPLOYMENT NAME TO HASH THE COUNTERS/STUBS
-        kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
-        assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
-        deployment_name = kwargs['deployment_name']
 
-        print(f"\nDEPLOYMENT NAME WITHIN INTERCEPTOR -> {deployment_name}")
-        
         def invoke_intercept_method(request_proto, context):
+            kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
+            assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
+            deployment_name = kwargs.get('deployment_name')
+            del kwargs['deployment_name']
+            kwargs = kwarg_dict_to_proto(**kwargs)
+            task = None
+            for repl in replica_configs:
+                if repl.deployment_name == deployment_name:
+                    task = repl.task
+                    break
+            method = GRPC_METHOD_TABLE[get_task(task)]
+            if method_name == "ConversationalReply":
+                request_dict = {}
+                request_dict['text'] = request_proto.text
+                request_dict['conversation_id'] = getattr(request_proto, 'conversation_id')
+                request_dict['past_user_inputs'] = request_proto.past_user_inputs
+                request_dict['generated_responses'] = request_proto.generated_responses
+                request_proto = method.pack_request_to_proto(request_dict, kwargs)
+
+            elif method_name == "QuestionAndAnswerReply":
+                request_dict = {}
+                request_dict['question'] = request_proto.question
+                request_dict['context'] = requet_proto.context
+                request_proto = method.pack_request_to_proto(request_dict, kwargs)
+            else
+                request_proto = method.pack_request_to_proto(request_proto.query, kwargs)
+
+            print(f"\nDEPLOYMENT NAME WITHIN INTERCEPTOR -> {deployment_name}")
             method_name = _get_grpc_method_name(handler_call_details.method)
 
             if method_name == TERMINATE_METHOD:
