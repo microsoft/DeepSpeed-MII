@@ -213,22 +213,22 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 if repl.deployment_name == deployment_name:
                     task = repl.task
                     break
-            print(f"\nTASK ->{task}")
+            print(f"\nTASK ->{task}\nMETHOD NAME-> {method_name}")
             method = GRPC_METHOD_TABLE[get_task(task)]
             new_request = None
             if method_name == "ConversationalReply":
                 request_dict = {}
-                request_dict['text'] = request_proto.text
+                request_dict['text'] = str(request_proto.text)
                 val =  getattr(request_proto, 'conversation_id')
                 request_dict['conversation_id'] = int(val) if val is not None else None
-                request_dict['past_user_inputs'] = request_proto.past_user_inputs
-                request_dict['generated_responses'] = request_proto.generated_responses
+                request_dict['past_user_inputs'] = list(request_proto.past_user_inputs)
+                request_dict['generated_responses'] = list(request_proto.generated_responses)
                 new_request = method.pack_request_to_proto(request_dict, **kwargs)
 
             elif method_name == "QuestionAndAnswerReply":
                 request_dict = {}
-                request_dict['question'] = request_proto.question
-                request_dict['context'] = requet_proto.context
+                request_dict['question'] = str(request_proto.question)
+                request_dict['context'] = str(requet_proto.context)
                 new_request = method.pack_request_to_proto(request_dict, **kwargs)
             else:
                 request_dict = {}
@@ -270,6 +270,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
             assert new_request is not None, "test"
             print("ASSERT DONE")
+            print(new_request.query_kwargs)
             ret = self.stubs[deployment_name][replica_index].invoke(method_name, new_request)
             return ret
 
