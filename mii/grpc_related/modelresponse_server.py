@@ -170,6 +170,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
         self.stubs = {}
         self.counter = {}
+        self.replica_configs = replica_configs
         for repl in replica_configs:
             self.stubs[repl.deployment_name] = []
             self.counter[repl.deployment_name] = AtomicCounter()
@@ -202,42 +203,48 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         #USE KWARGS LIKE THEY ARE USED TO MAKE SESSIONS TO GET THE DEPLOYMENT NAME TO HASH THE COUNTERS/STUBS
 
         def invoke_intercept_method(request_proto, context):
+            method_name = _get_grpc_method_name(handler_call_details.method)
             kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
             assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
             deployment_name = kwargs.get('deployment_name')
-            del kwargs['deployment_name']
-            kwargs = kwarg_dict_to_proto(**kwargs)
+            kwargs.pop('deployment_name', None)
             task = None
-            for repl in replica_configs:
+            for repl in self.replica_configs:
                 if repl.deployment_name == deployment_name:
                     task = repl.task
                     break
+            print(f"\nTASK ->{task}")
             method = GRPC_METHOD_TABLE[get_task(task)]
+            new_request = None
             if method_name == "ConversationalReply":
                 request_dict = {}
                 request_dict['text'] = request_proto.text
-                request_dict['conversation_id'] = getattr(request_proto, 'conversation_id')
+                val =  getattr(request_proto, 'conversation_id')
+                request_dict['conversation_id'] = int(val) if val is not None else None
                 request_dict['past_user_inputs'] = request_proto.past_user_inputs
                 request_dict['generated_responses'] = request_proto.generated_responses
-                request_proto = method.pack_request_to_proto(request_dict, kwargs)
+                new_request = method.pack_request_to_proto(request_dict, **kwargs)
 
             elif method_name == "QuestionAndAnswerReply":
                 request_dict = {}
                 request_dict['question'] = request_proto.question
                 request_dict['context'] = requet_proto.context
-                request_proto = method.pack_request_to_proto(request_dict, kwargs)
-            else
-                request_proto = method.pack_request_to_proto(request_proto.query, kwargs)
+                new_request = method.pack_request_to_proto(request_dict, **kwargs)
+            else:
+                request_dict = {}
+                request_dict["query"] = list(request_proto.request) if method_name == "GeneratorReply" or method_name == "Txt2ImgReply" else str(request_proto.request)
+                print(f"HERE request_dict -> {request_dict}\nKWARGS-> {kwargs}")
+                new_request = method.pack_request_to_proto(request_dict, **kwargs)
+                print("done?")
 
             print(f"\nDEPLOYMENT NAME WITHIN INTERCEPTOR -> {deployment_name}")
-            method_name = _get_grpc_method_name(handler_call_details.method)
 
             if method_name == TERMINATE_METHOD:
                 for stub in self.stubs:
                     stub.invoke(TERMINATE_METHOD,
                                 google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
-                return next_handler.unary_unary(request_proto, context)
+                return next_handler.unary_unary(new_request, context)
 
             call_count = self.counter[deployment_name].get_and_increment()
             replica_index = call_count % len(self.stubs[deployment_name])
@@ -247,12 +254,12 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                     raise ValueError(
                         f"session {request_proto.session_id} already exists")
                 self.replica_sessions[request_proto.session_id] = replica_index
-                self.stubs[deployment_name][replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
+                self.stubs[deployment_name][replica_index].invoke(CREATE_SESSION_METHOD, new_request)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == DESTROY_SESSION_METHOD:
                 replica_index = self.replica_sessions.pop(request_proto.session_id)
-                self.stubs[deployment_name][replica_index].invoke(DESTROY_SESSION_METHOD, request_proto)
+                self.stubs[deployment_name][replica_index].invoke(DESTROY_SESSION_METHOD, new_request)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if "session_id" in kwargs:
@@ -261,7 +268,9 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                     raise ValueError(f"session not found")
                 replica_index = self.replica_sessions[session_id]
 
-            ret = self.stubs[deployment_name][replica_index].invoke(method_name, request_proto)
+            assert new_request is not None, "test"
+            print("ASSERT DONE")
+            ret = self.stubs[deployment_name][replica_index].invoke(method_name, new_request)
             return ret
 
         return grpc.unary_unary_rpc_method_handler(

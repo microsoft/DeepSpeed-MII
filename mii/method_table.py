@@ -23,6 +23,9 @@ def single_string_response_to_proto(self, response, time_taken, model_time_taken
 
 
 def multi_string_request_to_proto(self, request_dict, **query_kwargs):
+    temp = kwarg_dict_to_proto(query_kwargs)
+    print(f"FINE {temp}\nrd->{request_dict}")
+    print(isinstance(request_dict['query'], list))
     return modelresponse_pb2.MultiStringRequest(
         request=request_dict['query'] if isinstance(request_dict['query'],
                                                     list) else [request_dict['query']],

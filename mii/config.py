@@ -6,7 +6,7 @@ import torch
 from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel, validator, root_validator
-
+from .constants import Tasks
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 
 
@@ -107,6 +107,7 @@ class MIIConfig(BaseModel):
 
 
 class ReplicaConfig(BaseModel):
+    task: str = ""
     deployment_name: str = ""
     hostname: str = ""
     tensor_parallel_ports: List[int] = []

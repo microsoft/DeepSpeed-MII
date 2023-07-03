@@ -134,7 +134,8 @@ def deploy(task=None,
                     base_port + mii_config.tensor_parallel))
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
-                ReplicaConfig(deployment_name = deployment.deployment_name,
+                ReplicaConfig(task=get_task_name(deployment.task),
+                              deployment_name = deployment.deployment_name,
                               hostname=hostname,
                               tensor_parallel_ports=tensor_parallel_ports,
                               torch_dist_port=torch_dist_port,
