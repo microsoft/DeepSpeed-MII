@@ -13,7 +13,7 @@ from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT, MODEL_PROVIDER_MA
 from .utils import logger, get_task_name, get_provider_name
 from .models.score import create_score_file
 from .models import load_models
-from .config import ReplicaConfig, LoadBalancerConfig
+from .config import ReplicaConfig, LoadBalancerConfig, Deployment
 
 
 def deploy(task=None,
@@ -26,7 +26,8 @@ def deploy(task=None,
            deployment_tag=None,
            deployments=[],
            deployment_type=DeploymentType.LOCAL,
-           model_path=None):
+           model_path=None,
+           version=1):
     """Deploy a task using specified model. For usage examples see:
 
         mii/examples/local/text-generation-example.py
@@ -69,7 +70,17 @@ def deploy(task=None,
     """
     if not deployments:
         assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
-        deployments = [Deployment(deployment_name, task, model, enable_deepspeed, enable_zero, None, mii_config, ds_config, version)]
+        deployments = [
+            Deployment(deployment_name,
+                       task,
+                       model,
+                       enable_deepspeed,
+                       enable_zero,
+                       None,
+                       mii_config,
+                       ds_config,
+                       version)
+        ]
         deployment_tag = deployment_name + "_tag"
     else:
         assert deployment_tag is not None, "deployment_tag must be set to deploy multiple models"
@@ -96,15 +107,17 @@ def deploy(task=None,
         if not mii_config.skip_model_check:
             mii.utils.check_if_task_and_model_is_valid(deployment.task, deployment.model)
             if enable_deepspeed:
-                mii.utils.check_if_task_and_model_is_supported(deployment.task, deployment.model)
+                mii.utils.check_if_task_and_model_is_supported(
+                    deployment.task,
+                    deployment.model)
 
         if enable_deepspeed:
             logger.info(
-                    f"************* MII is using DeepSpeed Optimizations to accelerate your model: {deployment.model} *************"
+                f"************* MII is using DeepSpeed Optimizations to accelerate your model: {deployment.model} *************"
             )
         else:
             logger.info(
-                    f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance for: {deployment.model} *************"
+                f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance for: {deployment.model} *************"
             )
 
     # In local deployments use default path if no model path set
@@ -115,7 +128,7 @@ def deploy(task=None,
 
     # add fields for replica deployment
     replica_configs = []
-    ports = set()
+    port_map = {}
     for deployment in deployments:
         mii_config = deployment.mii_config
         replica_pool = _allocate_processes(mii_config.hostfile,
@@ -125,19 +138,21 @@ def deploy(task=None,
 
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
+            if hostname not in port_map:
+                port_map[hostname] = set()
             port_offset = 1
             base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-            if base_port in ports:
-                base_port = max(ports) + 1
+            if base_port in port_map[hostname]:
+                base_port = max(port_map[hostname]) + 1
             tensor_parallel_ports = list(
                 range(base_port,
-                    base_port + mii_config.tensor_parallel))
+                      base_port + mii_config.tensor_parallel))
             for i in range(base_port, base_port + mii_config.tensor_parallel):
-                ports.add(i)
+                port_map[hostname].add(i)
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
                 ReplicaConfig(task=get_task_name(deployment.task),
-                              deployment_name = deployment.deployment_name,
+                              deployment_name=deployment.deployment_name,
                               hostname=hostname,
                               tensor_parallel_ports=tensor_parallel_ports,
                               torch_dist_port=torch_dist_port,
@@ -183,23 +198,25 @@ def _deploy_aml(deployment_tag, model_name, version):
                                                model_name=model_name,
                                                version=version)
     print(
-        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_name)}"
+        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_tag)}"
     )
     print("Please run 'deploy.sh' to bring your deployment online")
 
 
-def _allocate_processes(hostfile_path, tensor_parallel, num_replicas, gpu_index_map=None):
+def _allocate_processes(hostfile_path,
+                        tensor_parallel,
+                        num_replicas,
+                        gpu_index_map=None):
     resource_pool = fetch_hostfile(hostfile_path)
     assert resource_pool is not None and len(
         resource_pool) > 0, f'No hosts found in {hostfile_path}'
-    
+
     replica_pool = []
 
     if gpu_index_map is not None:
-        assert len(gpu_index_map) == num_replicas, "Number of Hosts must match number of replicas"
         for host in gpu_index_map:
             assert host in resource_pool, f"Host: {host} was not found"
-            assert resource_pool[host] >= tensor_parallel, f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required"
+            assert resource_pool[host] >= tensor_parallel, f"Host {host} has {resource_pool[host]} slot(s), but {tensor_parallel} slot(s) are required"
         for host in gpu_index_map:
             replica_pool.append((host, gpu_index_map[host]))
         return replica_pool

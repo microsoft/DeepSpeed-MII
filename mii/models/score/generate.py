@@ -14,19 +14,26 @@ def create_score_file(deployment_tag,
                       deployments,
                       model_path,
                       lb_config):
-    
+
     config_dict = {}
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
     config_dict[mii.constants.DEPLOYMENT_TAG_KEY] = deployment_tag
     for deployment in deployments:
         config_dict[deployment.deployment_name] = {}
-        config_dict[deployment.deployment_name][mii.constants.DEPLOYMENT_NAME_KEY] = deployment.deployment_name
-        config_dict[deployment.deployment_name][mii.constants.TASK_NAME_KEY] = mii.utils.get_task_name(deployment.task)
-        config_dict[deployment.deployment_name][mii.constants.MODEL_NAME_KEY] = deployment.model
-        config_dict[deployment.deployment_name][mii.constants.ENABLE_DEEPSPEED_KEY] = deployment.enable_deepspeed
-        config_dict[deployment.deployment_name][mii.constants.MII_CONFIGS_KEY] = deployment.mii_config.dict()
-        config_dict[deployment.deployment_name][mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = deployment.enable_zero
-        config_dict[deployment.deployment_name][mii.constants.DEEPSPEED_CONFIG_KEY] = deployment.ds_config
+        config_dict[deployment.deployment_name][
+            mii.constants.DEPLOYMENT_NAME_KEY] = deployment.deployment_name
+        config_dict[deployment.deployment_name][
+            mii.constants.TASK_NAME_KEY] = mii.utils.get_task_name(deployment.task)
+        config_dict[deployment.deployment_name][
+            mii.constants.MODEL_NAME_KEY] = deployment.model
+        config_dict[deployment.deployment_name][
+            mii.constants.ENABLE_DEEPSPEED_KEY] = deployment.enable_deepspeed
+        config_dict[deployment.deployment_name][
+            mii.constants.MII_CONFIGS_KEY] = deployment.mii_config.dict()
+        config_dict[deployment.deployment_name][
+            mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = deployment.enable_zero
+        config_dict[deployment.deployment_name][
+            mii.constants.DEEPSPEED_CONFIG_KEY] = deployment.ds_config
 
     if lb_config is not None:
         config_dict[mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config
@@ -37,8 +44,8 @@ def create_score_file(deployment_tag,
             )
 
     with open(os.path.join(mii.__path__[0],
-                        "models/score/score_template.py"),
-            "r") as fd:
+                           "models/score/score_template.py"),
+              "r") as fd:
         score_src = fd.read()
 
     # update score file w. global config dict

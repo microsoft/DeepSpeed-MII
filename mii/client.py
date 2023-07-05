@@ -60,7 +60,7 @@ class MIIClient():
         channel = create_channel(host, port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
         self.task = get_task(task_name)
-        
+
     async def _request_async_response(self, request_dict, **query_kwargs):
         if self.task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {self.task}")

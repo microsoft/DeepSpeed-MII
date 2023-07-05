@@ -28,11 +28,7 @@ def config_to_b64_str(config):
 
 class MIIServer():
     '''Initialize the model, setup the server for the model under model_path'''
-    def __init__(self,
-                 deployment_tag,
-                 deployments,
-                 model_path,
-                 lb_config=None):
+    def __init__(self, deployment_tag, deployments, model_path, lb_config=None):
 
         #mii_configs = mii.config.MIIConfig(**mii_configs)
 
@@ -103,7 +99,7 @@ class MIIServer():
                            port):
         # serialize mii config
         b64_config_str = config_to_b64_str(mii_configs)
-        
+
         task = ""
         for deployment in self.deployments:
             if deployment_name == deployment.deployment_name:
@@ -272,11 +268,7 @@ class MIIServer():
                                            "MII server",
                                            ds_launch_str=ds_launch_str)
 
-    def _initialize_service(self,
-                            deployment_tag,
-                            deployments,
-                            model_path,
-                            lb_config):
+    def _initialize_service(self, deployment_tag, deployments, model_path, lb_config):
 
         processes = []
 
@@ -288,7 +280,7 @@ class MIIServer():
         for i, repl_config in enumerate(lb_config.replica_configs):
             name = repl_config.deployment_name
             deployment = None
-            print (f"IN SERVER NAME -> {name}")
+            print(f"IN SERVER NAME -> {name}")
             for dep in deployments:
                 print(f"\nDEPLOYMENT_NAME {dep.deployment_name}")
                 if dep.deployment_name == name:
@@ -309,7 +301,8 @@ class MIIServer():
                     hostfile.name,
                     repl_config.hostname,
                     repl_config.tensor_parallel_ports[0],
-                    deployment.mii_config.torch_dist_port + (100 * i) + repl_config.gpu_indices[0],
+                    deployment.mii_config.torch_dist_port + (100 * i) +
+                    repl_config.gpu_indices[0],
                     repl_config.gpu_indices))
 
             # start load balancer here.

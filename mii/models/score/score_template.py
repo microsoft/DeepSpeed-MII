@@ -22,7 +22,17 @@ def init():
         if not isinstance(deployment, dict):
             continue
         print(f"\nDEPLOYMENT ->{configs.values()}")
-        data = {'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY], 'task': deployment[mii.constants.TASK_NAME_KEY], 'model': deployment[mii.constants.MODEL_NAME_KEY], 'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY], 'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY], 'GPU_index_map': None, 'mii_config': deployment[mii.constants.MII_CONFIGS_KEY], 'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY], 'version': 1}
+        data = {
+            'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
+            'task': deployment[mii.constants.TASK_NAME_KEY],
+            'model': deployment[mii.constants.MODEL_NAME_KEY],
+            'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
+            'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
+            'GPU_index_map': None,
+            'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
+            'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
+            'version': 1
+        }
         deployments.append(mii.Deployment.parse_obj(data))
 
     print(f"WITHIN INIT {deployments}")

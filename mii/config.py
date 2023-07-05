@@ -6,7 +6,6 @@ import torch
 from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel, validator, root_validator
-from .constants import Tasks
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 
 
@@ -125,6 +124,8 @@ class LoadBalancerConfig(BaseModel):
 
     class Config:
         validate_all = True
+
+
 validate_assignment = True
 
 
