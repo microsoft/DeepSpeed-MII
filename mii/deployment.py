@@ -74,13 +74,9 @@ def deploy(task=None,
     else:
         assert deployment_tag is not None, "deployment_tag must be set to deploy multiple models"
 
-    ports = set()
     # parse and validate mii config
     for deployment in deployments:
         mii_config = deployment.mii_config
-        print(mii_config)
-        assert mii_config.port_number not in ports, f"duplicate port numbers not allowed - {mii_config.port_number}"
-        #ports.add(mii_config.port_number)
         if deployment.enable_zero:
             if deployment.ds_config.get("fp16", {}).get("enabled", False):
                 assert (mii_config.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
@@ -119,19 +115,25 @@ def deploy(task=None,
 
     # add fields for replica deployment
     replica_configs = []
+    ports = set()
     for deployment in deployments:
         mii_config = deployment.mii_config
         replica_pool = _allocate_processes(mii_config.hostfile,
                                            mii_config.tensor_parallel,
-                                           mii_config.replica_num)
+                                           mii_config.replica_num,
+                                           deployment.GPU_index_map)
 
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
             port_offset = 1
             base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+            if base_port in ports:
+                base_port = max(ports) + 1
             tensor_parallel_ports = list(
                 range(base_port,
                     base_port + mii_config.tensor_parallel))
+            for i in range(base_port, base_port + mii_config.tensor_parallel):
+                ports.add(i)
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
                 ReplicaConfig(task=get_task_name(deployment.task),
@@ -186,12 +188,22 @@ def _deploy_aml(deployment_tag, model_name, version):
     print("Please run 'deploy.sh' to bring your deployment online")
 
 
-def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
+def _allocate_processes(hostfile_path, tensor_parallel, num_replicas, gpu_index_map=None):
     resource_pool = fetch_hostfile(hostfile_path)
     assert resource_pool is not None and len(
         resource_pool) > 0, f'No hosts found in {hostfile_path}'
-
+    
     replica_pool = []
+
+    if gpu_index_map is not None:
+        assert len(gpu_index_map) == num_replicas, "Number of Hosts must match number of replicas"
+        for host in gpu_index_map:
+            assert host in resource_pool, f"Host: {host} was not found"
+            assert resource_pool[host] >= tensor_parallel, f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required"
+        for host in gpu_index_map:
+            replica_pool.append((host, gpu_index_map[host]))
+        return replica_pool
+
     allocated_num = 0
     for host, slots in resource_pool.items():
         available_on_host = slots

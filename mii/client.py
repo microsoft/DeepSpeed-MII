@@ -61,7 +61,6 @@ class MIIClient():
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
         self.task = get_task(task_name)
         
-        print(f"IN CLEINT TASK -> {self.task}\n STUB -> {self.stub}")
     async def _request_async_response(self, request_dict, **query_kwargs):
         if self.task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {self.task}")
