@@ -7,9 +7,9 @@ import grpc
 import mii
 
 
-def terminate(deployment_name):
+def terminate(deployment_tag, deployment_name):
     mii.utils.logger.info(f"Terminating server for {deployment_name}")
-    generator = mii.mii_query_handle(deployment_name)
+    generator = mii.mii_query_handle(deployment_tag, deployment_name)
     if (deployment_name in mii.non_persistent_models):
         generator.terminate()
         return
@@ -24,4 +24,4 @@ def terminate(deployment_name):
         pass
 
     generator.terminate()
-    mii.client.terminate_restful_gateway(deployment_name)
+    mii.client.terminate_restful_gateway(deployment_tag, deployment_name)

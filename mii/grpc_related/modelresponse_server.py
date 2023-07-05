@@ -207,8 +207,16 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
+            if method_name == TERMINATE_METHOD:
+                for deployment in self.stubs:
+                    for stub in self.stubs[deployment]:
+                        stub.invoke(TERMINATE_METHOD,
+                                    google_dot_protobuf_dot_empty__pb2.Empty())
+                self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
+                return next_handler.unary_unary(request_proto, context)
             kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
-            assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
+            if method_name != TERMINATE_METHOD:
+                assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
             deployment_name = kwargs.get('deployment_name')
             kwargs.pop('deployment_name', None)
             task = None
@@ -245,13 +253,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 print("done?")
 
             print(f"\nDEPLOYMENT NAME WITHIN INTERCEPTOR -> {deployment_name}")
-
-            if method_name == TERMINATE_METHOD:
-                for stub in self.stubs:
-                    stub.invoke(TERMINATE_METHOD,
-                                google_dot_protobuf_dot_empty__pb2.Empty())
-                self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
-                return next_handler.unary_unary(new_request, context)
 
             call_count = self.counter[deployment_name].get_and_increment()
             replica_index = call_count % len(self.stubs[deployment_name])

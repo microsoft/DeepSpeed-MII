@@ -188,7 +188,7 @@ class MIINonPersistentClient():
         del mii.non_persistent_models[self.deployment_name]
 
 
-def terminate_restful_gateway(deployment_name):
-    _, mii_configs = _get_deployment_info(deployment_name)
+def terminate_restful_gateway(deployment_tag, deployment_name):
+    _, mii_configs = _get_deployment_info(deployment_tag, deployment_name)
     if mii_configs.enable_restful_api:
         requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")

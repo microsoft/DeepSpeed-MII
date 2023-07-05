@@ -4,4 +4,4 @@
 # DeepSpeed Team
 import mii
 
-mii.terminate("bloom560m_deployment")
+mii.terminate("first_test", "bloom560m_deployment")
