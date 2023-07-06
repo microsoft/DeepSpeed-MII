@@ -36,4 +36,11 @@ deployments.append(
                    GPU_index_map=gpu_index_map1,
                    mii_config=mii.config.MIIConfig(**mii_configs2)))
 
+name = "deepset/roberta-large-squad2"
+deployments.append(
+    mii.Deployment(task="question-answering",
+                   model=name,
+                   deployment_name=name + "-qa-deployment",
+                   GPU_index_map=gpu_index_map2))
+
 mii.deploy(deployment_tag="first_test", deployments=deployments)

@@ -81,7 +81,7 @@ def deploy(task=None,
                        ds_config,
                        version)
         ]
-        deployment_tag = deployment_name + "_tag"
+        deployment_tag = deployment_name
     else:
         assert deployment_tag is not None, "deployment_tag must be set to deploy multiple models"
 

@@ -32,3 +32,11 @@ result = generator.query(
     },
     "microsoft/DialoGPT-large_deployment")
 print(result)
+
+results = generator.query(
+    {
+        'question': "What is the greatest?",
+        'context': "DeepSpeed is the greatest"
+    }, 
+    "deepset/roberta-large-squad2" + "-qa-deployment")
+print(results)

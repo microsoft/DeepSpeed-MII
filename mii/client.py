@@ -18,7 +18,6 @@ def _get_deployment_info(deployment_tag):
     for deployment in configs:
         if not isinstance(configs[deployment], dict):
             continue
-        print("here")
         deployments.append(configs[deployment])
         mii_configs_dict = configs[deployment][mii.constants.MII_CONFIGS_KEY]
         mii_configs = mii.config.MIIConfig(**mii_configs_dict)
@@ -33,7 +32,7 @@ def _get_deployment_info(deployment_tag):
     """
 
 
-def mii_query_handle(deployment_tag, deployment_name=None):
+def mii_query_handle(deployment_tag):
     """Get a query handle for a local deployment:
 
         mii/examples/local/gpt2-query-example.py
@@ -46,12 +45,11 @@ def mii_query_handle(deployment_tag, deployment_name=None):
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
 
-    if deployment_name is not None and deployment_name in mii.non_persistent_models:
+    if deployment_tag in mii.non_persistent_models:
         inference_pipeline, task = mii.non_persistent_models[deployment_name]
         return MIINonPersistentClient(task, deployment_name)
 
     deployments = _get_deployment_info(deployment_tag)
-    print(deployments)
     mii_configs_dict = deployments[0][mii.constants.MII_CONFIGS_KEY]
     mii_configs = mii.config.MIIConfig(**mii_configs_dict)
     return MIIClient(deployments, "localhost", mii_configs.port_number)
@@ -86,6 +84,8 @@ class MIIClient():
         return task_methods.unpack_response_from_proto(proto_response)
 
     def query(self, request_dict, deployment_name, **query_kwargs):
+        if deployment_name is None: #mii.terminate()
+            return len(self.deployments)
         task = None
         for deployment in self.deployments:
             if deployment[mii.constants.DEPLOYMENT_NAME_KEY] == deployment_name:
@@ -220,7 +220,10 @@ class MIINonPersistentClient():
         del mii.non_persistent_models[self.deployment_name]
 
 
-def terminate_restful_gateway(deployment_tag, deployment_name):
-    _, mii_configs = _get_deployment_info(deployment_tag, deployment_name)
-    if mii_configs.enable_restful_api:
-        requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")
+def terminate_restful_gateway(deployment_tag):
+    deployments = _get_deployment_info(deployment_tag)
+    for deployment in deployments:
+        mii_configs_dict = deployment[mii.constants.MII_CONFIGS_KEY]
+        mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+        if mii_configs.enable_restful_api:
+            requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")
