@@ -175,7 +175,7 @@ def deploy(task=None,
         assert int(os.getenv('WORLD_SIZE', '1')) == mii_config.tensor_parallel, "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
         provider = MODEL_PROVIDER_MAP[get_provider_name(model, task)]
         mii.non_persistent_models[deployment_name] = (load_models(
-            get_task_name(task),
+            task,
             model,
             model_path,
             enable_deepspeed,
