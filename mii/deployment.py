@@ -71,15 +71,15 @@ def deploy(task=None,
     if not deployments:
         assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
         deployments = [
-            Deployment(deployment_name,
-                       task,
-                       model,
-                       enable_deepspeed,
-                       enable_zero,
-                       None,
-                       mii_config,
-                       ds_config,
-                       version)
+            Deployment(deployment_name=deployment_name,
+                       task=task,
+                       model=model,
+                       enable_deepspeed=enable_deepspeed,
+                       enable_zero=enable_zero,
+                       GPU_index_map=None,
+                       mii_config=mii.config.MIIConfig(**mii_config),
+                       ds_config=ds_config,
+                       version=version)
         ]
         deployment_tag = deployment_name
     else:
