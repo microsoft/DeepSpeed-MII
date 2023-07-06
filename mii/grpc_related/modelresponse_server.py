@@ -175,14 +175,12 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             self.stubs[repl.deployment_name] = []
             self.counter[repl.deployment_name] = AtomicCounter()
 
-        print(replica_configs)
         for repl in replica_configs:
             self.stubs[repl.deployment_name].extend(
                 ParallelStubInvoker(replica.hostname,
                                     replica.tensor_parallel_ports)
                 for replica in replica_configs
                 if replica.deployment_name == repl.deployment_name)
-        print(f"\nSTUBS-> {self.stubs}\nCOUNTERS-> {self.counter}")
         """
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
@@ -224,7 +222,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 if repl.deployment_name == deployment_name:
                     task = repl.task
                     break
-            print(f"\nTASK ->{task}\nMETHOD NAME-> {method_name}")
             method = GRPC_METHOD_TABLE[get_task(task)]
             new_request = None
             if method_name == "ConversationalReply":
@@ -248,11 +245,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                     request_proto.request
                 ) if method_name == "GeneratorReply" or method_name == "Txt2ImgReply" else str(
                     request_proto.request)
-                print(f"HERE request_dict -> {request_dict}\nKWARGS-> {kwargs}")
                 new_request = method.pack_request_to_proto(request_dict, **kwargs)
-                print("done?")
-
-            print(f"\nDEPLOYMENT NAME WITHIN INTERCEPTOR -> {deployment_name}")
 
             call_count = self.counter[deployment_name].get_and_increment()
             replica_index = call_count % len(self.stubs[deployment_name])
@@ -281,8 +274,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 replica_index = self.replica_sessions[session_id]
 
             assert new_request is not None, "test"
-            print("ASSERT DONE")
-            print(new_request.query_kwargs)
             ret = self.stubs[deployment_name][replica_index].invoke(
                 method_name,
                 new_request)

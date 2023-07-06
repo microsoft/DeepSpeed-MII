@@ -280,9 +280,7 @@ class MIIServer():
         for i, repl_config in enumerate(lb_config.replica_configs):
             name = repl_config.deployment_name
             deployment = None
-            print(f"IN SERVER NAME -> {name}")
             for dep in deployments:
-                print(f"\nDEPLOYMENT_NAME {dep.deployment_name}")
                 if dep.deployment_name == name:
                     deployment = dep
             hostfile = tempfile.NamedTemporaryFile(delete=False)
