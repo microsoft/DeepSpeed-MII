@@ -152,19 +152,17 @@ class MIIServer():
         printable_string += " " + "-" * 60
         return printable_string
 
-    def _launch_load_balancer(self,
-                              deployment_name,
-                              model_name,
-                              model_path,
-                              ds_optimize,
-                              ds_zero,
-                              ds_config,
-                              mii_configs,
-                              lb_config):
+    def _launch_load_balancer(self, model_path, lb_config):
 
         # serialize mii config
         b64_config_str = config_to_b64_str(lb_config)
-
+        launch_str = f"{sys.executable} -m mii.launch.load_balance_server --load-balancer {b64_config_str}"
+        cmd = launch_str.split(" ")
+        mii_env = os.environ.copy()
+        mii_env["TRANSFORMERS_CACHE"] = model_path
+        logger.info(f"load balancer server launch: {cmd}")
+        return subprocess.Popen(cmd, env=mii_env)
+        """
         return self._launch_server_process(
             deployment_name,
             model_name,
@@ -176,6 +174,7 @@ class MIIServer():
             mii_configs.port_number,
             "load balancer",
             ex_server_args=[f"--load-balancer {b64_config_str}"])
+        """
 
     def _launch_restful_gateway(self,
                                 deployment_name,
@@ -307,15 +306,7 @@ class MIIServer():
             # we don't use deepspeed launcher for the load balancer because it does not need a GPU.
             # The deepspeed launcher determines the number of processes to launch based on GPUs available on the host or CUDA_VISIBLE_DEVICES,
             # and it is expected to assign one GPU to one process.
-        processes.append(
-            self._launch_load_balancer(self.deployments[0].deployment_name,
-                                       self.deployments[0].model,
-                                       model_path,
-                                       self.deployments[0].enable_deepspeed,
-                                       self.deployments[0].enable_zero,
-                                       self.deployments[0].ds_config,
-                                       self.deployments[0].mii_config,
-                                       lb_config))
+        processes.append(self._launch_load_balancer(model_path, lb_config))
 
         for deployment in self.deployments:
             if deployment.mii_config.enable_restful_api:

@@ -164,7 +164,7 @@ class ParallelStubInvoker:
 
 
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
-    def __init__(self, task_name, replica_configs):
+    def __init__(self, replica_configs):
         super().__init__()
         self.asyncio_loop = asyncio.get_event_loop()
 
@@ -306,11 +306,10 @@ def serve_inference(inference_pipeline, port):
     _do_serve(ModelResponse(inference_pipeline), port)
 
 
-def serve_load_balancing(task_name, lb_config):
+def serve_load_balancing(lb_config):
     _do_serve(ServiceBase(),
               lb_config.port,
-              [LoadBalancingInterceptor(task_name,
-                                        lb_config.replica_configs)])
+              [LoadBalancingInterceptor(lb_config.replica_configs)])
 
 
 if __name__ == '__main__':

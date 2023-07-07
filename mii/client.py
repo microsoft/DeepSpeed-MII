@@ -86,6 +86,7 @@ class MIIClient():
     def query(self, request_dict, deployment_name=None, **query_kwargs):
         task = None
         if deployment_name is None:  #mii.terminate() or single model
+            #assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
             deployment_name = self.deployments[0][mii.constants.DEPLOYMENT_NAME_KEY]
             task = get_task(self.deployments[0][mii.constants.TASK_NAME_KEY])
         else:
