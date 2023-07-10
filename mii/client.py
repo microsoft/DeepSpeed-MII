@@ -200,7 +200,7 @@ class MIITensorParallelClient():
 
 class MIINonPersistentClient():
     def __init__(self, task, deployment_name):
-        self.task = task
+        self.task = get_task(task)
         self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
