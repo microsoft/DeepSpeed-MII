@@ -176,11 +176,9 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             self.counter[repl.deployment_name] = AtomicCounter()
 
         for repl in replica_configs:
-            self.stubs[repl.deployment_name].extend(
-                ParallelStubInvoker(replica.hostname,
-                                    replica.tensor_parallel_ports)
-                for replica in replica_configs
-                if replica.deployment_name == repl.deployment_name)
+            self.stubs[repl.deployment_name].append(
+                ParallelStubInvoker(repl.hostname,
+                                    repl.tensor_parallel_ports))
         """
         self.counter = AtomicCounter()
         self.task = get_task(task_name)
