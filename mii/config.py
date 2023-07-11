@@ -9,8 +9,6 @@ from pydantic import BaseModel, validator, root_validator
 
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 
-from .utils import logger
-
 
 class DtypeEnum(Enum):
     # The torch dtype must always be the first value (so we return torch.dtype)
@@ -43,6 +41,7 @@ class MIIConfig(BaseModel):
     tensor_parallel: int = 1
     port_number: int = 50050
     dtype: DtypeEnum = torch.float32
+    meta_tensor: bool = False
     load_with_sys_mem: bool = False
     enable_cuda_graph: bool = False
     checkpoint_dict: Union[dict, None] = None
@@ -55,7 +54,6 @@ class MIIConfig(BaseModel):
     max_tokens: int = 1024
     enable_restful_api: bool = False
     restful_api_port: int = 51080
-    enable_load_balancing: bool = False
     replica_num: int = 1
     hostfile: str = DLTS_HOSTFILE
     trust_remote_code: bool = False
@@ -94,10 +92,11 @@ class MIIConfig(BaseModel):
         return value
 
     @root_validator
-    def auto_enable_load_balancing(cls, values):
-        if values["enable_restful_api"] and not values["enable_load_balancing"]:
-            logger.warn("Restful API is enabled, enabling Load Balancing")
-            values["enable_load_balancing"] = True
+    def meta_tensor_or_sys_mem(cls, values):
+        if values.get("meta_tensor") and values.get("load_with_sys_mem"):
+            raise ValueError(
+                "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
+            )
         return values
 
     class Config:

@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-from transformers import Conversation
 from abc import ABC, abstractmethod
-
+from transformers import Conversation
 from mii.constants import Tasks
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
@@ -179,6 +178,28 @@ class ConversationalMethods(TaskMethods):
     def method(self):
         return "ConversationalReply"
 
+    def create_conversation(self, request, **kwargs):
+        if isinstance(request, dict):
+            assert 'text' in request and 'past_user_inputs' in request and 'generated_responses' in request, "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
+            text = request['text']
+            conversation_id = request[
+                'conversation_id'] if 'conversation_id' in request else None
+            past_user_inputs = request['past_user_inputs']
+            generated_responses = request['generated_responses']
+
+        else:
+            text = getattr(request, 'text')
+            conversation_id = getattr(request, 'conversation_id')
+            past_user_inputs = getattr(request, 'past_user_inputs')
+            generated_responses = getattr(request, 'generated_responses')
+
+        conv = Conversation(text=text,
+                            conversation_id=conversation_id,
+                            past_user_inputs=past_user_inputs,
+                            generated_responses=generated_responses,
+                            **kwargs)
+        return conv
+
     def pack_response_to_proto(self, conv, time_taken, model_time_taken):
         return modelresponse_pb2.ConversationReply(
             conversation_id=conv.uuid,
@@ -189,11 +210,7 @@ class ConversationalMethods(TaskMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        conv = Conversation(text=request.text,
-                            conversation_id=request.conversation_id,
-                            past_user_inputs=request.past_user_inputs,
-                            generated_responses=request.generated_responses,
-                            **kwargs)
+        conv = self.create_conversation(request, **kwargs)
         args = (conv, )
         kwargs = {}
         return args, kwargs

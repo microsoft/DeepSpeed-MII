@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+
 import pytest
 import mii
 
 
+@pytest.mark.parametrize("deployment_type", [mii.DeploymentType.NON_PERSISTENT])
 @pytest.mark.parametrize(
     "task_name, model_name, query",
     [
@@ -64,25 +66,6 @@ import mii
     ],
 )
 def test_single_GPU(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
-    result = generator.query(query)
-    assert result
-
-
-@pytest.mark.parametrize(
-    "task_name, model_name, query",
-    [
-        (
-            "text-generation",
-            "bigscience/bloom-560m",
-            {
-                "query": ["DeepSpeed is the greatest",
-                          'Seattle is']
-            },
-        ),
-    ],
-)
-def test_multi_GPU(deployment, query):
     generator = mii.mii_query_handle(deployment.deployment_name)
     result = generator.query(query)
     assert result

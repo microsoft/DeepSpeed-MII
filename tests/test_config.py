@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+
 import pytest
 import pydantic
 
 import mii
 
 
-@pytest.mark.CPU
 def test_base_config():
     config = {'port_number': 12345, 'tensor_parallel': 4}
     mii_config = mii.config.MIIConfig(**config)
@@ -17,7 +17,6 @@ def test_base_config():
     assert mii_config.tensor_parallel == config['tensor_parallel']
 
 
-@pytest.mark.CPU
 @pytest.mark.parametrize("config",
                          [
                              {

@@ -7,6 +7,7 @@ import mii
 mii_configs = {
     "dtype": "fp16",
     "tensor_parallel": 8,
+    "meta_tensor": True,
 }
 name = "microsoft/bloom-deepspeed-inference-fp16"
 

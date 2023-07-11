@@ -8,7 +8,6 @@ import logging
 import importlib
 import torch
 import mii
-
 from huggingface_hub import HfApi
 
 from mii.constants import (CONVERSATIONAL_NAME,
@@ -97,8 +96,6 @@ def _get_supported_models_name(task):
 
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
-            models = _get_hf_models_by_type(model_type, task_name)
-        elif provider == ModelProvider.HUGGING_FACE_LLM:
             models = _get_hf_models_by_type(model_type, task_name)
         elif provider == ModelProvider.ELEUTHER_AI:
             if task_name == TEXT_GENERATION_NAME:
@@ -207,6 +204,16 @@ def get_num_gpus(mii_configs):
     assert torch.cuda.device_count(
     ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
     return num_gpus
+
+
+def get_provider_name(model_name, task):
+    if model_name == "gpt-neox":
+        provider = mii.constants.MODEL_PROVIDER_NAME_EA
+    elif task == mii.Tasks.TEXT2IMG:
+        provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
+    else:
+        provider = mii.constants.MODEL_PROVIDER_NAME_HF
+    return provider
 
 
 log_levels = {

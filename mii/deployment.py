@@ -4,14 +4,15 @@
 # DeepSpeed Team
 import torch
 import string
-
+import os
 import mii
 
 from deepspeed.launcher.runner import fetch_hostfile
 
-from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT
-from .utils import logger
+from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT, MODEL_PROVIDER_MAP
+from .utils import logger, get_task_name, get_provider_name
 from .models.score import create_score_file
+from .models import load_models
 from .config import ReplicaConfig, LoadBalancerConfig
 
 
@@ -65,6 +66,7 @@ def deploy(task,
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
     """
+
     # parse and validate mii config
     mii_config = mii.config.MIIConfig(**mii_config)
     if enable_zero:
@@ -103,43 +105,54 @@ def deploy(task,
         model_path = "model"
 
     # add fields for replica deployment
-    lb_config = None
-    if mii_config.enable_load_balancing:
-        replica_pool = _allocate_processes(mii_config.hostfile,
-                                           mii_config.tensor_parallel,
-                                           mii_config.replica_num)
-        replica_configs = []
-        for i, (hostname, gpu_indices) in enumerate(replica_pool):
-            # Reserver port for a LB proxy when replication is enabled
-            port_offset = 1 if mii_config.enable_load_balancing else 0
-            base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-            tensor_parallel_ports = list(
-                range(base_port,
-                      base_port + mii_config.tensor_parallel))
-            torch_dist_port = mii_config.torch_dist_port + i
-            replica_configs.append(
-                ReplicaConfig(hostname=hostname,
-                              tensor_parallel_ports=tensor_parallel_ports,
-                              torch_dist_port=torch_dist_port,
-                              gpu_indices=gpu_indices))
-        lb_config = LoadBalancerConfig(port=mii_config.port_number,
-                                       replica_configs=replica_configs)
+    replica_pool = _allocate_processes(mii_config.hostfile,
+                                       mii_config.tensor_parallel,
+                                       mii_config.replica_num)
+    replica_configs = []
+    for i, (hostname, gpu_indices) in enumerate(replica_pool):
+        # Reserver port for a LB proxy when replication is enabled
+        port_offset = 1
+        base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+        tensor_parallel_ports = list(
+            range(base_port,
+                  base_port + mii_config.tensor_parallel))
+        torch_dist_port = mii_config.torch_dist_port + i
+        replica_configs.append(
+            ReplicaConfig(hostname=hostname,
+                          tensor_parallel_ports=tensor_parallel_ports,
+                          torch_dist_port=torch_dist_port,
+                          gpu_indices=gpu_indices))
+    lb_config = LoadBalancerConfig(port=mii_config.port_number,
+                                   replica_configs=replica_configs)
 
-    create_score_file(deployment_name=deployment_name,
-                      deployment_type=deployment_type,
-                      task=task,
-                      model_name=model,
-                      ds_optimize=enable_deepspeed,
-                      ds_zero=enable_zero,
-                      ds_config=ds_config,
-                      mii_config=mii_config,
-                      model_path=model_path,
-                      lb_config=lb_config)
+    if deployment_type != DeploymentType.NON_PERSISTENT:
+        create_score_file(deployment_name=deployment_name,
+                          deployment_type=deployment_type,
+                          task=task,
+                          model_name=model,
+                          ds_optimize=enable_deepspeed,
+                          ds_zero=enable_zero,
+                          ds_config=ds_config,
+                          mii_config=mii_config,
+                          model_path=model_path,
+                          lb_config=lb_config)
 
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
+    elif deployment_type == DeploymentType.NON_PERSISTENT:
+        assert int(os.getenv('WORLD_SIZE', '1')) == mii_config.tensor_parallel, "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
+        provider = MODEL_PROVIDER_MAP[get_provider_name(model, task)]
+        mii.non_persistent_models[deployment_name] = (load_models(
+            get_task_name(task),
+            model,
+            model_path,
+            enable_deepspeed,
+            enable_zero,
+            provider,
+            mii_config),
+                                                      task)
     else:
         raise Exception(f"Unknown deployment type: {deployment_type}")
 

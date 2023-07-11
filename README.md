@@ -55,22 +55,23 @@ Under-the-hood MII is powered by [DeepSpeed-Inference](https://arxiv.org/abs/220
 
 # Supported Models and Tasks
 
-MII currently supports over 30,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
+MII currently supports over 50,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
 
 MII model support will continue to grow over time, check back for updates! Currently we support the following Hugging Face Transformers model families:
 
 model family | size range | ~model count
 ------ | ------ | ------
-[bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 198
-[stable-diffusion](https://huggingface.co/models?other=stable-diffusion) | 1.1B | 330
-[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 170
-[gpt\_neox](https://huggingface.co/models?other=gpt_neox) | 1.3B - 20B | 37
-[gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 140
-[gpt\_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 300
-[gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 7,888
-[xlm-roberta](https://huggingface.co/models?other=xlm-roberta) | 0.1B - 0.3B | 1,850
-[roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 5,190
-[bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 13,940
+[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 1,500
+[bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 480
+[stable-diffusion](https://huggingface.co/models?other=stable-diffusion) | 1.1B | 3,700
+[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 460
+[gpt\_neox](https://huggingface.co/models?other=gpt_neox) | 1.3B - 20B | 850
+[gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 420
+[gpt\_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 700
+[gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 11,900
+[xlm-roberta](https://huggingface.co/models?other=xlm-roberta) | 0.1B - 0.3B | 4,100
+[roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 8,700
+[bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 23,600
 
 <!--
 SD param count:
@@ -136,14 +137,13 @@ mii.terminate("bloom560m_deployment")
 **Load balancing over multiple replicas**
 
 You can launch a load balancer and multiple replica of MII servers.
-When `enable_load_balancing` is set to `True`, `mii.deploy()` launches the load balancer server and `replica_num` number of replicas.
+When you specify a value for `replica_num`, `mii.deploy()` launches the load balancer server and `replica_num` number of replicas.
 Note that each replica consists of `tensor_parallel` server processes that are deployed on the same server.
 
 ```python
 mii_configs = {
 ...
     "tensor_parallel": tensor_parallel,
-    "enable_load_balancing": True,
     "replica_num": replica_num,
     "hostfile": hostfile
 }
@@ -177,6 +177,24 @@ mii.deploy(...
     deployment_name=DEPLOYMENT_NAME,
     mii_config=mii_configs)
 ```
+
+**Non-persistent Deployment**
+
+You can enable a non-persistent deployment which allows you to make queries without standing up a server. The non-persistent deployment acts as a simplified interface to DeepSpeed-inference for use cases that do not require creating a persistent model server process. Changing the `deployment_type` to `NON_PERSISTENT` in `mii.deploy(...)` will activate this option.
+
+```python
+...
+mii.deploy(deployment_name = DEPLOYMENT_NAME,
+	   deployment_type=mii.constants.DeploymentType.NON_PERSISTENT
+	   ...
+	   )
+
+generator = mii.mii_query_handle(DEPLOYMENT_NAME)
+result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30})
+
+```
+
+You can find a complete example [here]("https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/non_persistent")
 
 Any HTTP client can be used to call the APIs. An example of using curl is:
 ```bash
