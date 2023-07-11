@@ -194,5 +194,6 @@ def hf_provider(model_path, model_name, task_name, mii_config):
             framework="pt",
             use_auth_token=mii_config.hf_auth_token,
             torch_dtype=mii_config.dtype,
+            trust_remote_code=mii_config.trust_remote_code,
         )
         return inference_pipeline

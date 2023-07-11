@@ -56,6 +56,7 @@ class MIIConfig(BaseModel):
     restful_api_port: int = 51080
     replica_num: int = 1
     hostfile: str = DLTS_HOSTFILE
+    trust_remote_code: bool = False
 
     @validator("deploy_rank")
     def deploy_valid(cls, field_value, values):
