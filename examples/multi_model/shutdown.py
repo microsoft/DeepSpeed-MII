@@ -4,4 +4,4 @@
 # DeepSpeed Team
 import mii
 
-mii.terminate("first_test")
+mii.terminate("multi_models")

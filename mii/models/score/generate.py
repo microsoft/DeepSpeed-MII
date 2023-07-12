@@ -38,10 +38,10 @@ def create_score_file(deployment_tag,
     if lb_config is not None:
         config_dict[mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config
 
-        if len(mii.__path__) > 1:
-            logger.warning(
-                f"Detected mii path as multiple sources: {mii.__path__}, might cause unknown behavior"
-            )
+    if len(mii.__path__) > 1:
+        logger.warning(
+            f"Detected mii path as multiple sources: {mii.__path__}, might cause unknown behavior"
+        )
 
     with open(os.path.join(mii.__path__[0],
                            "models/score/score_template.py"),

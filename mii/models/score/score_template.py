@@ -32,7 +32,7 @@ def init():
             'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
             'version': 1
         }
-        deployments.append(mii.Deployment.parse_obj(data))
+        deployments.append(mii.DeploymentConfig.parse_obj(data))
     """
     deployment_name = configs[mii.constants.DEPLOYMENT_NAME_KEY]
     model_name = configs[mii.constants.MODEL_NAME_KEY]

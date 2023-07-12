@@ -171,9 +171,11 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         self.stubs = {}
         self.counter = {}
         self.replica_configs = replica_configs
+        self.tasks = {}
         for repl in replica_configs:
             self.stubs[repl.deployment_name] = []
             self.counter[repl.deployment_name] = AtomicCounter()
+            self.tasks[repl.deployment_name] = repl.task
 
         for repl in replica_configs:
             self.stubs[repl.deployment_name].append(
@@ -215,11 +217,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
             deployment_name = kwargs.get('deployment_name')
             kwargs.pop('deployment_name', None)
-            task = None
-            for repl in self.replica_configs:
-                if repl.deployment_name == deployment_name:
-                    task = repl.task
-                    break
+            task = self.tasks[deployment_name]
+            assert task is not None, f"task for {deployment_name} not found"
             method = GRPC_METHOD_TABLE[get_task(task)]
             new_request = None
             if method_name == "ConversationalReply":
@@ -271,7 +270,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                     raise ValueError(f"session not found")
                 replica_index = self.replica_sessions[session_id]
 
-            assert new_request is not None, "test"
             ret = self.stubs[deployment_name][replica_index].invoke(
                 method_name,
                 new_request)

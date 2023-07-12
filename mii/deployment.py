@@ -13,7 +13,7 @@ from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT, MODEL_PROVIDER_MA
 from .utils import logger, get_task_name, get_provider_name
 from .models.score import create_score_file
 from .models import load_models
-from .config import ReplicaConfig, LoadBalancerConfig, Deployment
+from .config import ReplicaConfig, LoadBalancerConfig, DeploymentConfig
 
 
 def deploy(task=None,
@@ -71,15 +71,15 @@ def deploy(task=None,
     if not deployments:
         assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
         deployments = [
-            Deployment(deployment_name=deployment_name,
-                       task=task,
-                       model=model,
-                       enable_deepspeed=enable_deepspeed,
-                       enable_zero=enable_zero,
-                       GPU_index_map=None,
-                       mii_config=mii.config.MIIConfig(**mii_config),
-                       ds_config=ds_config,
-                       version=version)
+            DeploymentConfig(deployment_name=deployment_name,
+                             task=task,
+                             model=model,
+                             enable_deepspeed=enable_deepspeed,
+                             enable_zero=enable_zero,
+                             GPU_index_map=None,
+                             mii_config=mii.config.MIIConfig(**mii_config),
+                             ds_config=ds_config,
+                             version=version)
         ]
         deployment_tag = deployment_name
     else:
@@ -129,6 +129,7 @@ def deploy(task=None,
     # add fields for replica deployment
     replica_configs = []
     port_map = {}
+    port_offset = 1
     for deployment in deployments:
         mii_config = deployment.mii_config
         replica_pool = _allocate_processes(mii_config.hostfile,
@@ -140,7 +141,6 @@ def deploy(task=None,
             # Reserver port for a LB proxy when replication is enabled
             if hostname not in port_map:
                 port_map[hostname] = set()
-            port_offset = 1
             base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
             if base_port in port_map[hostname]:
                 base_port = max(port_map[hostname]) + 1

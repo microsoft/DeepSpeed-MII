@@ -129,7 +129,7 @@ class LoadBalancerConfig(BaseModel):
 validate_assignment = True
 
 
-class Deployment(BaseModel):
+class DeploymentConfig(BaseModel):
     deployment_name: str
     task: str
     model: str

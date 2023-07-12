@@ -4,9 +4,9 @@
 # DeepSpeed Team
 
 import mii
-import time
 
-generator = mii.mii_query_handle("first_test")
+results = []
+generator = mii.mii_query_handle("multi_models")
 result = generator.query(
     {"query": ["DeepSpeed is",
                "Seattle is"]},
@@ -14,14 +14,11 @@ result = generator.query(
     do_sample=True,
     max_new_tokens=30,
 )
-print(result)
+results.append(result)
 
-time.sleep(5)
 result = generator.query({'query': "DeepSpeed is the greatest"},
                          "microsoft/DialogRPT-human-vs-rand_deployment")
-print(result)
-
-time.sleep(5)
+results.append(result)
 
 result = generator.query(
     {
@@ -31,12 +28,12 @@ result = generator.query(
         'generated_responses': []
     },
     "microsoft/DialoGPT-large_deployment")
-print(result)
+results.append(result)
 
-results = generator.query(
+result = generator.query(
     {
         'question': "What is the greatest?",
         'context': "DeepSpeed is the greatest"
     },
     "deepset/roberta-large-squad2" + "-qa-deployment")
-print(results)
+results.append(result)
