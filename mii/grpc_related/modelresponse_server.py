@@ -16,7 +16,6 @@ import time
 from mii.constants import GRPC_MAX_MSG_SIZE, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
-from mii.utils import get_task, unpack_proto_query_kwargs
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -265,7 +264,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                     DESTROY_SESSION_METHOD,
                     request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
-            
+
             if "session_id" in request_proto.query_kwargs:
                 session_id = request_proto.query_kwargs["session_id"]
                 if session_id not in self.replica_sessions:
