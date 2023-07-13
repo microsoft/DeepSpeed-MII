@@ -52,29 +52,34 @@ message SessionID {
 message SingleStringRequest {
   string request = 1;
   map<string,Value> query_kwargs = 2;
+  optional string deployment_name = 3;
 }
 
 message MultiStringRequest {
   repeated string request = 1;
   map<string,Value> query_kwargs = 2;
+  optional string deployment_name = 3;
 }
 
 message SingleStringReply {
   string response = 1;
   float time_taken = 2;
   float model_time_taken = 3;
+  optional string deployment_name = 4;
 }
 
 message MultiStringReply {
   repeated string response = 1;
   float time_taken = 2;
   float model_time_taken = 3;
+  optional string deployment_name = 4;
 }
 
 message QARequest {
   string question = 1;
   string context = 2;
   map<string,Value> query_kwargs = 3;
+  optional string deployment_name = 4;
 }
 
 message ConversationRequest {
@@ -83,6 +88,7 @@ message ConversationRequest {
   repeated string past_user_inputs = 3;
   repeated string generated_responses = 4;
   map<string,Value> query_kwargs = 5;
+  optional string deployment_name = 6;
 }
 
 message ConversationReply {
@@ -91,6 +97,7 @@ message ConversationReply {
   repeated string generated_responses = 3;
   float time_taken = 4;
   float model_time_taken = 5;
+  optional string deployment_name = 6;
 }
 
 message ImageReply {
@@ -100,4 +107,5 @@ message ImageReply {
   int64 size_w = 4;
   int64 size_h = 5;
   float time_taken = 6;
+  optional string deployment_name = 7;
 }

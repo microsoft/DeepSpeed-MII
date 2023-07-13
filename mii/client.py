@@ -74,7 +74,7 @@ class MIIClient():
             for deployment in self.deployments:
                 if deployment[mii.constants.DEPLOYMENT_NAME_KEY] == deployment_name:
                     task = get_task(deployment[mii.constants.TASK_NAME_KEY])
-                    break
+                    return deployment_name, task
             assert False, f"{deployment_name} not found in list of deployments"
         return deployment_name, task
 
@@ -87,9 +87,9 @@ class MIIClient():
         proto_response = await getattr(self.stub, task_methods.method)(proto_request)
         return task_methods.unpack_response_from_proto(proto_response)
 
-    def query(self, request_dict, deployment_name=None, **query_kwargs):
+    def query(self, request_dict, **query_kwargs):
+        deployment_name = request_dict.get('deployment_name')
         deployment_name, task = self._get_deployment_task(deployment_name)
-        query_kwargs['deployment_name'] = deployment_name
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,
                                          task,
@@ -107,6 +107,8 @@ class MIIClient():
             modelresponse_pb2.SessionID(session_id=session_id))
 
     def create_session(self, session_id, deployment_name=None):
+        if len(self.deployments > 1):
+            assert deployment_name is not None, "Deployment name must be passed in to create session when there are multiple models"
         deployment_name, task = self._get_deployment_task(deployment_name)
         assert task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
         return self.asyncio_loop.run_until_complete(
@@ -117,6 +119,8 @@ class MIIClient():
                                        )
 
     def destroy_session(self, session_id, deployment_name=None):
+        if len(self.deployments > 1):
+            assert deployment_name is not None, "Deployment name must be passed in to destroy session when there are multiple models"
         deployment_name, task = self._get_deployment_task(deployment_name)
         assert task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))

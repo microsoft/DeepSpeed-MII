@@ -15,7 +15,7 @@ mii_configs2 = {"tensor_parallel": 1}
 
 name = "bigscience/bloom-560m"
 deployments.append(
-    mii.Deployment(task='text-generation',
+    mii.DeploymentConfig(task='text-generation',
                    model=name,
                    deployment_name=name + "_deployment",
                    GPU_index_map=gpu_index_map3,
@@ -24,14 +24,14 @@ deployments.append(
 # gpt2
 name = "microsoft/DialogRPT-human-vs-rand"
 deployments.append(
-    mii.Deployment(task='text-classification',
+    mii.DeploymentConfig(task='text-classification',
                    model=name,
                    deployment_name=name + "_deployment",
                    GPU_index_map=gpu_index_map2))
 
 name = "microsoft/DialoGPT-large"
 deployments.append(
-    mii.Deployment(task='conversational',
+    mii.DeploymentConfig(task='conversational',
                    model=name,
                    deployment_name=name + "_deployment",
                    GPU_index_map=gpu_index_map1,
@@ -39,7 +39,7 @@ deployments.append(
 
 name = "deepset/roberta-large-squad2"
 deployments.append(
-    mii.Deployment(task="question-answering",
+    mii.DeploymentConfig(task="question-answering",
                    model=name,
                    deployment_name=name + "-qa-deployment",
                    GPU_index_map=gpu_index_map2))

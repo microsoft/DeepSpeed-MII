@@ -212,6 +212,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                                     google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
+            deployment_name = getattr(request_proto, 'deployment_name')
+            """
             kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
             if method_name != TERMINATE_METHOD:
                 assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
@@ -243,7 +245,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 ) if method_name == "GeneratorReply" or method_name == "Txt2ImgReply" else str(
                     request_proto.request)
                 new_request = method.pack_request_to_proto(request_dict, **kwargs)
-
+            """
             call_count = self.counter[deployment_name].get_and_increment()
             replica_index = call_count % len(self.stubs[deployment_name])
 
@@ -254,25 +256,25 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 self.replica_sessions[request_proto.session_id] = replica_index
                 self.stubs[deployment_name][replica_index].invoke(
                     CREATE_SESSION_METHOD,
-                    new_request)
+                    request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == DESTROY_SESSION_METHOD:
                 replica_index = self.replica_sessions.pop(request_proto.session_id)
                 self.stubs[deployment_name][replica_index].invoke(
                     DESTROY_SESSION_METHOD,
-                    new_request)
+                    request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
-
-            if "session_id" in kwargs:
-                session_id = kwargs["session_id"]
+            
+            if "session_id" in request_proto.query_kwargs:
+                session_id = request_proto.query_kwargs["session_id"]
                 if session_id not in self.replica_sessions:
                     raise ValueError(f"session not found")
                 replica_index = self.replica_sessions[session_id]
 
             ret = self.stubs[deployment_name][replica_index].invoke(
                 method_name,
-                new_request)
+                request_proto)
             return ret
 
         return grpc.unary_unary_rpc_method_handler(
