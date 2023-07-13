@@ -7,21 +7,21 @@ import grpc
 import mii
 
 
-def terminate(deployment_name):
-    mii.utils.logger.info(f"Terminating server for {deployment_name}")
-    generator = mii.mii_query_handle(deployment_name)
-    if (deployment_name in mii.non_persistent_models):
+def terminate(deployment_tag):
+    mii.utils.logger.info(f"Terminating server for {deployment_tag}")
+    generator = mii.mii_query_handle(deployment_tag)
+    if (deployment_tag in mii.non_persistent_models):
         generator.terminate()
         return
     try:
-        generator.query({'query': ''})
+        generator.query({'query': ''}, None)
     except grpc.aio._call.AioRpcError as error:
         if error._code == grpc.StatusCode.UNAVAILABLE:
-            mii.utils.logger.warn(f"Server for {deployment_name} not found")
+            mii.utils.logger.warn(f"Server for {deployment_tag} not found")
         else:
             pass
     except (KeyError, TypeError) as error:
         pass
 
     generator.terminate()
-    mii.client.terminate_restful_gateway(deployment_name)
+    mii.client.terminate_restful_gateway(deployment_tag)

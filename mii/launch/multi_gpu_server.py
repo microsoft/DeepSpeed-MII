@@ -5,23 +5,13 @@
 import os
 import argparse
 import mii
-import base64
-import json
 
 from mii import MIIConfig, LoadBalancerConfig
 
 from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 from mii.grpc_related.restful_gateway import RestfulGatewayThread
-
-
-def decode_config_from_str(config_str):
-    # str -> bytes
-    b64_bytes = config_str.encode()
-    # decode b64 bytes -> json bytes
-    config_bytes = base64.urlsafe_b64decode(b64_bytes)
-    # convert json bytes -> str -> dict
-    return json.loads(config_bytes.decode())
+from .utils import decode_config_from_str
 
 
 def main():

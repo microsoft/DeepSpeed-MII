@@ -12,17 +12,17 @@ from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 
 
-def _get_deployment_info(deployment_name):
-    configs = mii.utils.import_score_file(deployment_name).configs
-    task = configs[mii.constants.TASK_NAME_KEY]
-    mii_configs_dict = configs[mii.constants.MII_CONFIGS_KEY]
-    mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+def _get_deployment_configs(deployment_tag):
+    deployments = []
+    configs = mii.utils.import_score_file(deployment_tag).configs
+    for deployment in configs:
+        if not isinstance(configs[deployment], dict):
+            continue
+        deployments.append(configs[deployment])
+    return deployments
 
-    assert task is not None, "The task name should be set before calling init"
-    return task, mii_configs
 
-
-def mii_query_handle(deployment_name):
+def mii_query_handle(deployment_tag):
     """Get a query handle for a local deployment:
 
         mii/examples/local/gpt2-query-example.py
@@ -35,12 +35,14 @@ def mii_query_handle(deployment_name):
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
 
-    if deployment_name in mii.non_persistent_models:
-        inference_pipeline, task = mii.non_persistent_models[deployment_name]
-        return MIINonPersistentClient(task, deployment_name)
+    if deployment_tag in mii.non_persistent_models:
+        inference_pipeline, task = mii.non_persistent_models[deployment_tag]
+        return MIINonPersistentClient(task, deployment_tag)
 
-    task_name, mii_configs = _get_deployment_info(deployment_name)
-    return MIIClient(task_name, "localhost", mii_configs.port_number)
+    deployments = _get_deployment_configs(deployment_tag)
+    mii_configs_dict = deployments[0][mii.constants.MII_CONFIGS_KEY]
+    mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+    return MIIClient(deployments, "localhost", mii_configs.port_number)
 
 
 def create_channel(host, port):
@@ -55,24 +57,42 @@ class MIIClient():
     """
     Client to send queries to a single endpoint.
     """
-    def __init__(self, task_name, host, port):
+    def __init__(self, deployments, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
-        self.task = get_task(task_name)
+        #self.task = get_task(task_name)
+        self.deployments = deployments
 
-    async def _request_async_response(self, request_dict, **query_kwargs):
-        if self.task not in GRPC_METHOD_TABLE:
-            raise ValueError(f"unknown task: {self.task}")
+    def _get_deployment_task(self, deployment_name=None):
+        task = None
+        if deployment_name is None:  #mii.terminate() or single model
+            assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
+            deployment_name = self.deployments[0][mii.constants.DEPLOYMENT_NAME_KEY]
+            task = get_task(self.deployments[0][mii.constants.TASK_NAME_KEY])
+        else:
+            for deployment in self.deployments:
+                if deployment[mii.constants.DEPLOYMENT_NAME_KEY] == deployment_name:
+                    task = get_task(deployment[mii.constants.TASK_NAME_KEY])
+                    break
+            assert False, f"{deployment_name} not found in list of deployments"
+        return deployment_name, task
 
-        task_methods = GRPC_METHOD_TABLE[self.task]
+    async def _request_async_response(self, request_dict, task, **query_kwargs):
+        if task not in GRPC_METHOD_TABLE:
+            raise ValueError(f"unknown task: {task}")
+
+        task_methods = GRPC_METHOD_TABLE[task]
         proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
         proto_response = await getattr(self.stub, task_methods.method)(proto_request)
         return task_methods.unpack_response_from_proto(proto_response)
 
-    def query(self, request_dict, **query_kwargs):
+    def query(self, request_dict, deployment_name=None, **query_kwargs):
+        deployment_name, task = self._get_deployment_task(deployment_name)
+        query_kwargs['deployment_name'] = deployment_name
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,
+                                         task,
                                          **query_kwargs))
 
     async def terminate_async(self):
@@ -86,8 +106,9 @@ class MIIClient():
         return await self.stub.CreateSession(
             modelresponse_pb2.SessionID(session_id=session_id))
 
-    def create_session(self, session_id):
-        assert self.task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
+    def create_session(self, session_id, deployment_name=None):
+        deployment_name, task = self._get_deployment_task(deployment_name)
+        assert task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
         return self.asyncio_loop.run_until_complete(
             self.create_session_async(session_id))
 
@@ -95,8 +116,9 @@ class MIIClient():
         await self.stub.DestroySession(modelresponse_pb2.SessionID(session_id=session_id)
                                        )
 
-    def destroy_session(self, session_id):
-        assert self.task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
+    def destroy_session(self, session_id, deployment_name=None):
+        deployment_name, task = self._get_deployment_task(deployment_name)
+        assert task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
 
@@ -157,7 +179,7 @@ class MIITensorParallelClient():
 
 class MIINonPersistentClient():
     def __init__(self, task, deployment_name):
-        self.task = task
+        self.task = get_task(task)
         self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
@@ -188,7 +210,10 @@ class MIINonPersistentClient():
         del mii.non_persistent_models[self.deployment_name]
 
 
-def terminate_restful_gateway(deployment_name):
-    _, mii_configs = _get_deployment_info(deployment_name)
-    if mii_configs.enable_restful_api:
-        requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")
+def terminate_restful_gateway(deployment_tag):
+    deployments = _get_deployment_configs(deployment_tag)
+    for deployment in deployments:
+        mii_configs_dict = deployment[mii.constants.MII_CONFIGS_KEY]
+        mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+        if mii_configs.enable_restful_api:
+            requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")

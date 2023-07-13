@@ -94,7 +94,7 @@ TASK_NAME_KEY = 'task_name'
 DEPLOYMENT_NAME_KEY = 'deployment_name'
 MODEL_PATH_KEY = 'model_path'
 LOAD_BALANCER_CONFIG_KEY = 'load_balancer_config'
-
+DEPLOYMENT_TAG_KEY = 'deployment_tag'
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'

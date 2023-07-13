@@ -6,7 +6,6 @@ import torch
 from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel, validator, root_validator
-
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 
 
@@ -108,6 +107,8 @@ class MIIConfig(BaseModel):
 
 
 class ReplicaConfig(BaseModel):
+    task: str = ""
+    deployment_name: str = ""
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
     torch_dist_port: int = None
@@ -124,4 +125,18 @@ class LoadBalancerConfig(BaseModel):
 
     class Config:
         validate_all = True
-        validate_assignment = True
+
+
+validate_assignment = True
+
+
+class DeploymentConfig(BaseModel):
+    deployment_name: str
+    task: str
+    model: str
+    enable_deepspeed: bool = True
+    enable_zero: bool = False
+    GPU_index_map: dict = None
+    mii_config: MIIConfig = MIIConfig.parse_obj({})
+    ds_config: dict = None
+    version: int = 1
