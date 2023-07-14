@@ -90,6 +90,7 @@ class MIIClient():
     def query(self, request_dict, **query_kwargs):
         deployment_name = request_dict.get('deployment_name')
         deployment_name, task = self._get_deployment_task(deployment_name)
+        request_dict['deployment_name'] = deployment_name
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,
                                          task,
