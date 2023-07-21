@@ -27,6 +27,10 @@ def get_acr_name():
         )
         print("\t- Are logged in to an active account on Azure-CLI ($az login)")
         print("\t- Have Azure-CLI ML plugin installed ($az extension add --name ml)")
+        print("\t- You have the default subscription, resource group, and workspace set")
+        print("\t\t- az account set --subscription YOUR_SUBSCRIPTION")
+        print("\t\t- az config set defaults.group=YOUR_GROUP")
+        print("\t\t- az config set defaults.workspace=YOUR_WORKSPACE")
         print("\n", "-" * 30, "\n")
         raise (e)
 

@@ -107,7 +107,7 @@ az ml online-deployment create -n "<deployment-name>" -f deployment.yml
 """
 
 dockerfile = \
-"""FROM nvidia/cuda:11.3.1-devel-ubuntu18.04
+        """FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
 ENV AML_APP_ROOT=/var/azureml-model/code \
     BUILD_DIR=/tmp/build \
@@ -124,7 +124,7 @@ COPY . $BUILD_DIR
 
 RUN mkdir -p $BUILD_DIR && \
     apt-get update && \
-    apt-get install -y --no-install-recommends nginx-light wget sudo runit rsyslog libcurl3 unzip git-all && \
+    apt-get install -y --no-install-recommends nginx-light wget sudo runit rsyslog libcurl4 unzip git-all && \
     apt-get autoremove -y && \
     apt-get clean -y && \
     rm -rf /usr/share/man/* /var/lib/apt/lists/* && \
@@ -154,7 +154,7 @@ RUN cd ~ && \
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     chmod +x Miniconda3-latest-Linux-x86_64.sh && \
     bash ./Miniconda3-latest-Linux-x86_64.sh -bf -p /opt/miniconda && \
-    conda create -n amlenv python=3.8 -y
+    conda create -n amlenv python=3.10 -y
 
 ENV PATH="/opt/miniconda/envs/amlenv/bin:$AML_APP_ROOT:$PATH" \
     CUDA_HOME=/usr/local/cuda \
@@ -166,7 +166,7 @@ RUN /opt/miniconda/envs/amlenv/bin/pip install -r "$BUILD_DIR/requirements.txt" 
     /opt/miniconda/envs/amlenv/bin/pip install azureml-inference-server-http && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/deepspeed.git && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git && \
-    /opt/miniconda/envs/amlenv/bin/pip install transformers==4.21.2
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/huggingface/transformers.git
 
 
 EXPOSE 5001
@@ -390,9 +390,9 @@ killall -SIGHUP runsvdir
 """
 
 requirements = \
-"""torch==1.12.0
+"""torch>=2.0.0
 grpcio
 grpcio-tools
-pydantic
+pydantic<2.0.0
 asyncio
 """
