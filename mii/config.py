@@ -140,3 +140,4 @@ class DeploymentConfig(BaseModel):
     mii_config: MIIConfig = MIIConfig.parse_obj({})
     ds_config: dict = None
     version: int = 1
+    deployed: bool = False

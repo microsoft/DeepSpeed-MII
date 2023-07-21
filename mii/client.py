@@ -8,8 +8,10 @@ import requests
 import mii
 from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
+from mii.constants import GRPC_MAX_MSG_SIZE, Tasks, DeploymentType
 from mii.method_table import GRPC_METHOD_TABLE
+from mii.deployment import allocate_processes, create_score_file
+from mii.config import DeploymentConfig
 
 
 def _get_deployment_configs(deployment_tag):
@@ -18,6 +20,7 @@ def _get_deployment_configs(deployment_tag):
     for deployment in configs:
         if not isinstance(configs[deployment], dict):
             continue
+        configs[deployment][mii.constants.DEPLOYED_KEY] = True
         deployments.append(configs[deployment])
     return deployments
 
@@ -60,7 +63,7 @@ class MIIClient():
     def __init__(self, deployments, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
-        self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
+        self.stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
         #self.task = get_task(task_name)
         self.deployments = deployments
 
@@ -126,7 +129,54 @@ class MIIClient():
         assert task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
+    async def add_models_async(self, request=None):
+        await getattr(self.stub, "AddDeployment")(modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
+    def add_models(self,
+                   task=None,
+                   model=None,
+                   deployment_name=None,
+                   enable_deepspeed=True,
+                   enable_zero=False,
+                   ds_config=None,
+                   mii_config={},
+                   deployment_tag=None,
+                   deployments=[],
+                   deployment_type=DeploymentType.LOCAL,
+                   model_path=None,
+                   version=1):
+        if not deployments:
+            assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
+            deployments = [
+                DeploymentConfig(deployment_name=deployment_name,
+                             task=task,
+                             model=model,
+                             enable_deepspeed=enable_deepspeed,
+                             enable_zero=enable_zero,
+                             GPU_index_map=None,
+                             mii_config=mii.config.MIIConfig(**mii_config),
+                             ds_config=ds_config,
+                             version=version,
+                             deployed=False)
+            ]
+
+        """
+        deployment_tag = mii.deployment_tag
+        lb_config = allocate_processes(deployments)
+        if mii.lb_config is not None:
+            mii.lb_config.replica_configs.extend(lb_config.replica_configs)
+        else:
+            mii.lb_config = lb_config
+        self.deployments.extend(deployments)
+        if mii.model_path is None and deployment_type == DeploymentType.LOCAL:
+            mii.model_path = MII_MODEL_PATH_DEFAULT
+        elif mii.model_path is None and deployment_type == DeploymentType.AML:
+            model_path = "model"
+        create_score_file(deployment_tag=deployment_tag, deployment_type=mii.deployment_type, deployments=self.deployments, model_path=mii.model_path, lb_config=mii.lb_config)
+        if mii.deployment_type == DeploymentType.Local:
+            mii.utils.import_score_file(deployment_tag).init()
+        """
+        self.asyncio_loop.run_until_complete(self.add_models_async())
 class MIITensorParallelClient():
     """
     Client to send queries to multiple endpoints in parallel.

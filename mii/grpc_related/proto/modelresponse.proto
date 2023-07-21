@@ -36,6 +36,10 @@ service ModelResponse {
   rpc Txt2ImgReply(MultiStringRequest) returns (ImageReply) {}
 }
 
+service DeploymentManagement {
+  rpc AddDeployment(google.protobuf.Empty) returns (google.protobuf.Empty) {}	
+}
+
 message Value {
     oneof oneof_values {
         string svalue = 1;

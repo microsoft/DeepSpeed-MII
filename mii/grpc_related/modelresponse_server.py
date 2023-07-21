@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 
-from mii.constants import GRPC_MAX_MSG_SIZE, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
+from mii.constants import GRPC_MAX_MSG_SIZE, ADD_DEPLOYMENT_METHOD, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
 
@@ -31,6 +31,11 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
 
     def get_stop_event(self):
         return self._stop_event
+
+class DeploymentManagement(ServiceBase, modelresponse_pb2_grpc.DeploymentManagementServicer):
+    def AddDeployment(self, request, context):
+        print("TESTING ADD DEPLOYMENT")
+        return google_dot_protobuf_dot_empty__pb2.Empty()
 
 
 class ModelResponse(ServiceBase):
@@ -142,7 +147,7 @@ class ParallelStubInvoker:
         self.stubs = []
         for port in ports:
             channel = create_channel(host, port)
-            stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
+            stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
             self.stubs.append(stub)
 
         self.asyncio_loop = asyncio.get_event_loop()
@@ -198,12 +203,19 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
     def intercept_service(self, continuation, handler_call_details):
         next_handler = continuation(handler_call_details)
+        print(next_handler)
         assert next_handler.unary_unary is not None
 
         #USE KWARGS LIKE THEY ARE USED TO MAKE SESSIONS TO GET THE DEPLOYMENT NAME TO HASH THE COUNTERS/STUBS
 
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
+            if method_name == ADD_DEPLOYMENT_METHOD:
+                for name in self.stubs:
+                    for stub in self.stubs[name]:
+                        stub.invoke(ADD_DEPLOYMENT_METHOD, request_proto)
+                return google_dot_protobuf_dot_empty__pb2.Empty()
+
             if method_name == TERMINATE_METHOD:
                 for deployment in self.stubs:
                     for stub in self.stubs[deployment]:
@@ -290,7 +302,7 @@ def _do_serve(service_impl, port, interceptors=[]):
                                    GRPC_MAX_MSG_SIZE),
                                   ('grpc.max_receive_message_length',
                                    GRPC_MAX_MSG_SIZE)])
-    modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)
+    modelresponse_pb2_grpc.add_DeploymentManagementServicer_to_server(service_impl, server)
     server.add_insecure_port(f'[::]:{port}')
     print(f"About to start server")
     server.start()
@@ -300,11 +312,11 @@ def _do_serve(service_impl, port, interceptors=[]):
 
 
 def serve_inference(inference_pipeline, port):
-    _do_serve(ModelResponse(inference_pipeline), port)
+    _do_serve(DeploymentManagement(), port)
 
 
 def serve_load_balancing(lb_config):
-    _do_serve(ServiceBase(),
+    _do_serve(DeploymentManagement(),
               lb_config.port,
               [LoadBalancingInterceptor(lb_config.replica_configs)])
 
