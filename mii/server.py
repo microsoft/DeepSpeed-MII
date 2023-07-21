@@ -28,10 +28,10 @@ def config_to_b64_str(config):
 
 class MIIServer():
     '''Initialize the model, setup the server for the model under model_path'''
-    def __init__(self, deployment_tag, deployments, model_path, lb_config=None):
+    def __init__(self, deployment_tag, deployments, model_path, lb_config=None, lb_enabled=False):
 
         #mii_configs = mii.config.MIIConfig(**mii_configs)
-
+        self.lb_enabled = lb_enabled
         #self.task = mii.utils.get_task(task_name)
         self.deployments = deployments
         for deployment in deployments:
@@ -48,7 +48,8 @@ class MIIServer():
         processes = self._initialize_service(deployment_tag,
                                              deployments,
                                              model_path,
-                                             lb_config)
+                                             lb_config,
+                                             name_map)
         self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
@@ -282,6 +283,8 @@ class MIIServer():
             for dep in deployments:
                 if dep.deployment_name == name:
                     deployment = dep
+            if deployment is None:
+                continue
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             hostfile.write(
                 f'{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n'
@@ -306,7 +309,8 @@ class MIIServer():
             # we don't use deepspeed launcher for the load balancer because it does not need a GPU.
             # The deepspeed launcher determines the number of processes to launch based on GPUs available on the host or CUDA_VISIBLE_DEVICES,
             # and it is expected to assign one GPU to one process.
-        processes.append(self._launch_load_balancer(model_path, lb_config))
+        if not self.lb_enabled:
+            processes.append(self._launch_load_balancer(model_path, lb_config))
 
         for deployment in self.deployments:
             if deployment.mii_config.enable_restful_api:

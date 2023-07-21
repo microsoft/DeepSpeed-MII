@@ -43,8 +43,10 @@ def mii_query_handle(deployment_tag):
         return MIINonPersistentClient(task, deployment_tag)
 
     deployments = _get_deployment_configs(deployment_tag)
-    mii_configs_dict = deployments[0][mii.constants.MII_CONFIGS_KEY]
-    mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+    if len(deployments) > 0:
+        mii_configs_dict = deployments[0][mii.constants.MII_CONFIGS_KEY]
+        mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+
     return MIIClient(deployments, "localhost", mii_configs.port_number)
 
 
@@ -160,7 +162,7 @@ class MIIClient():
                              deployed=False)
             ]
 
-        """
+        
         deployment_tag = mii.deployment_tag
         lb_config = allocate_processes(deployments)
         if mii.lb_config is not None:
@@ -172,10 +174,25 @@ class MIIClient():
             mii.model_path = MII_MODEL_PATH_DEFAULT
         elif mii.model_path is None and deployment_type == DeploymentType.AML:
             model_path = "model"
+        deps = []
+        for deployment in self.deployments:
+             data = {
+                'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
+                'task': deployment[mii.constants.TASK_NAME_KEY],
+                'model': deployment[mii.constants.MODEL_NAME_KEY],
+                'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
+                'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
+                'GPU_index_map': None,
+                'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
+                'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
+                'version': 1
+                'deployed' deployment[mii.constants.DEPLOYED_KEY]
+            }
+             
         create_score_file(deployment_tag=deployment_tag, deployment_type=mii.deployment_type, deployments=self.deployments, model_path=mii.model_path, lb_config=mii.lb_config)
         if mii.deployment_type == DeploymentType.Local:
             mii.utils.import_score_file(deployment_tag).init()
-        """
+        
         self.asyncio_loop.run_until_complete(self.add_models_async())
 class MIITensorParallelClient():
     """

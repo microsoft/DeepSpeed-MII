@@ -113,3 +113,13 @@ message ImageReply {
   float time_taken = 6;
   optional string deployment_name = 7;
 }
+
+message AddDeployRequest {
+  string task = 1;
+  string deployment_name = 2;
+  string hostname = 3;
+  repeated int64 tensor_parallel_ports = 4;
+  int64 torch_dist_port = 5;
+  repeated int64 gpu_indices = 6;
+  
+}
