@@ -49,7 +49,7 @@ class MIIServer():
                                              deployments,
                                              model_path,
                                              lb_config,
-                                             name_map)
+                                             )
         self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):

@@ -19,9 +19,11 @@ def init():
     deployment_tag = configs[mii.constants.DEPLOYMENT_TAG_KEY]
     deployments = []
     lb_enabled = False
+    del configs[mii.constants.PORT_MAP_KEY]
     for deployment in configs.values():
         if isinstance(deployment, dict) and deployment[mii.constants.DEPLOYED_KEY]:
             lb_enabled = True
+            print(deployment)
             continue
         if not isinstance(deployment, dict):
             continue

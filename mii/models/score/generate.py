@@ -13,11 +13,13 @@ def create_score_file(deployment_tag,
                       deployment_type,
                       deployments,
                       model_path,
+                      port_map,
                       lb_config):
 
     config_dict = {}
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
     config_dict[mii.constants.DEPLOYMENT_TAG_KEY] = deployment_tag
+    config_dict[mii.constants.PORT_MAP_KEY] = port_map
     for deployment in deployments:
         deployment_config = {
             mii.constants.DEPLOYMENT_NAME_KEY: deployment.deployment_name,

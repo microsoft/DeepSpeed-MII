@@ -34,7 +34,7 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
 
 class DeploymentManagement(ServiceBase, modelresponse_pb2_grpc.DeploymentManagementServicer):
     def AddDeployment(self, request, context):
-        print("TESTING ADD DEPLOYMENT")
+        print("DEPLOYMENT ADDED")
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
 
@@ -203,7 +203,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
     def intercept_service(self, continuation, handler_call_details):
         next_handler = continuation(handler_call_details)
-        print(next_handler)
         assert next_handler.unary_unary is not None
 
         #USE KWARGS LIKE THEY ARE USED TO MAKE SESSIONS TO GET THE DEPLOYMENT NAME TO HASH THE COUNTERS/STUBS
@@ -211,9 +210,14 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
             if method_name == ADD_DEPLOYMENT_METHOD:
-                for name in self.stubs:
-                    for stub in self.stubs[name]:
-                        stub.invoke(ADD_DEPLOYMENT_METHOD, request_proto)
+                print(f"REQUEST PROTO -> {request_proto}")
+                task = str(getattr(request_proto, "task"))
+                deployment_name = str(getattr(request_proto, "deployment_name"))
+                hostname = str(getattr(request_proto, "hostname"))
+                tensor_parallel_ports = list(getattr(request_proto, "tensor_parallel_ports"))
+                torch_dist_port = int(getattr(request_proto, "torch_dist_port"))
+                gpu_indices = list(getattr(request_proto, "gpu_indices"))
+                print(type(gpu_indices[0]))
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == TERMINATE_METHOD:

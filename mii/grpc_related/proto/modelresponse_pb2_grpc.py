@@ -375,7 +375,7 @@ class DeploymentManagementStub(object):
         """
         self.AddDeployment = channel.unary_unary(
                 '/modelresponse.DeploymentManagement/AddDeployment',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                request_serializer=modelresponse__pb2.AddDeployRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
 
@@ -394,7 +394,7 @@ def add_DeploymentManagementServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'AddDeployment': grpc.unary_unary_rpc_method_handler(
                     servicer.AddDeployment,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    request_deserializer=modelresponse__pb2.AddDeployRequest.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
     }
@@ -419,7 +419,7 @@ class DeploymentManagement(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/modelresponse.DeploymentManagement/AddDeployment',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            modelresponse__pb2.AddDeployRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

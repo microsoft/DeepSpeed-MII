@@ -6,6 +6,7 @@ import asyncio
 import grpc
 import requests
 import mii
+import time
 from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks, DeploymentType
@@ -18,11 +19,14 @@ def _get_deployment_configs(deployment_tag):
     deployments = []
     configs = mii.utils.import_score_file(deployment_tag).configs
     for deployment in configs:
-        if not isinstance(configs[deployment], dict):
+        if not isinstance(configs[deployment], dict) or deployment == mii.constants.PORT_MAP_KEY:
             continue
         configs[deployment][mii.constants.DEPLOYED_KEY] = True
         deployments.append(configs[deployment])
-    return deployments
+    lb_config = configs[mii.constants.LOAD_BALANCER_CONFIG_KEY]
+    model_path = configs[mii.constants.MODEL_PATH_KEY]
+    port_map = configs[mii.constants.PORT_MAP_KEY]
+    return deployments, lb_config, model_path, port_map
 
 
 def mii_query_handle(deployment_tag):
@@ -42,12 +46,12 @@ def mii_query_handle(deployment_tag):
         inference_pipeline, task = mii.non_persistent_models[deployment_tag]
         return MIINonPersistentClient(task, deployment_tag)
 
-    deployments = _get_deployment_configs(deployment_tag)
+    deployments, lb_config, model_path, port_map = _get_deployment_configs(deployment_tag)
     if len(deployments) > 0:
         mii_configs_dict = deployments[0][mii.constants.MII_CONFIGS_KEY]
         mii_configs = mii.config.MIIConfig(**mii_configs_dict)
 
-    return MIIClient(deployments, "localhost", mii_configs.port_number)
+    return MIIClient(deployments, "localhost", mii_configs.port_number, lb_config, model_path, port_map, deployment_tag)
 
 
 def create_channel(host, port):
@@ -62,12 +66,16 @@ class MIIClient():
     """
     Client to send queries to a single endpoint.
     """
-    def __init__(self, deployments, host, port):
+    def __init__(self, deployments, host, port, lb_config=None, model_path=None, port_map=None, deployment_tag=None):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
         self.stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
         #self.task = get_task(task_name)
         self.deployments = deployments
+        self.lb_config = lb_config
+        self.model_path = model_path
+        self.port_map = port_map
+        self.deployment_tag = deployment_tag
 
     def _get_deployment_task(self, deployment_name=None):
         task = None
@@ -131,8 +139,8 @@ class MIIClient():
         assert task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
-    async def add_models_async(self, request=None):
-        await getattr(self.stub, "AddDeployment")(modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
+    async def add_models_async(self, proto_request):
+        await getattr(self.stub, "AddDeployment")(proto_request)
 
     def add_models(self,
                    task=None,
@@ -161,39 +169,57 @@ class MIIClient():
                              version=version,
                              deployed=False)
             ]
-
         
-        deployment_tag = mii.deployment_tag
-        lb_config = allocate_processes(deployments)
-        if mii.lb_config is not None:
-            mii.lb_config.replica_configs.extend(lb_config.replica_configs)
+        for deployment in deployments:
+            deployment.task = get_task(deployment.task)
+        lb_config = allocate_processes(deployments, self.port_map)
+        if self.lb_config is not None:
+            self.lb_config.replica_configs.extend(lb_config.replica_configs)
         else:
-            mii.lb_config = lb_config
+            self.lb_config = lb_config
         self.deployments.extend(deployments)
-        if mii.model_path is None and deployment_type == DeploymentType.LOCAL:
-            mii.model_path = MII_MODEL_PATH_DEFAULT
-        elif mii.model_path is None and deployment_type == DeploymentType.AML:
+        if self.model_path is None and deployment_type == DeploymentType.LOCAL:
+            self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
+        elif self.model_path is None and deployment_type == DeploymentType.AML:
             model_path = "model"
         deps = []
         for deployment in self.deployments:
-             data = {
-                'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
-                'task': deployment[mii.constants.TASK_NAME_KEY],
-                'model': deployment[mii.constants.MODEL_NAME_KEY],
-                'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
-                'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
-                'GPU_index_map': None,
-                'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
-                'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
-                'version': 1
-                'deployed' deployment[mii.constants.DEPLOYED_KEY]
-            }
-             
-        create_score_file(deployment_tag=deployment_tag, deployment_type=mii.deployment_type, deployments=self.deployments, model_path=mii.model_path, lb_config=mii.lb_config)
-        if mii.deployment_type == DeploymentType.Local:
-            mii.utils.import_score_file(deployment_tag).init()
+            if isinstance(deployment, dict):
+
+                data = {
+                    'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
+                    'task': deployment[mii.constants.TASK_NAME_KEY],
+                    'model': deployment[mii.constants.MODEL_NAME_KEY],
+                    'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
+                    'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
+                    'GPU_index_map': None,
+                    'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
+                    'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
+                    'version': 1,
+                    'deployed': deployment[mii.constants.DEPLOYED_KEY]
+                    }
+                deps.append(DeploymentConfig.parse_obj(data))
+            else:
+                deps.append(deployment)
+        for deployment in deps:
+            if isinstance(deployment.task, str):
+                deployment.task = get_task(deployment.task)
+        print(deps)
+        time.sleep(5)
+        create_score_file(deployment_tag=self.deployment_tag, deployment_type=deployment_type, deployments=deps, model_path=self.model_path, port_map=self.port_map, lb_config=lb_config)
+        if deployment_type == DeploymentType.LOCAL:
+            mii.utils.import_score_file(self.deployment_tag).init()
         
-        self.asyncio_loop.run_until_complete(self.add_models_async())
+        for replica in lb_config.replica_configs:
+            request_proto = modelresponse_pb2.AddDeployRequest(task=replica.task,
+                                                               deployment_name=replica.deployment_name,
+                                                               hostname=replica.hostname,
+                                                               tensor_parallel_ports=replica.tensor_parallel_ports,
+                                                               torch_dist_port=replica.torch_dist_port,
+                                                               gpu_indices=replica.gpu_indices
+                                                               )
+
+            self.asyncio_loop.run_until_complete(self.add_models_async(request_proto))
 class MIITensorParallelClient():
     """
     Client to send queries to multiple endpoints in parallel.

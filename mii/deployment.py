@@ -68,7 +68,6 @@ def deploy(task=None,
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
     """
-    mii.deployment_type = deployment_type
     if not deployments:
         assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
         deployments = [
@@ -86,7 +85,6 @@ def deploy(task=None,
         deployment_tag = deployment_name
     else:
         assert deployment_tag is not None, "deployment_tag must be set to deploy multiple models"
-    mii.deployment_tag = deployment_tag
     # parse and validate mii config
     for deployment in deployments:
         mii_config = deployment.mii_config
@@ -128,10 +126,10 @@ def deploy(task=None,
     elif model_path is None and deployment_type == DeploymentType.AML:
         model_path = "model"
     
-    mii.model_path = model_path
     # add fields for replica deployment
     replica_configs = []
     port_offset = 1
+    port_map = {}
     for deployment in deployments:
         mii_config = deployment.mii_config
         replica_pool = _allocate_processes(mii_config.hostfile,
@@ -141,16 +139,16 @@ def deploy(task=None,
 
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
-            if hostname not in mii.port_map:
-                mii.port_map[hostname] = set()
+            if hostname not in port_map:
+                port_map[hostname] = set()
             base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-            if base_port in mii.port_map[hostname]:
-                base_port = max(mii.port_map[hostname]) + 1
+            if base_port in port_map[hostname]:
+                base_port = max(port_map[hostname]) + 1
             tensor_parallel_ports = list(
                 range(base_port,
                       base_port + mii_config.tensor_parallel))
             for i in range(base_port, base_port + mii_config.tensor_parallel):
-                mii.port_map[hostname].add(i)
+                port_map[hostname].add(i)
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
                 ReplicaConfig(task=get_task_name(deployment.task),
@@ -167,6 +165,7 @@ def deploy(task=None,
                           deployment_type=deployment_type,
                           deployments=deployments,
                           model_path=model_path,
+                          port_map=port_map,
                           lb_config=lb_config)
     
     if deployment_type == DeploymentType.AML:
@@ -188,7 +187,7 @@ def deploy(task=None,
     else:
         raise Exception(f"Unknown deployment type: {deployment_type}")
 
-def allocate_processes(deployments):
+def allocate_processes(deployments, port_map):
     replica_configs = []
     port_offset = 1
     for deployment in deployments:
@@ -200,16 +199,16 @@ def allocate_processes(deployments):
 
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
-            if hostname not in mii.port_map:
-                mii.port_map[hostname] = set()
+            if hostname not in port_map:
+                port_map[hostname] = set()
             base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-            if base_port in mii.port_map[hostname]:
-                base_port = max(mii.port_map[hostname]) + 1
+            if base_port in port_map[hostname]:
+                base_port = max(port_map[hostname]) + 1
             tensor_parallel_ports = list(
                 range(base_port,
                       base_port + mii_config.tensor_parallel))
             for i in range(base_port, base_port + mii_config.tensor_parallel):
-                mii.port_map[hostname].add(i)
+                port_map[hostname].add(i)
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
                 ReplicaConfig(task=get_task_name(deployment.task),
