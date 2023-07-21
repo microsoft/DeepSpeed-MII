@@ -100,6 +100,9 @@ except OSError:
 deploy = \
 """set -e
 python3 model_download.py
+cd model/models--*/snapshots/*/
+find ./ -type l -execdir bash -c 'ln -sfn "$(readlink -f "$0")" "$0"' {} \;
+cd -
 az acr build -r <acr-name> --build-arg no-cache=True -t "<image-name>:<version>" build
 az ml environment create -f environment.yml
 az ml online-endpoint create -n "<endpoint-name>" -f endpoint.yml
