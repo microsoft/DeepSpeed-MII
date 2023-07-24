@@ -38,6 +38,15 @@ service ModelResponse {
 
 service DeploymentManagement {
   rpc AddDeployment(AddDeployRequest) returns (google.protobuf.Empty) {}
+  rpc CreateSession (SessionID) returns (google.protobuf.Empty) {}
+  rpc DestroySession (SessionID) returns (google.protobuf.Empty) {}
+  rpc GeneratorReply (MultiStringRequest) returns (MultiStringReply) {}
+  rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
+  rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
+  rpc FillMaskReply(SingleStringRequest) returns (SingleStringReply) {}
+  rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
+  rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
+  rpc Txt2ImgReply(MultiStringRequest) returns (ImageReply) {}
 }
 
 message Value {

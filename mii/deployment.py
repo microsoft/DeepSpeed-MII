@@ -219,7 +219,7 @@ def allocate_processes(deployments, port_map):
                               gpu_indices=gpu_indices))
     lb_config = LoadBalancerConfig(port=mii_config.port_number,
                                    replica_configs=replica_configs)
-    return lb_config
+    return lb_config, port_map
 
 def _deploy_local(deployment_tag, model_path):
     mii.utils.import_score_file(deployment_tag).init()

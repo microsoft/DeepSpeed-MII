@@ -142,15 +142,16 @@ class ParallelStubInvoker:
     This class aims to call gRPC methods without conversions between proto and python object.
     TensorParallelClient can be used for invocation with the conversions.
     """
-    def __init__(self, host, ports):
+    def __init__(self, host, ports, asyncio_loop):
         # Assumption: target services are all on the same host
         self.stubs = []
         for port in ports:
+            asyncio.set_event_loop(asyncio_loop)
             channel = create_channel(host, port)
-            stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
+            stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
             self.stubs.append(stub)
 
-        self.asyncio_loop = asyncio.get_event_loop()
+        self.asyncio_loop = asyncio_loop
 
     async def _invoke_async(self, method_name, proto_request):
         responses = []
@@ -184,12 +185,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         for repl in replica_configs:
             self.stubs[repl.deployment_name].append(
                 ParallelStubInvoker(repl.hostname,
-                                    repl.tensor_parallel_ports))
-        """
-        self.counter = AtomicCounter()
-        self.task = get_task(task_name)
-        self.replica_sessions = {}
-        """
+                                    repl.tensor_parallel_ports,
+                                    self.asyncio_loop))
 
         # Start the asyncio loop in a separate thread
         def run_asyncio_loop(loop):
@@ -210,14 +207,17 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
             if method_name == ADD_DEPLOYMENT_METHOD:
-                print(f"REQUEST PROTO -> {request_proto}")
                 task = str(getattr(request_proto, "task"))
                 deployment_name = str(getattr(request_proto, "deployment_name"))
                 hostname = str(getattr(request_proto, "hostname"))
                 tensor_parallel_ports = list(getattr(request_proto, "tensor_parallel_ports"))
                 torch_dist_port = int(getattr(request_proto, "torch_dist_port"))
                 gpu_indices = list(getattr(request_proto, "gpu_indices"))
-                print(type(gpu_indices[0]))
+                if deployment_name not in self.stubs:
+                    self.stubs[deployment_name] = []
+                self.counter[deployment_name] = AtomicCounter()
+                self.tasks[deployment_name] = task
+                self.stubs[deployment_name].append(ParallelStubInvoker(hostname, tensor_parallel_ports, self.asyncio_loop))
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == TERMINATE_METHOD:
@@ -227,40 +227,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                                     google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
+            
             deployment_name = getattr(request_proto, 'deployment_name')
-            """
-            kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
-            if method_name != TERMINATE_METHOD:
-                assert "deployment_name" in kwargs, "Must include deployment_name in kwargs for query"
-            deployment_name = kwargs.get('deployment_name')
-            kwargs.pop('deployment_name', None)
-            task = self.tasks[deployment_name]
-            assert task is not None, f"task for {deployment_name} not found"
-            method = GRPC_METHOD_TABLE[get_task(task)]
-            new_request = None
-            if method_name == "ConversationalReply":
-                request_dict = {}
-                request_dict['text'] = str(request_proto.text)
-                val = getattr(request_proto, 'conversation_id')
-                request_dict['conversation_id'] = int(val) if val is not None else None
-                request_dict['past_user_inputs'] = list(request_proto.past_user_inputs)
-                request_dict['generated_responses'] = list(
-                    request_proto.generated_responses)
-                new_request = method.pack_request_to_proto(request_dict, **kwargs)
-
-            elif method_name == "QuestionAndAnswerReply":
-                request_dict = {}
-                request_dict['question'] = str(request_proto.question)
-                request_dict['context'] = str(request_proto.context)
-                new_request = method.pack_request_to_proto(request_dict, **kwargs)
-            else:
-                request_dict = {}
-                request_dict["query"] = list(
-                    request_proto.request
-                ) if method_name == "GeneratorReply" or method_name == "Txt2ImgReply" else str(
-                    request_proto.request)
-                new_request = method.pack_request_to_proto(request_dict, **kwargs)
-            """
             call_count = self.counter[deployment_name].get_and_increment()
             replica_index = call_count % len(self.stubs[deployment_name])
 
@@ -298,7 +266,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             response_serializer=next_handler.response_serializer)
 
 
-def _do_serve(service_impl, port, interceptors=[]):
+def _do_serve(service_impl, port, interceptors=[], is_lb=False):
     stop_event = service_impl.get_stop_event()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=LB_MAX_WORKER_THREADS),
                          interceptors=interceptors,
@@ -306,7 +274,10 @@ def _do_serve(service_impl, port, interceptors=[]):
                                    GRPC_MAX_MSG_SIZE),
                                   ('grpc.max_receive_message_length',
                                    GRPC_MAX_MSG_SIZE)])
-    modelresponse_pb2_grpc.add_DeploymentManagementServicer_to_server(service_impl, server)
+    if is_lb:
+        modelresponse_pb2_grpc.add_DeploymentManagementServicer_to_server(service_impl, server)
+    else:
+        modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)
     server.add_insecure_port(f'[::]:{port}')
     print(f"About to start server")
     server.start()
@@ -316,13 +287,14 @@ def _do_serve(service_impl, port, interceptors=[]):
 
 
 def serve_inference(inference_pipeline, port):
-    _do_serve(DeploymentManagement(), port)
+    _do_serve(ModelResponse(inference_pipeline), port)
 
 
 def serve_load_balancing(lb_config):
     _do_serve(DeploymentManagement(),
               lb_config.port,
-              [LoadBalancingInterceptor(lb_config.replica_configs)])
+              [LoadBalancingInterceptor(lb_config.replica_configs)],
+              True)
 
 
 if __name__ == '__main__':
