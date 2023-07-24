@@ -264,7 +264,7 @@ class MIIServer():
         # assign different ports to replicas because they could be on the same host
         worker_str += f"--master_port {master_port}"
 
-        ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
+        ds_launch_str = f"deepspeed {worker_str} --no_ssh_check --no_local_rank --no_python"
 
         return self._launch_server_process(deployment_name,
                                            model_name,
