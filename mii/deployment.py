@@ -68,7 +68,22 @@ def deploy(task=None,
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
     """
-    if not deployments:
+    if model_path is None and deployment_type == DeploymentType.LOCAL:
+        model_path = MII_MODEL_PATH_DEFAULT
+    elif model_path is None and deployment_type == DeploymentType.AML:
+        model_path = "model"
+
+    if not deployments and not all((model, task, deployment_name)):
+        assert deployment_tag is not None, "Deployment tag must be set when starting empty deployment"
+        create_score_file(deployment_tag=deployment_tag,
+                          deployment_type=deployment_type,
+                          deployments=None,
+                          model_path=model_path,
+                          port_map=None,
+                          lb_config=None)
+        return None
+
+    elif not deployments:
         assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
         deployments = [
             DeploymentConfig(deployment_name=deployment_name,
@@ -121,10 +136,6 @@ def deploy(task=None,
             )
 
     # In local deployments use default path if no model path set
-    if model_path is None and deployment_type == DeploymentType.LOCAL:
-        model_path = MII_MODEL_PATH_DEFAULT
-    elif model_path is None and deployment_type == DeploymentType.AML:
-        model_path = "model"
     
     # add fields for replica deployment
     replica_configs = []
