@@ -34,9 +34,9 @@ def _get_deployment_configs(deployment_tag):
                 'deployed': configs[deployment][mii.constants.DEPLOYED_KEY]
                }
         deployments.append(DeploymentConfig.parse_obj(data))
-    lb_config = configs[mii.constants.LOAD_BALANCER_CONFIG_KEY]
+    lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
     model_path = configs[mii.constants.MODEL_PATH_KEY]
-    port_map = configs[mii.constants.PORT_MAP_KEY]
+    port_map = configs.get(mii.constants.PORT_MAP_KEY)
     return deployments, lb_config, model_path, port_map
 
 
@@ -58,11 +58,13 @@ def mii_query_handle(deployment_tag):
         return MIINonPersistentClient(task, deployment_tag)
 
     deployments, lb_config, model_path, port_map = _get_deployment_configs(deployment_tag)
+    mii_configs_dict = None
     if len(deployments) > 0:
         mii_configs_dict = deployments[0].mii_config
         #mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+    port_number = None if mii_configs_dict == None else mii_configs_dict.port_number
 
-    return MIIClient(deployments, "localhost", mii_configs_dict.port_number, lb_config, model_path, port_map, deployment_tag)
+    return MIIClient(deployments, "localhost", port_number, lb_config, model_path, port_map, deployment_tag)
 
 
 def create_channel(host, port):
@@ -79,12 +81,15 @@ class MIIClient():
     """
     def __init__(self, deployments, host, port, lb_config=None, model_path=None, port_map=None, deployment_tag=None):
         self.asyncio_loop = asyncio.get_event_loop()
-        channel = create_channel(host, port)
-        self.stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
+        self.stub = None
+        self.host = host
+        if port is not None:
+            channel = create_channel(host, port)
+            self.stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
         self.deployments = deployments
         self.lb_config = lb_config
         self.model_path = model_path
-        self.port_map = port_map
+        self.port_map = port_map if port_map is not None else {}
         self.deployment_tag = deployment_tag
 
     def _get_deployment_task(self, deployment_name=None):
@@ -161,7 +166,6 @@ class MIIClient():
                    enable_zero=False,
                    ds_config=None,
                    mii_config={},
-                   deployment_tag=None,
                    deployments=[],
                    deployment_type=DeploymentType.LOCAL,
                    model_path=None,
@@ -201,7 +205,10 @@ class MIIClient():
         create_score_file(deployment_tag=self.deployment_tag, deployment_type=deployment_type, deployments=self.deployments, model_path=self.model_path, port_map=self.port_map, lb_config=lb_config)
         if deployment_type == DeploymentType.LOCAL:
             mii.utils.import_score_file(self.deployment_tag).init()
-         
+        if self.stub is None:
+            self.port_number = self.deployments[0].mii_config.port_number
+            channel = create_channel(self.host, self.port_number)
+            self.stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
         for replica in lb_config.replica_configs:
             request_proto = modelresponse_pb2.AddDeployRequest(task=replica.task,
                                                                deployment_name=replica.deployment_name,

@@ -19,19 +19,22 @@ def create_score_file(deployment_tag,
     config_dict = {}
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
     config_dict[mii.constants.DEPLOYMENT_TAG_KEY] = deployment_tag
-    config_dict[mii.constants.PORT_MAP_KEY] = port_map
-    for deployment in deployments:
-        deployment_config = {
-            mii.constants.DEPLOYMENT_NAME_KEY: deployment.deployment_name,
-            mii.constants.TASK_NAME_KEY: mii.utils.get_task_name(deployment.task),
-            mii.constants.MODEL_NAME_KEY: deployment.model,
-            mii.constants.ENABLE_DEEPSPEED_KEY: deployment.enable_deepspeed,
-            mii.constants.MII_CONFIGS_KEY: deployment.mii_config.dict(),
-            mii.constants.ENABLE_DEEPSPEED_ZERO_KEY: deployment.enable_zero,
-            mii.constants.DEEPSPEED_CONFIG_KEY: deployment.ds_config,
-            mii.constants.DEPLOYED_KEY: deployment.deployed,
-        }
-        config_dict[deployment.deployment_name] = deployment_config
+    if port_map is not None:
+        config_dict[mii.constants.PORT_MAP_KEY] = port_map
+    
+    if deployments is not None:
+        for deployment in deployments:
+            deployment_config = {
+                mii.constants.DEPLOYMENT_NAME_KEY: deployment.deployment_name,
+                mii.constants.TASK_NAME_KEY: mii.utils.get_task_name(deployment.task),
+                mii.constants.MODEL_NAME_KEY: deployment.model,
+                mii.constants.ENABLE_DEEPSPEED_KEY: deployment.enable_deepspeed,
+                mii.constants.MII_CONFIGS_KEY: deployment.mii_config.dict(),
+                mii.constants.ENABLE_DEEPSPEED_ZERO_KEY: deployment.enable_zero,
+                mii.constants.DEEPSPEED_CONFIG_KEY: deployment.ds_config,
+                mii.constants.DEPLOYED_KEY: deployment.deployed,
+            }
+            config_dict[deployment.deployment_name] = deployment_config
 
     if lb_config is not None:
         config_dict[mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config
