@@ -57,11 +57,10 @@ def mii_query_handle(deployment_tag):
         return MIINonPersistentClient(task, deployment_tag)
 
     deployments, lb_config, model_path, port_map = _get_deployment_configs(deployment_tag)
-    mii_configs_dict = None
+    mii_configs = None
     if len(deployments) > 0:
-        mii_configs_dict = next(iter(deployments.values())).mii_config
-        #mii_configs = mii.config.MIIConfig(**mii_configs_dict)
-    port_number = None if mii_configs_dict == None else mii_configs_dict.port_number
+        mii_configs = next(iter(deployments.values())).mii_config
+    port_number = None if mii_configs == None else mii_configs.port_number
 
     return MIIClient(deployments,
                      "localhost",
@@ -223,7 +222,6 @@ class MIIClient():
             self.lb_config = lb_config
         for deployment in deployments:
             self.deployments[deployment.deployment_name] = deployment
-        #self.deployments.extend(deployments)
         if self.model_path is None and deployment_type == DeploymentType.LOCAL:
             self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
         elif self.model_path is None and deployment_type == DeploymentType.AML:
@@ -348,6 +346,5 @@ def terminate_restful_gateway(deployment_tag):
     deployments, _, _, _ = _get_deployment_configs(deployment_tag)
     for deployment in deployments.values():
         mii_configs = deployment.mii_config
-        #mii_configs = mii.config.MIIConfig(**mii_configs_dict)
         if mii_configs.enable_restful_api:
             requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")
