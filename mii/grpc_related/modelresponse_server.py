@@ -32,13 +32,16 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
     def get_stop_event(self):
         return self._stop_event
 
-class DeploymentManagement(ServiceBase, modelresponse_pb2_grpc.DeploymentManagementServicer):
+
+class DeploymentManagement(ServiceBase,
+                           modelresponse_pb2_grpc.DeploymentManagementServicer):
     def AddDeployment(self, request, context):
         print("DEPLOYMENT ADDED")
         return google_dot_protobuf_dot_empty__pb2.Empty()
-    
+
     def DeleteDeployment(self, request, context):
         return google_dot_protobuf_dot_empty__pb2.Empty()
+
 
 class ModelResponse(ServiceBase):
     """
@@ -212,14 +215,19 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 task = str(getattr(request_proto, "task"))
                 deployment_name = str(getattr(request_proto, "deployment_name"))
                 hostname = str(getattr(request_proto, "hostname"))
-                tensor_parallel_ports = list(getattr(request_proto, "tensor_parallel_ports"))
+                tensor_parallel_ports = list(
+                    getattr(request_proto,
+                            "tensor_parallel_ports"))
                 torch_dist_port = int(getattr(request_proto, "torch_dist_port"))
                 gpu_indices = list(getattr(request_proto, "gpu_indices"))
                 if deployment_name not in self.stubs:
                     self.stubs[deployment_name] = []
                 self.counter[deployment_name] = AtomicCounter()
                 self.tasks[deployment_name] = task
-                self.stubs[deployment_name].append(ParallelStubInvoker(hostname, tensor_parallel_ports, self.asyncio_loop))
+                self.stubs[deployment_name].append(
+                    ParallelStubInvoker(hostname,
+                                        tensor_parallel_ports,
+                                        self.asyncio_loop))
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == TERMINATE_METHOD:
@@ -230,13 +238,13 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                                     google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
-            
+
             if method_name == DELETE_DEPLOYMENT_METHOD:
                 deployment_name = str(getattr(request_proto, "deployment_name"))
                 assert deployment_name in self.stubs, f"Deployment: {deployment_name} not found"
                 for stub in self.stubs[deployment_name]:
                     stub.invoke(TERMINATE_METHOD,
-                                    google_dot_protobuf_dot_empty__pb2.Empty())
+                                google_dot_protobuf_dot_empty__pb2.Empty())
                 del self.stubs[deployment_name]
                 del self.counter[deployment_name]
                 del self.tasks[deployment_name]
@@ -290,7 +298,9 @@ def _do_serve(service_impl, port, interceptors=[], is_lb=False):
                                   ('grpc.max_receive_message_length',
                                    GRPC_MAX_MSG_SIZE)])
     if is_lb:
-        modelresponse_pb2_grpc.add_DeploymentManagementServicer_to_server(service_impl, server)
+        modelresponse_pb2_grpc.add_DeploymentManagementServicer_to_server(
+            service_impl,
+            server)
     else:
         modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)
     server.add_insecure_port(f'[::]:{port}')

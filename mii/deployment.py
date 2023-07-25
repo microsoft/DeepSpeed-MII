@@ -126,7 +126,6 @@ def deploy(task=None,
                     deployment.task,
                     deployment.model)
 
-
         if enable_deepspeed:
             logger.info(
                 f"************* MII is using DeepSpeed Optimizations to accelerate your model: {deployment.model} *************"
@@ -139,7 +138,7 @@ def deploy(task=None,
     deps = {deployment.deployment_name: deployment for deployment in deployments}
 
     # In local deployments use default path if no model path set
-    
+
     # add fields for replica deployment
     port_map = {}
     lb_config, port_map = allocate_processes(deps, port_map)
@@ -151,7 +150,7 @@ def deploy(task=None,
                           model_path=model_path,
                           port_map=port_map,
                           lb_config=lb_config)
-    
+
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_tag=deployment_tag, model_name=model, version=version)
     elif deployment_type == DeploymentType.LOCAL:
@@ -170,6 +169,7 @@ def deploy(task=None,
                                                       task)
     else:
         raise Exception(f"Unknown deployment type: {deployment_type}")
+
 
 def allocate_processes(deployments, port_map):
     replica_configs = []
@@ -204,6 +204,7 @@ def allocate_processes(deployments, port_map):
     lb_config = LoadBalancerConfig(port=mii_config.port_number,
                                    replica_configs=replica_configs)
     return lb_config, port_map
+
 
 def _deploy_local(deployment_tag, model_path):
     mii.utils.import_score_file(deployment_tag).init()

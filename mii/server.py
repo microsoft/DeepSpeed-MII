@@ -28,7 +28,12 @@ def config_to_b64_str(config):
 
 class MIIServer():
     '''Initialize the model, setup the server for the model under model_path'''
-    def __init__(self, deployment_tag, deployments, model_path, lb_config=None, lb_enabled=False):
+    def __init__(self,
+                 deployment_tag,
+                 deployments,
+                 model_path,
+                 lb_config=None,
+                 lb_enabled=False):
         if len(deployments) > 0:
             self.lb_enabled = lb_enabled
             self.deployments = deployments
@@ -43,11 +48,12 @@ class MIIServer():
                         f.write(f"localhost slots={num_gpu}")
                     mii.configs.hostfile = hostfile
 
-            processes = self._initialize_service(deployment_tag,
-                                             deployments,
-                                             model_path,
-                                             lb_config,
-                                             )
+            processes = self._initialize_service(
+                deployment_tag,
+                deployments,
+                model_path,
+                lb_config,
+            )
             self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):

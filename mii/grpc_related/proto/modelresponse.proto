@@ -132,7 +132,7 @@ message AddDeployRequest {
   repeated int64 tensor_parallel_ports = 4;
   int64 torch_dist_port = 5;
   repeated int64 gpu_indices = 6;
-  
+
 }
 
 message DeleteDeployRequest {
