@@ -29,6 +29,7 @@ jobs:
 
       - name: Install MII
         run: |
+          pip install git+https://github.com/microsoft/DeepSpeed.git@loadams/try-bump-pydantic
           pip install .[dev]
 
       - name: Formatting checks
