@@ -13,7 +13,7 @@ import sys
 import threading
 import time
 
-from mii.constants import GRPC_MAX_MSG_SIZE, ADD_DEPLOYMENT_METHOD, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
+from mii.constants import GRPC_MAX_MSG_SIZE, ADD_DEPLOYMENT_METHOD, DELETE_DEPLOYMENT_METHOD, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
 
@@ -36,7 +36,9 @@ class DeploymentManagement(ServiceBase, modelresponse_pb2_grpc.DeploymentManagem
     def AddDeployment(self, request, context):
         print("DEPLOYMENT ADDED")
         return google_dot_protobuf_dot_empty__pb2.Empty()
-
+    
+    def DeleteDeployment(self, request, context):
+        return google_dot_protobuf_dot_empty__pb2.Empty()
 
 class ModelResponse(ServiceBase):
     """
@@ -228,6 +230,16 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
             
+            if method_name == DELETE_DEPLOYMENT_METHOD:
+                deployment_name = str(getattr(request_proto, "deployment_name"))
+                for stub in self.stubs[deployment_name]:
+                    stub.invoke(TERMINATE_METHOD,
+                                    google_dot_protobuf_dot_empty__pb2.Empty())
+                del self.stubs[deployment_name]
+                del self.counter[deployment_name]
+                del self.tasks[deployment_name]
+                return google_dot_protobuf_dot_empty__pb2.Empty()
+
             deployment_name = getattr(request_proto, 'deployment_name')
             call_count = self.counter[deployment_name].get_and_increment()
             replica_index = call_count % len(self.stubs[deployment_name])

@@ -155,6 +155,19 @@ class MIIClient():
         assert task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
+    async def delete_model_async(self, proto_request):
+        await getattr(self.stub, "DeleteDeployment")(proto_request)
+
+    def delete_model(self, deployment_name):
+        for deployment in self.deployments:
+            if deployment.deployment_name == deployment_name:
+                request_proto = modelresponse_pb2.DeleteDeployRequest(deployment_name=deployment_name)
+                self.asyncio_loop.run_until_complete(self.delete_model_async(request_proto))
+                return None
+        assert False, f"Deployment: {deployment_name} not found"
+            
+                
+
     async def add_models_async(self, proto_request):
         await getattr(self.stub, "AddDeployment")(proto_request)
 

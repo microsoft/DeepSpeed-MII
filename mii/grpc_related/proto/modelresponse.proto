@@ -47,6 +47,8 @@ service DeploymentManagement {
   rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
   rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
   rpc Txt2ImgReply(MultiStringRequest) returns (ImageReply) {}
+  rpc DeleteDeployment(DeleteDeployRequest) returns (google.protobuf.Empty) {}
+  rpc Terminate (google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }
 
 message Value {
@@ -131,4 +133,8 @@ message AddDeployRequest {
   int64 torch_dist_port = 5;
   repeated int64 gpu_indices = 6;
   
+}
+
+message DeleteDeployRequest {
+  string deployment_name = 1;
 }
