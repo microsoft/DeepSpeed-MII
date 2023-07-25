@@ -212,26 +212,25 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
             if method_name == ADD_DEPLOYMENT_METHOD:
-                task = str(getattr(request_proto, "task"))
                 deployment_name = str(getattr(request_proto, "deployment_name"))
-                hostname = str(getattr(request_proto, "hostname"))
-                tensor_parallel_ports = list(
-                    getattr(request_proto,
-                            "tensor_parallel_ports"))
-                torch_dist_port = int(getattr(request_proto, "torch_dist_port"))
-                gpu_indices = list(getattr(request_proto, "gpu_indices"))
                 if deployment_name not in self.stubs:
+                    task = str(getattr(request_proto, "task"))
+                    hostname = str(getattr(request_proto, "hostname"))
+                    tensor_parallel_ports = list(
+                        getattr(request_proto,
+                                "tensor_parallel_ports"))
+                    torch_dist_port = int(getattr(request_proto, "torch_dist_port"))
+                    gpu_indices = list(getattr(request_proto, "gpu_indices"))
                     self.stubs[deployment_name] = []
-                self.counter[deployment_name] = AtomicCounter()
-                self.tasks[deployment_name] = task
-                self.stubs[deployment_name].append(
-                    ParallelStubInvoker(hostname,
-                                        tensor_parallel_ports,
-                                        self.asyncio_loop))
+                    self.counter[deployment_name] = AtomicCounter()
+                    self.tasks[deployment_name] = task
+                    self.stubs[deployment_name].append(
+                        ParallelStubInvoker(hostname,
+                                            tensor_parallel_ports,
+                                            self.asyncio_loop))
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == TERMINATE_METHOD:
-                print(self.stubs.keys())
                 for deployment_name in self.stubs:
                     for stub in self.stubs[deployment_name]:
                         stub.invoke(TERMINATE_METHOD,
