@@ -15,25 +15,24 @@ from mii.config import DeploymentConfig
 
 
 def _get_deployment_configs(deployment_tag):
-    deployments = []
+    deployments = {}
     configs = mii.utils.import_score_file(deployment_tag).configs
-    for deployment in configs:
-        if not isinstance(configs[deployment], dict) or deployment == mii.constants.PORT_MAP_KEY:
-            continue
-        configs[deployment][mii.constants.DEPLOYED_KEY] = True
+    for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
+        deployment[mii.constants.DEPLOYED_KEY] = True
+        deployment_name = deployment[mii.constants.DEPLOYMENT_NAME_KEY]
         data = {
-                'deployment_name':configs[deployment][mii.constants.DEPLOYMENT_NAME_KEY],
-                'task': configs[deployment][mii.constants.TASK_NAME_KEY],
-                'model': configs[deployment][mii.constants.MODEL_NAME_KEY],
-                'enable_deepspeed': configs[deployment][mii.constants.ENABLE_DEEPSPEED_KEY],
-                'enable_zero': configs[deployment][mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
+                'deployment_name':deployment[mii.constants.DEPLOYMENT_NAME_KEY],
+                'task': deployment[mii.constants.TASK_NAME_KEY],
+                'model': deployment[mii.constants.MODEL_NAME_KEY],
+                'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
+                'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
                 'GPU_index_map': None,
-                'mii_config': configs[deployment][mii.constants.MII_CONFIGS_KEY],
-                'ds_config': configs[deployment][mii.constants.DEEPSPEED_CONFIG_KEY],
+                'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
+                'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
                 'version': 1,
-                'deployed': configs[deployment][mii.constants.DEPLOYED_KEY]
+                'deployed': deployment[mii.constants.DEPLOYED_KEY]
                }
-        deployments.append(DeploymentConfig.parse_obj(data))
+        deployments[deployment_name] = DeploymentConfig.parse_obj(data)
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
     model_path = configs[mii.constants.MODEL_PATH_KEY]
     port_map = configs.get(mii.constants.PORT_MAP_KEY)
@@ -60,7 +59,7 @@ def mii_query_handle(deployment_tag):
     deployments, lb_config, model_path, port_map = _get_deployment_configs(deployment_tag)
     mii_configs_dict = None
     if len(deployments) > 0:
-        mii_configs_dict = deployments[0].mii_config
+        mii_configs_dict = next(iter(deployments.values())).mii_config
         #mii_configs = mii.config.MIIConfig(**mii_configs_dict)
     port_number = None if mii_configs_dict == None else mii_configs_dict.port_number
 
@@ -96,14 +95,14 @@ class MIIClient():
         task = None
         if deployment_name is None:  #mii.terminate() or single model
             assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
-            deployment_name = self.deployments[0].deployment_name
-            task = get_task(self.deployments[0].task) if isinstance(deployment.task, str) else self.deployments[0].task
+            deployment = next(iter(self.deployments.values()))
+            deployment_name = deployment.deployment_name
+            task = get_task(deployment.task) if isinstance(deployment.task, str) else deployment.task
         else:
-            for deployment in self.deployments:
-                print(deployment.deployment_name)
-                if deployment.deployment_name == deployment_name:
-                    task = get_task(deployment.task) if isinstance(deployment.task, str) else deployment.task
-                    return deployment_name, task
+            if deployment_name in self.deployments:
+                deployment = self.deployments[deployment_name]
+                task = get_task(deployment.task) if isinstance(deployment.task, str) else deployment.task
+                return deployment_name, task
             assert False, f"{deployment_name} not found in list of deployments"
         return deployment_name, task
 
@@ -159,11 +158,11 @@ class MIIClient():
         await getattr(self.stub, "DeleteDeployment")(proto_request)
 
     def delete_model(self, deployment_name):
-        for deployment in self.deployments:
-            if deployment.deployment_name == deployment_name:
-                request_proto = modelresponse_pb2.DeleteDeployRequest(deployment_name=deployment_name)
-                self.asyncio_loop.run_until_complete(self.delete_model_async(request_proto))
-                return None
+        if deployment_name in self.deployments:
+            request_proto = modelresponse_pb2.DeleteDeployRequest(deployment_name=deployment_name)
+            self.asyncio_loop.run_until_complete(self.delete_model_async(request_proto))
+            del self.deployments[deployment_name]
+            return None
         assert False, f"Deployment: {deployment_name} not found"
             
                 
@@ -199,27 +198,30 @@ class MIIClient():
                              deployed=False)
             ]
         
+        deps = {deployment.deployment_name: deployment for deployment in deployments}
         for deployment in deployments:
             deployment.task = get_task(deployment.task)
-        lb_config, self.port_map = allocate_processes(deployments, self.port_map)
+        lb_config, self.port_map = allocate_processes(deps, self.port_map)
         
         if self.lb_config is not None:
             self.lb_config.replica_configs.extend(lb_config.replica_configs)
         else:
             self.lb_config = lb_config
-        self.deployments.extend(deployments)
+        for deployment in deployments:
+            self.deployments[deployment.deployment_name] = deployment
+        #self.deployments.extend(deployments)
         if self.model_path is None and deployment_type == DeploymentType.LOCAL:
             self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
         elif self.model_path is None and deployment_type == DeploymentType.AML:
             model_path = "model"
-        for deployment in self.deployments:
+        for deployment in self.deployments.values():
             if isinstance(deployment.task, str):
                 deployment.task = get_task(deployment.task)
         create_score_file(deployment_tag=self.deployment_tag, deployment_type=deployment_type, deployments=self.deployments, model_path=self.model_path, port_map=self.port_map, lb_config=lb_config)
         if deployment_type == DeploymentType.LOCAL:
             mii.utils.import_score_file(self.deployment_tag).init()
         if self.stub is None:
-            self.port_number = self.deployments[0].mii_config.port_number
+            self.port_number = next(iter(self.deployments.values())).mii_config.port_number
             channel = create_channel(self.host, self.port_number)
             self.stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
         for replica in lb_config.replica_configs:
@@ -321,9 +323,9 @@ class MIINonPersistentClient():
 
 
 def terminate_restful_gateway(deployment_tag):
-    deployments = _get_deployment_configs(deployment_tag)
-    for deployment in deployments:
-        mii_configs_dict = deployment[mii.constants.MII_CONFIGS_KEY]
-        mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+    deployments, _, _, _ = _get_deployment_configs(deployment_tag)
+    for deployment in deployments.values():
+        mii_configs_dict = deployment.mii_config
+        #mii_configs = mii.config.MIIConfig(**mii_configs_dict)
         if mii_configs.enable_restful_api:
             requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")

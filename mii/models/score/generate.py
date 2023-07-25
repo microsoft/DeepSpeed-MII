@@ -19,11 +19,12 @@ def create_score_file(deployment_tag,
     config_dict = {}
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
     config_dict[mii.constants.DEPLOYMENT_TAG_KEY] = deployment_tag
+    config_dict[mii.constants.DEPLOYMENTS_KEY] = {}
     if port_map is not None:
         config_dict[mii.constants.PORT_MAP_KEY] = port_map
     
     if deployments is not None:
-        for deployment in deployments:
+        for deployment in deployments.values():
             deployment_config = {
                 mii.constants.DEPLOYMENT_NAME_KEY: deployment.deployment_name,
                 mii.constants.TASK_NAME_KEY: mii.utils.get_task_name(deployment.task),
@@ -34,7 +35,7 @@ def create_score_file(deployment_tag,
                 mii.constants.DEEPSPEED_CONFIG_KEY: deployment.ds_config,
                 mii.constants.DEPLOYED_KEY: deployment.deployed,
             }
-            config_dict[deployment.deployment_name] = deployment_config
+            config_dict[mii.constants.DEPLOYMENTS_KEY][deployment.deployment_name] = deployment_config
 
     if lb_config is not None:
         config_dict[mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config

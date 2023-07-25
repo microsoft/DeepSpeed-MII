@@ -223,8 +223,9 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == TERMINATE_METHOD:
-                for deployment in self.stubs:
-                    for stub in self.stubs[deployment]:
+                print(self.stubs.keys())
+                for deployment_name in self.stubs:
+                    for stub in self.stubs[deployment_name]:
                         stub.invoke(TERMINATE_METHOD,
                                     google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
@@ -232,6 +233,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             
             if method_name == DELETE_DEPLOYMENT_METHOD:
                 deployment_name = str(getattr(request_proto, "deployment_name"))
+                assert deployment_name in self.stubs, f"Deployment: {deployment_name} not found"
                 for stub in self.stubs[deployment_name]:
                     stub.invoke(TERMINATE_METHOD,
                                     google_dot_protobuf_dot_empty__pb2.Empty())
@@ -241,6 +243,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             deployment_name = getattr(request_proto, 'deployment_name')
+            assert deployment_name in self.stubs, f"Deployment: {deployment_name} not found"
             call_count = self.counter[deployment_name].get_and_increment()
             replica_index = call_count % len(self.stubs[deployment_name])
 

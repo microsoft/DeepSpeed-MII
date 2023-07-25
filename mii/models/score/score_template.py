@@ -19,13 +19,10 @@ def init():
     deployment_tag = configs[mii.constants.DEPLOYMENT_TAG_KEY]
     deployments = []
     lb_enabled = False
-    del configs[mii.constants.PORT_MAP_KEY]
-    for deployment in configs.values():
-        if isinstance(deployment, dict) and deployment[mii.constants.DEPLOYED_KEY]:
+    for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
+        if deployment[mii.constants.DEPLOYED_KEY]:
             lb_enabled = True
             print(deployment)
-            continue
-        if not isinstance(deployment, dict):
             continue
         data = {
             'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
@@ -48,8 +45,7 @@ def init():
     assert task_name is not None, "The task name should be set before calling init"
     """
 
-    if len(deployments) > 0:
-        mii.MIIServer(deployment_tag,
+    mii.MIIServer(deployment_tag,
                   deployments,
                   model_path,
                   lb_config=configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY,

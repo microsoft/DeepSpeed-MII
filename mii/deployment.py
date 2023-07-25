@@ -126,6 +126,7 @@ def deploy(task=None,
                     deployment.task,
                     deployment.model)
 
+
         if enable_deepspeed:
             logger.info(
                 f"************* MII is using DeepSpeed Optimizations to accelerate your model: {deployment.model} *************"
@@ -135,46 +136,18 @@ def deploy(task=None,
                 f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance for: {deployment.model} *************"
             )
 
+    deps = {deployment.deployment_name: deployment for deployment in deployments}
+
     # In local deployments use default path if no model path set
     
     # add fields for replica deployment
-    replica_configs = []
-    port_offset = 1
     port_map = {}
-    for deployment in deployments:
-        mii_config = deployment.mii_config
-        replica_pool = _allocate_processes(mii_config.hostfile,
-                                           mii_config.tensor_parallel,
-                                           mii_config.replica_num,
-                                           deployment.GPU_index_map)
-
-        for i, (hostname, gpu_indices) in enumerate(replica_pool):
-            # Reserver port for a LB proxy when replication is enabled
-            if hostname not in port_map:
-                port_map[hostname] = set()
-            base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-            if base_port in port_map[hostname]:
-                base_port = max(port_map[hostname]) + 1
-            tensor_parallel_ports = list(
-                range(base_port,
-                      base_port + mii_config.tensor_parallel))
-            for i in range(base_port, base_port + mii_config.tensor_parallel):
-                port_map[hostname].add(i)
-            torch_dist_port = mii_config.torch_dist_port + i
-            replica_configs.append(
-                ReplicaConfig(task=get_task_name(deployment.task),
-                              deployment_name=deployment.deployment_name,
-                              hostname=hostname,
-                              tensor_parallel_ports=tensor_parallel_ports,
-                              torch_dist_port=torch_dist_port,
-                              gpu_indices=gpu_indices))
-    lb_config = LoadBalancerConfig(port=mii_config.port_number,
-                                   replica_configs=replica_configs)
+    lb_config, port_map = allocate_processes(deps, port_map)
 
     if deployment_type != DeploymentType.NON_PERSISTENT:
         create_score_file(deployment_tag=deployment_tag,
                           deployment_type=deployment_type,
-                          deployments=deployments,
+                          deployments=deps,
                           model_path=model_path,
                           port_map=port_map,
                           lb_config=lb_config)
@@ -201,7 +174,7 @@ def deploy(task=None,
 def allocate_processes(deployments, port_map):
     replica_configs = []
     port_offset = 1
-    for deployment in deployments:
+    for deployment in deployments.values():
         mii_config = deployment.mii_config
         replica_pool = _allocate_processes(mii_config.hostfile,
                                            mii_config.tensor_parallel,
