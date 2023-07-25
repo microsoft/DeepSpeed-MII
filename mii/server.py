@@ -19,7 +19,7 @@ from mii.utils import get_num_gpus, logger, get_provider_name
 
 def config_to_b64_str(config):
     # convert json str -> bytes
-    json_bytes = config.json().encode()
+    json_bytes = config.model_dump_json().encode()
     # base64 encoded bytes
     b64_config_bytes = base64.urlsafe_b64encode(json_bytes)
     # bytes -> str
