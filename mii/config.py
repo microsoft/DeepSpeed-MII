@@ -7,7 +7,7 @@ from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel, validator, root_validator
 from deepspeed.launcher.runner import DLTS_HOSTFILE
-
+from mii.utils import get_task
 
 class DtypeEnum(Enum):
     # The torch dtype must always be the first value (so we return torch.dtype)
@@ -127,7 +127,7 @@ class LoadBalancerConfig(BaseModel):
         validate_all = True
 
 
-validate_assignment = True
+    validate_assignment = True
 
 
 class DeploymentConfig(BaseModel):
@@ -141,3 +141,7 @@ class DeploymentConfig(BaseModel):
     ds_config: dict = None
     version: int = 1
     deployed: bool = False
+
+    @validator("task")
+    def convert_task_str(cls, field_value, values):
+        return get_task(field_value)

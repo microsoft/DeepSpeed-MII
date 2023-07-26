@@ -36,7 +36,6 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
 class DeploymentManagement(ServiceBase,
                            modelresponse_pb2_grpc.DeploymentManagementServicer):
     def AddDeployment(self, request, context):
-        print("DEPLOYMENT ADDED")
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def DeleteDeployment(self, request, context):
@@ -207,7 +206,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         next_handler = continuation(handler_call_details)
         assert next_handler.unary_unary is not None
 
-        #USE KWARGS LIKE THEY ARE USED TO MAKE SESSIONS TO GET THE DEPLOYMENT NAME TO HASH THE COUNTERS/STUBS
 
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
@@ -228,6 +226,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                         ParallelStubInvoker(hostname,
                                             tensor_parallel_ports,
                                             self.asyncio_loop))
+                else:
+                    print(f"deployment: {deployment_name} already exists")
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == TERMINATE_METHOD:

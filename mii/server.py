@@ -40,7 +40,6 @@ class MIIServer():
             for deployment in deployments:
                 assert get_num_gpus(deployment.mii_config) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
                 mii_configs = deployment.mii_config
-                deployment.task = mii.utils.get_task(deployment.task)
                 if mii_configs.hostfile is None:
                     hostfile = tempfile.NamedTemporaryFile(delete=False)
                     num_gpu = torch.cuda.device_count()

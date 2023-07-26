@@ -14,7 +14,7 @@ def terminate(deployment_tag):
         generator.terminate()
         return
     try:
-        generator.query({'query': ''}, None)
+        generator.query({'query': ''}, mii.constants.MII_TERMINATE_DEP_NAME)
     except grpc.aio._call.AioRpcError as error:
         if error._code == grpc.StatusCode.UNAVAILABLE:
             mii.utils.logger.warn(f"Server for {deployment_tag} not found")

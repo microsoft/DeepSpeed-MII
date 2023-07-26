@@ -10,7 +10,7 @@ from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks, DeploymentType
 from mii.method_table import GRPC_METHOD_TABLE
-from mii.deployment import allocate_processes, create_score_file
+from mii.deployment import allocate_processes, create_score_file, validate_deployment
 from mii.config import DeploymentConfig
 
 
@@ -105,7 +105,7 @@ class MIIClient():
 
     def _get_deployment_task(self, deployment_name=None):
         task = None
-        if deployment_name is None:  #mii.terminate() or single model
+        if deployment_name is None or deployment_name == mii.constants.MII_TERMINATE_DEP_NAME:  #mii.terminate() or single model
             assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
             deployment = next(iter(self.deployments.values()))
             deployment_name = deployment.deployment_name
@@ -116,8 +116,8 @@ class MIIClient():
                 deployment = self.deployments[deployment_name]
                 task = get_task(deployment.task) if isinstance(deployment.task,
                                                                str) else deployment.task
-                return deployment_name, task
-            assert False, f"{deployment_name} not found in list of deployments"
+            else:
+                assert False, f"{deployment_name} not found in list of deployments"
         return deployment_name, task
 
     async def _request_async_response(self, request_dict, task, **query_kwargs):
@@ -130,7 +130,7 @@ class MIIClient():
         return task_methods.unpack_response_from_proto(proto_response)
 
     def query(self, request_dict, **query_kwargs):
-        deployment_name = request_dict.get('deployment_name')
+        deployment_name = request_dict.get(mii.constants.DEPLOYMENT_NAME_KEY)
         deployment_name, task = self._get_deployment_task(deployment_name)
         request_dict['deployment_name'] = deployment_name
         return self.asyncio_loop.run_until_complete(
@@ -195,25 +195,26 @@ class MIIClient():
                    deployment_type=DeploymentType.LOCAL,
                    model_path=None,
                    version=1):
+        
+        _, deployments = validate_deployment(task=task,
+                                             model=model,
+                                             deployment_name=deployment_name,
+                                             enable_deepspeed=enable_deepspeed,
+                                             enable_zero=enable_zero,
+                                             ds_config=ds_config,
+                                             mii_config=mii_config,
+                                             deployment_tag=self.deployment_tag,
+                                             deployments=deployments,
+                                             deployment_type=deployment_type,
+                                             model_path=model_path,
+                                             version=version)
 
-        if not deployments:
-            assert all((model, task, deployment_name)), "model, task, and deployment name must be set to deploy singular model"
-            deployments = [
-                DeploymentConfig(deployment_name=deployment_name,
-                                 task=task,
-                                 model=model,
-                                 enable_deepspeed=enable_deepspeed,
-                                 enable_zero=enable_zero,
-                                 GPU_index_map=None,
-                                 mii_config=mii.config.MIIConfig(**mii_config),
-                                 ds_config=ds_config,
-                                 version=version,
-                                 deployed=False)
-            ]
+        if not deployments: #Empty deployment
+            return None
 
         deps = {deployment.deployment_name: deployment for deployment in deployments}
-        for deployment in deployments:
-            deployment.task = get_task(deployment.task)
+        #for deployment in deployments:
+        #    deployment.task = get_task(deployment.task)
         lb_config, self.port_map = allocate_processes(deps, self.port_map)
 
         if self.lb_config is not None:
@@ -226,9 +227,9 @@ class MIIClient():
             self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
         elif self.model_path is None and deployment_type == DeploymentType.AML:
             model_path = "model"
-        for deployment in self.deployments.values():
-            if isinstance(deployment.task, str):
-                deployment.task = get_task(deployment.task)
+        #for deployment in self.deployments.values():
+            #if isinstance(deployment.task, str):
+                #deployment.task = get_task(deployment.task)
         create_score_file(deployment_tag=self.deployment_tag,
                           deployment_type=deployment_type,
                           deployments=self.deployments,
