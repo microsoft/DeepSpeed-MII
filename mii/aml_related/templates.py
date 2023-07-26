@@ -69,20 +69,17 @@ model_path = "<model-path>"
 tmp_download_path = "./tmp/"
 snapshot_rel_path = "*/snapshots/*/*"
 model = "<model-name>"
+task = "<task-name>"
 
 # Must set cache location before loading transformers
 os.environ["TRANSFORMERS_CACHE"] = model_path
 
-from transformers import AutoConfig, AutoTokenizer, AutoModel
+from transformers import pipeline
 from huggingface_hub import snapshot_download
-
-# Download config and tokenizer
-_ = AutoConfig.from_pretrained(model)
-_ = AutoTokenizer.from_pretrained(model)
 
 # Download model
 try:
-    _ = AutoModel.from_pretrained(model)
+    _ = pipeline(task=task, model=model)
 except OSError:
     # Sometimes the model cannot be downloaded and we need to grab the snapshot
     snapshot_download(model, cache_dir=tmp_download_path)

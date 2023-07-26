@@ -82,6 +82,7 @@ def deploy(task,
                             string.digits + '-')
         assert set(deployment_name) <= allowed_chars, "AML deployment names can only contain a-z, A-Z, 0-9, and '-'"
 
+    task_name = task
     task = mii.utils.get_task(task)
 
     if not mii_config.skip_model_check:
@@ -138,7 +139,10 @@ def deploy(task,
                           lb_config=lb_config)
 
     if deployment_type == DeploymentType.AML:
-        _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
+        _deploy_aml(deployment_name=deployment_name,
+                    model_name=model,
+                    task_name=task_name,
+                    version=version)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     elif deployment_type == DeploymentType.NON_PERSISTENT:
@@ -161,11 +165,12 @@ def _deploy_local(deployment_name, model_path):
     mii.utils.import_score_file(deployment_name).init()
 
 
-def _deploy_aml(deployment_name, model_name, version):
+def _deploy_aml(deployment_name, model_name, task_name, version):
     acr_name = mii.aml_related.utils.get_acr_name()
     mii.aml_related.utils.generate_aml_scripts(acr_name=acr_name,
                                                deployment_name=deployment_name,
                                                model_name=model_name,
+                                               task_name=task_name,
                                                version=version)
     print(
         f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_name)}"
