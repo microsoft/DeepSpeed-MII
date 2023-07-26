@@ -26,13 +26,13 @@ def _get_deployment_configs(deployment_tag):
             'model': deployment[mii.constants.MODEL_NAME_KEY],
             'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
             'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
-            'GPU_index_map': None,
+            'GPU_index_map': deployment[mii.constants.GPU_INDEX_KEY],
             'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
             'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
             'version': 1,
             'deployed': deployment[mii.constants.DEPLOYED_KEY]
         }
-        deployments[deployment_name] = DeploymentConfig.parse_obj(data)
+        deployments[deployment_name] = DeploymentConfig(**data)
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
     model_path = configs[mii.constants.MODEL_PATH_KEY]
     port_map = configs.get(mii.constants.PORT_MAP_KEY)

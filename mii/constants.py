@@ -88,7 +88,7 @@ REQUIRED_KEYS_PER_TASK = {
      'generated_responses'],
     TEXT2IMG_NAME: ["query"]
 }
-
+GPU_INDEX_KEY = "index_keys"
 DEPLOYMENTS_KEY = 'deployments'
 PORT_MAP_KEY = 'port_map'
 MODEL_NAME_KEY = 'model_name'

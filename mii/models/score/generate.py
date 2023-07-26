@@ -34,6 +34,7 @@ def create_score_file(deployment_tag,
                 mii.constants.ENABLE_DEEPSPEED_ZERO_KEY: deployment.enable_zero,
                 mii.constants.DEEPSPEED_CONFIG_KEY: deployment.ds_config,
                 mii.constants.DEPLOYED_KEY: deployment.deployed,
+                mii.constants.GPU_INDEX_KEY: deployment.GPU_index_map
             }
             config_dict[mii.constants.DEPLOYMENTS_KEY][
                 deployment.deployment_name] = deployment_config

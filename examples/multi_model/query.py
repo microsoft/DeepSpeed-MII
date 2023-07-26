@@ -17,6 +17,7 @@ result = generator.query(
     max_new_tokens=30,
 )
 results.append(result)
+print(result)
 
 result = generator.query({
     'query':
@@ -25,6 +26,7 @@ result = generator.query({
     "microsoft/DialogRPT-human-vs-rand_deployment"
 })
 results.append(result)
+print(result)
 
 result = generator.query({
     'text': "DeepSpeed is the greatest",
@@ -34,6 +36,7 @@ result = generator.query({
     "deployment_name": "microsoft/DialoGPT-large_deployment"
 })
 results.append(result)
+print(result)
 
 result = generator.query({
     'question':
@@ -44,3 +47,4 @@ result = generator.query({
     "deepset/roberta-large-squad2" + "-qa-deployment"
 })
 results.append(result)
+print(result)
