@@ -9,6 +9,7 @@ from pydantic import BaseModel, validator, root_validator
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 from mii.utils import get_task
 
+
 class DtypeEnum(Enum):
     # The torch dtype must always be the first value (so we return torch.dtype)
     fp16 = torch.float16, "torch.float16", "fp16", "float16", "half"
@@ -126,7 +127,6 @@ class LoadBalancerConfig(BaseModel):
     class Config:
         validate_all = True
 
-
     validate_assignment = True
 
 
@@ -140,7 +140,6 @@ class DeploymentConfig(BaseModel):
     mii_config: MIIConfig = MIIConfig.parse_obj({})
     ds_config: dict = None
     version: int = 1
-    deployed: bool = False
 
     @validator("task")
     def convert_task_str(cls, field_value, values):

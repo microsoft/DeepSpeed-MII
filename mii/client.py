@@ -18,7 +18,6 @@ def _get_deployment_configs(deployment_tag):
     deployments = {}
     configs = mii.utils.import_score_file(deployment_tag).configs
     for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
-        deployment[mii.constants.DEPLOYED_KEY] = True
         deployment_name = deployment[mii.constants.DEPLOYMENT_NAME_KEY]
         data = {
             'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
@@ -30,7 +29,6 @@ def _get_deployment_configs(deployment_tag):
             'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
             'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
             'version': 1,
-            'deployed': deployment[mii.constants.DEPLOYED_KEY]
         }
         deployments[deployment_name] = DeploymentConfig(**data)
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
@@ -61,6 +59,9 @@ def mii_query_handle(deployment_tag):
     if len(deployments) > 0:
         mii_configs = next(iter(deployments.values())).mii_config
     port_number = None if mii_configs == None else mii_configs.port_number
+    if port_number:
+        for deployment in deployments.values():
+            assert deployment.mii_config.port_number == port_number, f"All port numbers is each deployments mii_configs must match"
 
     return MIIClient(deployments,
                      "localhost",
@@ -195,7 +196,7 @@ class MIIClient():
                    deployment_type=DeploymentType.LOCAL,
                    model_path=None,
                    version=1):
-        
+
         _, deployments = validate_deployment(task=task,
                                              model=model,
                                              deployment_name=deployment_name,
@@ -209,7 +210,7 @@ class MIIClient():
                                              model_path=model_path,
                                              version=version)
 
-        if not deployments: #Empty deployment
+        if not deployments:  #Empty deployment
             return None
 
         deps = {deployment.deployment_name: deployment for deployment in deployments}
@@ -228,14 +229,16 @@ class MIIClient():
         elif self.model_path is None and deployment_type == DeploymentType.AML:
             model_path = "model"
         #for deployment in self.deployments.values():
-            #if isinstance(deployment.task, str):
-                #deployment.task = get_task(deployment.task)
+        #if isinstance(deployment.task, str):
+        #deployment.task = get_task(deployment.task)
+        lb_enabled = True if len(self.deployments) else False
         create_score_file(deployment_tag=self.deployment_tag,
                           deployment_type=deployment_type,
-                          deployments=self.deployments,
+                          deployments=deps,
                           model_path=self.model_path,
                           port_map=self.port_map,
-                          lb_config=lb_config)
+                          lb_config=lb_config,
+                          deployed=lb_enabled)
         if deployment_type == DeploymentType.LOCAL:
             mii.utils.import_score_file(self.deployment_tag).init()
         if self.stub is None:

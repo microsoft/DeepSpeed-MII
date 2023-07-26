@@ -206,7 +206,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         next_handler = continuation(handler_call_details)
         assert next_handler.unary_unary is not None
 
-
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
             if method_name == ADD_DEPLOYMENT_METHOD:

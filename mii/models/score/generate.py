@@ -14,11 +14,13 @@ def create_score_file(deployment_tag,
                       deployments,
                       model_path,
                       port_map,
-                      lb_config):
+                      lb_config,
+                      deployed=False):
 
     config_dict = {}
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
     config_dict[mii.constants.DEPLOYMENT_TAG_KEY] = deployment_tag
+    config_dict[mii.constants.DEPLOYED_KEY] = deployed
     config_dict[mii.constants.DEPLOYMENTS_KEY] = {}
     if port_map is not None:
         config_dict[mii.constants.PORT_MAP_KEY] = port_map
@@ -33,7 +35,6 @@ def create_score_file(deployment_tag,
                 mii.constants.MII_CONFIGS_KEY: deployment.mii_config.dict(),
                 mii.constants.ENABLE_DEEPSPEED_ZERO_KEY: deployment.enable_zero,
                 mii.constants.DEEPSPEED_CONFIG_KEY: deployment.ds_config,
-                mii.constants.DEPLOYED_KEY: deployment.deployed,
                 mii.constants.GPU_INDEX_KEY: deployment.GPU_index_map
             }
             config_dict[mii.constants.DEPLOYMENTS_KEY][

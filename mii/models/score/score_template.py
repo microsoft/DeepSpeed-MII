@@ -18,12 +18,8 @@ def init():
     model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
     deployment_tag = configs[mii.constants.DEPLOYMENT_TAG_KEY]
     deployments = []
-    lb_enabled = False
+    lb_enabled = configs[mii.constants.DEPLOYED_KEY]
     for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
-        if deployment[mii.constants.DEPLOYED_KEY]:
-            lb_enabled = True
-            print(deployment)
-            continue
         data = {
             'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
             'task': deployment[mii.constants.TASK_NAME_KEY],

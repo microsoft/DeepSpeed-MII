@@ -86,14 +86,14 @@ def deploy(task=None,
                                                       model_path=model_path,
                                                       version=version)
 
-    if not deployments: #Empty deployment
+    if not deployments:  #Empty deployment
         create_score_file(deployment_tag=deployment_tag,
                           deployment_type=deployment_type,
                           deployments=None,
                           model_path=model_path,
                           port_map=None,
                           lb_config=None)
-        print(f"Starting empty deployment, deployment_tag -> {deployment_tag}"
+        print(f"Starting empty deployment, deployment_tag -> {deployment_tag}")
         return None
 
     # parse and validate mii config
@@ -199,52 +199,54 @@ def allocate_processes(deployments, port_map):
                                    replica_configs=replica_configs)
     return lb_config, port_map
 
+
 def validate_deployment(task=None,
-           model=None,
-           deployment_name=None,
-           enable_deepspeed=True,
-           enable_zero=False,
-           ds_config=None,
-           mii_config={},
-           deployment_tag=None,
-           deployments=[],
-           deployment_type=DeploymentType.LOCAL,
-           model_path=None,
-           version=1):
+                        model=None,
+                        deployment_name=None,
+                        enable_deepspeed=True,
+                        enable_zero=False,
+                        ds_config=None,
+                        mii_config={},
+                        deployment_tag=None,
+                        deployments=[],
+                        deployment_type=DeploymentType.LOCAL,
+                        model_path=None,
+                        version=1):
 
-        if deployments and any((model, task, deployment_name)):
-            assert False, "Do not input deployments and model/task/deployment_name at the same time"
+    if deployments and any((model, task, deployment_name)):
+        assert False, "Do not input deployments and model/task/deployment_name at the same time"
 
-        elif deployments:
-            assert deployment_tag, "deployment_tag must be set to for mulitple models"
-            return deployment_tag, deployments
+    elif deployments:
+        assert deployment_tag, "deployment_tag must be set to for multiple models"
+        return deployment_tag, deployments
 
-        elif not any((model, task, deployment_name)):
-            assert deployment_tag, "deployment_tag must be set for an empty deployment"
-            create_score_file(deployment_tag=deployment_tag,
+    elif not any((model, task, deployment_name)):
+        assert deployment_tag, "deployment_tag must be set for an empty deployment"
+        create_score_file(deployment_tag=deployment_tag,
                           deployment_type=deployment_type,
                           deployments=None,
                           model_path=model_path,
                           port_map=None,
                           lb_config=None)
-            return deployment_tag, None
+        return deployment_tag, None
 
-        assert all((model, task, deployment_name)), "model, task, and deployment_name must be set for a single model"
-        deployments = [
-            DeploymentConfig(deployment_name=deployment_name,
-                             task=task,
-                             model=model,
-                             enable_deepspeed=enable_deepspeed,
-                             enable_zero=enable_zero,
-                             GPU_index_map=None,
-                             mii_config=mii.config.MIIConfig(**mii_config),
-                             ds_config=ds_config,
-                             version=version,
-                             deployed=False)
-            ]
-        if deployment_tag is None:
-            deployment_tag = deployment_name
-        return deployment_tag, deployments
+    assert all((model, task, deployment_name)), "model, task, and deployment_name must be set for a single model"
+    deployments = [
+        DeploymentConfig(deployment_name=deployment_name,
+                         task=task,
+                         model=model,
+                         enable_deepspeed=enable_deepspeed,
+                         enable_zero=enable_zero,
+                         GPU_index_map=None,
+                         mii_config=mii.config.MIIConfig(**mii_config),
+                         ds_config=ds_config,
+                         version=version,
+                         deployed=False)
+    ]
+    if deployment_tag is None:
+        deployment_tag = deployment_name
+    return deployment_tag, deployments
+
 
 def _deploy_local(deployment_tag, model_path):
     mii.utils.import_score_file(deployment_tag).init()
