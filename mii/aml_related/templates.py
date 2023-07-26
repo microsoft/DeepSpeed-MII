@@ -18,7 +18,7 @@ environment_variables:
   WORKER_TIMEOUT: 2400
   AZUREML_LOG_LEVEL: DEBUG
   LOG_IO: 1
-instance_type: Standard_ND96amsr_A100_v4
+instance_type: Standard_NC12s_v3
 request_settings:
   request_timeout_ms: 90000
 liveness_probe:
