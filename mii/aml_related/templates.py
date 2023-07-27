@@ -72,7 +72,7 @@ model = "<model-name>"
 task = "<task-name>"
 
 # Must set cache location before loading transformers
-os.environ["TRANSFORMERS_CACHE"] = model_path
+os.environ["TRANSFORMERS_CACHE"] = tmp_download_path
 
 from transformers import pipeline
 from huggingface_hub import snapshot_download
@@ -84,14 +84,15 @@ except OSError:
     # Sometimes the model cannot be downloaded and we need to grab the snapshot
     snapshot_download(model, cache_dir=tmp_download_path)
 
-    # We need to resolve symlinks and move files to model_path dir
-    for f_path in glob.glob(os.path.join(tmp_download_path, snapshot_rel_path)):
-        f_name = os.path.basename(f_path)
-        real_file = os.path.realpath(f_path)
-        new_file = os.path.join(model_path, f_name)
-        os.rename(real_file, new_file)
+# We need to resolve symlinks and move files to model_path dir
+os.mkdir(model_path)
+for f_path in glob.glob(os.path.join(tmp_download_path, snapshot_rel_path)):
+    f_name = os.path.basename(f_path)
+    real_file = os.path.realpath(f_path)
+    new_file = os.path.join(model_path, f_name)
+    os.rename(real_file, new_file)
 
-    shutil.rmtree(tmp_download_path)
+shutil.rmtree(tmp_download_path)
 """
 
 deploy = \
