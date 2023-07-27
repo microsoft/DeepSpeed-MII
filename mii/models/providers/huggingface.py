@@ -192,7 +192,7 @@ def hf_provider(model_path, model_name, task_name, mii_config):
         print("ARGS", model_path, model_name)
         inference_pipeline = pipeline(
             task_name,
-            model=model_name,
+            model=model_path,
             device=device,
             framework="pt",
             use_auth_token=mii_config.hf_auth_token,
