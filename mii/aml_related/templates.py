@@ -16,7 +16,7 @@ environment: azureml:<environment-name>:<version>
 environment_variables:
   AML_APP_ROOT: /var/azureml-model/code
   WORKER_TIMEOUT: 2400
-  WORKDER_COUNT: <replica_num>
+  WORKER_COUNT: <replica-num>
   AZUREML_LOG_LEVEL: DEBUG
   LOG_IO: 1
 instance_type: <instance-type>
@@ -100,9 +100,6 @@ shutil.rmtree(tmp_download_path)
 deploy = \
 """set -e
 python3 model_download.py
-cd model/models--*/snapshots/*/
-find ./ -type l -execdir bash -c 'ln -sfn "$(readlink -f "$0")" "$0"' {} \;
-cd -
 az acr build -r <acr-name> --build-arg no-cache=True -t "<image-name>:<version>" build
 az ml environment create -f environment.yml
 az ml online-endpoint create -n "<endpoint-name>" -f endpoint.yml

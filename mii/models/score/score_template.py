@@ -24,24 +24,32 @@ def init():
     assert model_name is not None, "The model name should be set before calling init"
     assert task_name is not None, "The task name should be set before calling init"
 
-    mii.MIIServer(deployment_name,
-                  task_name,
-                  model_name,
-                  model_path,
-                  ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
-                  ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
-                  ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
-                  mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
-                  lb_config=configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY,
-                                        None))
+    start_server = True
+    if mii.utils.is_aml() and (
+            int(os.getpid()) % configs.get("mii_configs").get("replica_num") != 0):
+        start_server = False
+
+    if start_server:
+        mii.MIIServer(deployment_name,
+                      task_name,
+                      model_name,
+                      model_path,
+                      ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
+                      ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
+                      ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
+                      mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
+                      lb_config=configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY,
+                                            None))
 
     global model
     model = None
 
     # In AML deployments both the GRPC client and server are used in the same process
     if mii.utils.is_aml():
-        model = mii.MIIClient(task_name,
-                              mii_configs=configs[mii.constants.MII_CONFIGS_KEY])
+        model = mii.MIIClient(
+            task_name,
+            "localhost",
+            configs.get(mii.constants.MII_CONFIGS_KEY).get("port_number"))
 
 
 def run(request):

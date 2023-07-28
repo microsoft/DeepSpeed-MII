@@ -141,7 +141,9 @@ def deploy(task,
                           lb_config=lb_config)
 
     if deployment_type == DeploymentType.AML:
-        _deploy_aml(deployment_name=deployment_name, instance_type=instance_type, version=version)
+        _deploy_aml(deployment_name=deployment_name,
+                    instance_type=instance_type,
+                    version=version)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     elif deployment_type == DeploymentType.NON_PERSISTENT:

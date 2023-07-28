@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import sys
 import os
 import importlib
 import torch
@@ -151,9 +150,7 @@ def mii_cache_path():
 
 def import_score_file(deployment_name, deployment_type):
     score_path = generated_score_path(deployment_name, deployment_type)
-    spec = importlib.util.spec_from_file_location(
-        "score",
-        score_path)
+    spec = importlib.util.spec_from_file_location("score", score_path)
     score = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(score)
     return score

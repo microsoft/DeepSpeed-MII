@@ -14,7 +14,7 @@ from transformers.utils.hub import EntryNotFoundError
 from transformers.modeling_utils import get_checkpoint_shard_files
 from transformers.utils import WEIGHTS_NAME, WEIGHTS_INDEX_NAME
 
-from mii.utils import mii_cache_path
+from mii.utils import mii_cache_path, is_aml
 
 try:
     from transformers.utils import cached_path, hf_bucket_url
@@ -192,7 +192,7 @@ def hf_provider(model_path, model_name, task_name, mii_config):
         print("ARGS", model_path, model_name)
         inference_pipeline = pipeline(
             task_name,
-            model=model_path,
+            model=model_name if not is_aml() else model_path,
             device=device,
             framework="pt",
             use_auth_token=mii_config.hf_auth_token,
