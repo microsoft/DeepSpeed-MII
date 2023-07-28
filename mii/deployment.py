@@ -111,6 +111,7 @@ def deploy(task,
     replica_pool = _allocate_processes(mii_config.hostfile,
                                        mii_config.tensor_parallel,
                                        mii_config.replica_num)
+    print(replica_pool)
     replica_configs = []
     for i, (hostname, gpu_indices) in enumerate(replica_pool):
         # Reserver port for a LB proxy when replication is enabled
@@ -125,6 +126,7 @@ def deploy(task,
                           tensor_parallel_ports=tensor_parallel_ports,
                           torch_dist_port=torch_dist_port,
                           gpu_indices=gpu_indices))
+
     lb_config = LoadBalancerConfig(port=mii_config.port_number,
                                    replica_configs=replica_configs)
 
@@ -194,13 +196,14 @@ def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
     allocated_num = 0
     for host, slots in resource_pool.items():
         available_on_host = slots
-        while available_on_host >= tensor_parallel:
+        while True:#available_on_host >= tensor_parallel:
             if allocated_num >= num_replicas:
                 break
-            if slots < tensor_parallel:
-                raise ValueError(
-                    f'Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required'
-                )
+            # TODO: Skip for AML / move to deployment time
+            #if slots < tensor_parallel:
+            #    raise ValueError(
+            #        f'Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required'
+            #    )
 
             allocated_num_on_host = slots - available_on_host
             replica_pool.append(
@@ -213,9 +216,10 @@ def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
 
             available_on_host -= tensor_parallel
 
-    if allocated_num < num_replicas:
-        raise ValueError(
-            f'No sufficient GPUs for {num_replicas} replica(s), only {allocated_num} replica(s) can be deployed'
-        )
+    # TODO: this check needs to happen when we start the server for AML
+    #if allocated_num < num_replicas:
+    #    raise ValueError(
+    #        f'No sufficient GPUs for {num_replicas} replica(s), only {allocated_num} replica(s) can be deployed'
+    #    )
 
     return replica_pool
