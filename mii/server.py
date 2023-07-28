@@ -14,7 +14,8 @@ from pathlib import Path
 from collections import defaultdict
 
 import mii
-from mii.utils import get_num_gpus, logger, get_provider_name
+from mii.utils import get_num_gpus, get_provider_name
+from mii.logging import logger
 
 
 def config_to_b64_str(config):
@@ -38,6 +39,8 @@ class MIIServer():
                  ds_config=None,
                  mii_configs={},
                  lb_config=None):
+        import os
+        print("SERVER PID", os.getpid())
 
         mii_configs = mii.config.MIIConfig(**mii_configs)
 

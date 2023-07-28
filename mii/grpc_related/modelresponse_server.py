@@ -72,6 +72,8 @@ class ModelResponse(ServiceBase):
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def _run_inference(self, method_name, request_proto):
+        import os
+        print("INF SRV", os.getpid(), "running query")
         if method_name not in self.method_name_to_task:
             raise ValueError(f"unknown method: {method_name}")
 
@@ -192,6 +194,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         assert next_handler.unary_unary is not None
 
         def invoke_intercept_method(request_proto, context):
+            import os
+            print("LB", os.getpid(), "WORKING")
             method_name = _get_grpc_method_name(handler_call_details.method)
 
             if method_name == TERMINATE_METHOD:

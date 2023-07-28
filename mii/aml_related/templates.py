@@ -16,11 +16,13 @@ environment: azureml:<environment-name>:<version>
 environment_variables:
   AML_APP_ROOT: /var/azureml-model/code
   WORKER_TIMEOUT: 2400
+  WORKDER_COUNT: <replica_num>
   AZUREML_LOG_LEVEL: DEBUG
   LOG_IO: 1
-instance_type: Standard_NC12s_v3
+instance_type: <instance-type>
 request_settings:
   request_timeout_ms: 90000
+  max_concurrent_requests_per_instance: <replica-num>
 liveness_probe:
   initial_delay: 300
   timeout: 1

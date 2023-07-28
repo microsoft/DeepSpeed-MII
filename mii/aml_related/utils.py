@@ -61,8 +61,7 @@ def write_out_yaml(output_file, yaml_data):
         yaml.dump(yaml.safe_load(yaml_data), f)
 
 
-def generate_aml_scripts(acr_name, deployment_name, model_name, task_name, version):
-    version = str(version)
+def generate_aml_scripts(acr_name, deployment_name, model_name, task_name, replica_num, instance_type, version):
     output_dir = aml_output_path(deployment_name)
     code_path = os.path.join(output_dir, "code")
     model_path = os.path.join(output_dir, "model")
@@ -76,7 +75,9 @@ def generate_aml_scripts(acr_name, deployment_name, model_name, task_name, versi
         "<deployment-name>": deployment_name,
         "<model-name>": model_name,
         "<task-name>": task_name,
-        "<version>": version,
+        "<replica-num>": str(replica_num),
+        "<instance-type>": instance_type,
+        "<version>": str(version),
         "<code-path>": code_path,
         "<model-path>": model_path,
         "<endpoint-name>": endpoint_name,
