@@ -299,6 +299,9 @@ def _do_serve(service_impl, port, interceptors=[], is_lb=False):
         modelresponse_pb2_grpc.add_DeploymentManagementServicer_to_server(
             service_impl,
             server)
+        modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(
+            ModelResponse(None),
+            server)
     else:
         modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)
     server.add_insecure_port(f'[::]:{port}')
