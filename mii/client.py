@@ -19,19 +19,6 @@ def _get_deployment_configs(deployment_tag):
     configs = mii.utils.import_score_file(deployment_tag).configs
     for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
         deployment_name = deployment[mii.constants.DEPLOYMENT_NAME_KEY]
-        """
-        data = {
-            'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
-            'task': deployment[mii.constants.TASK_NAME_KEY],
-            'model': deployment[mii.constants.MODEL_NAME_KEY],
-            'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
-            'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
-            'GPU_index_map': deployment[mii.constants.GPU_INDEX_KEY],
-            'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
-            'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
-            'version': 1,
-        }
-        """
         deployments[deployment_name] = DeploymentConfig(**deployment)
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
     model_path = configs[mii.constants.MODEL_PATH_KEY]
@@ -103,16 +90,10 @@ class MIIClient():
             assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
             deployment = next(iter(self.deployments.values()))
             deployment_name = getattr(deployment, mii.constants.DEPLOYMENT_NAME_KEY)
-            #task = get_task(deployment.task) if isinstance(deployment.task,
-            #str) else deployment.task
             task = getattr(deployment, mii.constants.TASK_NAME_KEY)
         else:
             if deployment_name in self.deployments:
                 deployment = self.deployments[deployment_name]
-                """
-                task = get_task(deployment.task) if isinstance(deployment.task,
-                                                               str) else deployment.task
-                                                               """
                 task = getattr(deployment, mii.constants.TASK_NAME_KEY)
             else:
                 assert False, f"{deployment_name} not found in list of deployments"
@@ -137,7 +118,7 @@ class MIIClient():
                                          **query_kwargs))
 
     async def terminate_async(self):
-        await self.mr_stub.Terminate(
+        await self.lb_stub.Terminate(
             modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
     def terminate(self):
@@ -186,6 +167,15 @@ class LBClient(MIIClient):
         self.port_map = port_map if port_map is not None else {}
         self.deployment_tag = deployment_tag
 
+    """
+    async def terminate_async(self):
+        await self.lb_stub.Terminate(
+            modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
+
+    def terminate(self):
+        self.asyncio_loop.run_until_complete(self.terminate_async())
+    """
+
     async def add_models_async(self, proto_request):
         await getattr(self.lb_stub, "AddDeployment")(proto_request)
 
@@ -223,8 +213,6 @@ class LBClient(MIIClient):
                     mii.constants.DEPLOYMENT_NAME_KEY): deployment
             for deployment in deployments
         }
-        #for deployment in deployments:
-        #    deployment.task = get_task(deployment.task)
         lb_config, self.port_map = allocate_processes(deps, self.port_map)
         lb_enabled = True if len(self.deployments) else False
         if self.lb_config is not None:
@@ -238,10 +226,6 @@ class LBClient(MIIClient):
             self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
         elif self.model_path is None and deployment_type == DeploymentType.AML:
             model_path = "model"
-        #for deployment in self.deployments.values():
-        #if isinstance(deployment.task, str):
-        #deployment.task = get_task(deployment.task)
-        #lb_enabled = True if len(self.deployments) else False
         create_score_file(deployment_tag=self.deployment_tag,
                           deployment_type=deployment_type,
                           deployments=deps,

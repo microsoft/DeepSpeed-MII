@@ -35,6 +35,9 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
 
 class DeploymentManagement(ServiceBase,
                            modelresponse_pb2_grpc.DeploymentManagementServicer):
+    def __init__(self):
+        ServiceBase.__init__(self)
+
     def AddDeployment(self, request, context):
         return google_dot_protobuf_dot_empty__pb2.Empty()
 

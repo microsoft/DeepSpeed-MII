@@ -487,6 +487,12 @@ class DeploymentManagementStub(object):
             request_serializer=modelresponse__pb2.DeleteDeployRequest.SerializeToString,
             response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
+        self.Terminate = channel.unary_unary(
+            '/modelresponse.DeploymentManagement/Terminate',
+            request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
+            response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        )
 
 
 class DeploymentManagementServicer(object):
@@ -498,6 +504,12 @@ class DeploymentManagementServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def DeleteDeployment(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Terminate(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -517,6 +529,13 @@ def add_DeploymentManagementServicer_to_server(servicer, server):
         grpc.unary_unary_rpc_method_handler(
             servicer.DeleteDeployment,
             request_deserializer=modelresponse__pb2.DeleteDeployRequest.FromString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
+        ),
+        'Terminate':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.Terminate,
+            request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
             SerializeToString,
         ),
@@ -572,6 +591,32 @@ class DeploymentManagement(object):
             target,
             '/modelresponse.DeploymentManagement/DeleteDeployment',
             modelresponse__pb2.DeleteDeployRequest.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
+    @staticmethod
+    def Terminate(request,
+                  target,
+                  options=(),
+                  channel_credentials=None,
+                  call_credentials=None,
+                  insecure=False,
+                  compression=None,
+                  wait_for_ready=None,
+                  timeout=None,
+                  metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modelresponse.DeploymentManagement/Terminate',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,

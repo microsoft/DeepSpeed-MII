@@ -20,28 +20,7 @@ def init():
     deployments = []
     lb_enabled = configs[mii.constants.DEPLOYED_KEY]
     for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
-        """
-        data = {
-            'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
-            'task': deployment[mii.constants.TASK_NAME_KEY],
-            'model': deployment[mii.constants.MODEL_NAME_KEY],
-            'enable_deepspeed': deployment[mii.constants.ENABLE_DEEPSPEED_KEY],
-            'enable_zero': deployment[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
-            'GPU_index_map': deployment[mii.constants.GPU_INDEX_KEY],
-            'mii_config': deployment[mii.constants.MII_CONFIGS_KEY],
-            'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
-            'version': 1
-        }
-        """
         deployments.append(mii.DeploymentConfig(**deployment))
-    """
-    deployment_name = configs[mii.constants.DEPLOYMENT_NAME_KEY]
-    model_name = configs[mii.constants.MODEL_NAME_KEY]
-    task_name = configs[mii.constants.TASK_NAME_KEY]
-
-    assert model_name is not None, "The model name should be set before calling init"
-    assert task_name is not None, "The task name should be set before calling init"
-    """
 
     mii.MIIServer(deployment_tag,
                   deployments,

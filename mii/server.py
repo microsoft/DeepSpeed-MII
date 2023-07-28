@@ -166,19 +166,6 @@ class MIIServer():
         mii_env["TRANSFORMERS_CACHE"] = model_path
         logger.info(f"load balancer server launch: {cmd}")
         return subprocess.Popen(cmd, env=mii_env)
-        """
-        return self._launch_server_process(
-            deployment_name,
-            model_name,
-            model_path,
-            ds_optimize,
-            ds_zero,
-            ds_config,
-            mii_configs,
-            mii_configs.port_number,
-            "load balancer",
-            ex_server_args=[f"--load-balancer {b64_config_str}"])
-        """
 
     def _launch_restful_gateway(self,
                                 deployment_name,

@@ -39,6 +39,7 @@ service ModelResponse {
 service DeploymentManagement {
   rpc AddDeployment(AddDeployRequest) returns (google.protobuf.Empty) {}
   rpc DeleteDeployment(DeleteDeployRequest) returns (google.protobuf.Empty) {}
+  rpc Terminate (google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }
 
 message Value {
