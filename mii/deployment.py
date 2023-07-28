@@ -98,9 +98,12 @@ def deploy(task=None,
 
     # parse and validate mii config
     for deployment in deployments:
-        mii_config = deployment.mii_config
-        if deployment.enable_zero:
-            if deployment.ds_config.get("fp16", {}).get("enabled", False):
+        mii_config = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
+        if getattr(deployment, mii.constants.ENABLE_DEEPSPEED_ZERO_KEY):
+            if getattr(deployment,
+                       mii.constants.DEEPSPEED_CONFIG_KEY).get("fp16",
+                                                               {}).get("enabled",
+                                                                       False):
                 assert (mii_config.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
             else:
                 assert (mii_config.dtype == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
@@ -114,7 +117,11 @@ def deploy(task=None,
         assert set(deployment_name) <= allowed_chars, "AML deployment names can only contain a-z, A-Z, 0-9, and '-'"
 
         if not mii_config.skip_model_check:
-            mii.utils.check_if_task_and_model_is_valid(deployment.task, deployment.model)
+            mii.utils.check_if_task_and_model_is_valid(
+                getattr(deployment,
+                        mii.constants.TASK_NAME_KEY),
+                getattr(deployment,
+                        mii.constants.MODEL_NAME_KEY))
             if enable_deepspeed:
                 mii.utils.check_if_task_and_model_is_supported(
                     deployment.task,
@@ -169,7 +176,7 @@ def allocate_processes(deployments, port_map):
     replica_configs = []
     port_offset = 1
     for deployment in deployments.values():
-        mii_config = deployment.mii_config
+        mii_config = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
         replica_pool = _allocate_processes(mii_config.hostfile,
                                            mii_config.tensor_parallel,
                                            mii_config.replica_num,
@@ -189,12 +196,15 @@ def allocate_processes(deployments, port_map):
                 port_map[hostname].add(i)
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
-                ReplicaConfig(task=get_task_name(deployment.task),
-                              deployment_name=deployment.deployment_name,
-                              hostname=hostname,
-                              tensor_parallel_ports=tensor_parallel_ports,
-                              torch_dist_port=torch_dist_port,
-                              gpu_indices=gpu_indices))
+                ReplicaConfig(
+                    task=get_task_name(getattr(deployment,
+                                               mii.constants.TASK_NAME_KEY)),
+                    deployment_name=(getattr(deployment,
+                                             mii.constants.DEPLOYMENT_NAME_KEY)),
+                    hostname=hostname,
+                    tensor_parallel_ports=tensor_parallel_ports,
+                    torch_dist_port=torch_dist_port,
+                    gpu_indices=gpu_indices))
     lb_config = LoadBalancerConfig(port=mii_config.port_number,
                                    replica_configs=replica_configs)
     return lb_config, port_map
@@ -232,16 +242,15 @@ def validate_deployment(task=None,
 
     assert all((model, task, deployment_name)), "model, task, and deployment_name must be set for a single model"
     deployments = [
-        DeploymentConfig(deployment_name=deployment_name,
-                         task=task,
-                         model=model,
-                         enable_deepspeed=enable_deepspeed,
-                         enable_zero=enable_zero,
-                         GPU_index_map=None,
-                         mii_config=mii.config.MIIConfig(**mii_config),
-                         ds_config=ds_config,
-                         version=version,
-                         deployed=False)
+        DeploymentConfig(DEPLOYMENT_NAME_KEY=deployment_name,
+                         TASK_NAME_KEY=task,
+                         MODEL_NAME_KEY=model,
+                         ENABLE_DEEPSPEED_KEY=enable_deepspeed,
+                         ENABLE_DEEPSPEED_ZERO_KEY=enable_zero,
+                         GPU_INDEX_KEY=None,
+                         MII_CONFIGS_KEY=mii.config.MIIConfig(**mii_config),
+                         DEEPSPEED_CONFIG_KEY=ds_config,
+                         VERSION_KEY=version)
     ]
     if deployment_tag is None:
         deployment_tag = deployment_name

@@ -19,6 +19,7 @@ def _get_deployment_configs(deployment_tag):
     configs = mii.utils.import_score_file(deployment_tag).configs
     for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
         deployment_name = deployment[mii.constants.DEPLOYMENT_NAME_KEY]
+        """
         data = {
             'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
             'task': deployment[mii.constants.TASK_NAME_KEY],
@@ -30,7 +31,8 @@ def _get_deployment_configs(deployment_tag):
             'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
             'version': 1,
         }
-        deployments[deployment_name] = DeploymentConfig(**data)
+        """
+        deployments[deployment_name] = DeploymentConfig(**deployment)
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
     model_path = configs[mii.constants.MODEL_PATH_KEY]
     port_map = configs.get(mii.constants.PORT_MAP_KEY)
@@ -57,11 +59,12 @@ def mii_query_handle(deployment_tag):
     deployments, lb_config, model_path, port_map = _get_deployment_configs(deployment_tag)
     mii_configs = None
     if len(deployments) > 0:
-        mii_configs = next(iter(deployments.values())).mii_config
+        mii_configs = getattr(next(iter(deployments.values())),
+                              mii.constants.MII_CONFIGS_KEY)
     port_number = None if mii_configs == None else mii_configs.port_number
     if port_number:
         for deployment in deployments.values():
-            assert deployment.mii_config.port_number == port_number, f"All port numbers is each deployments mii_configs must match"
+            assert getattr(deployment, mii.constants.MII_CONFIGS_KEY).port_number == port_number, f"All port numbers is each deployments mii_configs must match"
 
     return MIIClient(deployments,
                      "localhost",
@@ -109,14 +112,18 @@ class MIIClient():
         if deployment_name is None or deployment_name == mii.constants.MII_TERMINATE_DEP_NAME:  #mii.terminate() or single model
             assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
             deployment = next(iter(self.deployments.values()))
-            deployment_name = deployment.deployment_name
-            task = get_task(deployment.task) if isinstance(deployment.task,
-                                                           str) else deployment.task
+            deployment_name = getattr(deployment, mii.constants.DEPLOYMENT_NAME_KEY)
+            #task = get_task(deployment.task) if isinstance(deployment.task,
+            #str) else deployment.task
+            task = getattr(deployment, mii.constants.TASK_NAME_KEY)
         else:
             if deployment_name in self.deployments:
                 deployment = self.deployments[deployment_name]
+                """
                 task = get_task(deployment.task) if isinstance(deployment.task,
                                                                str) else deployment.task
+                                                               """
+                task = getattr(deployment, mii.constants.TASK_NAME_KEY)
             else:
                 assert False, f"{deployment_name} not found in list of deployments"
         return deployment_name, task
@@ -213,17 +220,22 @@ class MIIClient():
         if not deployments:  #Empty deployment
             return None
 
-        deps = {deployment.deployment_name: deployment for deployment in deployments}
+        deps = {
+            getattr(deployment,
+                    mii.constants.DEPLOYMENT_NAME_KEY): deployment
+            for deployment in deployments
+        }
         #for deployment in deployments:
         #    deployment.task = get_task(deployment.task)
         lb_config, self.port_map = allocate_processes(deps, self.port_map)
-
+        lb_enabled = True if len(self.deployments) else False
         if self.lb_config is not None:
             self.lb_config.replica_configs.extend(lb_config.replica_configs)
         else:
             self.lb_config = lb_config
         for deployment in deployments:
-            self.deployments[deployment.deployment_name] = deployment
+            self.deployments[getattr(deployment,
+                                     mii.constants.DEPLOYMENT_NAME_KEY)] = deployment
         if self.model_path is None and deployment_type == DeploymentType.LOCAL:
             self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
         elif self.model_path is None and deployment_type == DeploymentType.AML:
@@ -231,7 +243,7 @@ class MIIClient():
         #for deployment in self.deployments.values():
         #if isinstance(deployment.task, str):
         #deployment.task = get_task(deployment.task)
-        lb_enabled = True if len(self.deployments) else False
+        #lb_enabled = True if len(self.deployments) else False
         create_score_file(deployment_tag=self.deployment_tag,
                           deployment_type=deployment_type,
                           deployments=deps,
@@ -242,8 +254,8 @@ class MIIClient():
         if deployment_type == DeploymentType.LOCAL:
             mii.utils.import_score_file(self.deployment_tag).init()
         if self.stub is None:
-            self.port_number = next(iter(
-                self.deployments.values())).mii_config.port_number
+            self.port_number = getattr(next(iter(self.deployments.values())),
+                                       mii.constants.MII_CONFIGS_KEY).port_number
             channel = create_channel(self.host, self.port_number)
             self.stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
         for replica in lb_config.replica_configs:
@@ -349,6 +361,6 @@ class MIINonPersistentClient():
 def terminate_restful_gateway(deployment_tag):
     deployments, _, _, _ = _get_deployment_configs(deployment_tag)
     for deployment in deployments.values():
-        mii_configs = deployment.mii_config
+        mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
         if mii_configs.enable_restful_api:
             requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")

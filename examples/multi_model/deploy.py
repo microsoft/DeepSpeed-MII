@@ -19,7 +19,7 @@ deployments.append(
                          model=name,
                          deployment_name=name + "_deployment",
                          GPU_index_map=gpu_index_map3,
-                         mii_config=mii.config.MIIConfig(**mii_configs1)))
+                         mii_configs=mii.config.MIIConfig(**mii_configs1)))
 
 # gpt2
 name = "microsoft/DialogRPT-human-vs-rand"
@@ -35,7 +35,7 @@ deployments.append(
                          model=name,
                          deployment_name=name + "_deployment",
                          GPU_index_map=gpu_index_map1,
-                         mii_config=mii.config.MIIConfig(**mii_configs2)))
+                         mii_configs=mii.config.MIIConfig(**mii_configs2)))
 
 name = "deepset/roberta-large-squad2"
 deployments.append(

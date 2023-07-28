@@ -28,14 +28,30 @@ def create_score_file(deployment_tag,
     if deployments is not None:
         for deployment in deployments.values():
             deployment_config = {
-                mii.constants.DEPLOYMENT_NAME_KEY: deployment.deployment_name,
-                mii.constants.TASK_NAME_KEY: mii.utils.get_task_name(deployment.task),
-                mii.constants.MODEL_NAME_KEY: deployment.model,
-                mii.constants.ENABLE_DEEPSPEED_KEY: deployment.enable_deepspeed,
-                mii.constants.MII_CONFIGS_KEY: deployment.mii_config.dict(),
-                mii.constants.ENABLE_DEEPSPEED_ZERO_KEY: deployment.enable_zero,
-                mii.constants.DEEPSPEED_CONFIG_KEY: deployment.ds_config,
-                mii.constants.GPU_INDEX_KEY: deployment.GPU_index_map
+                mii.constants.DEPLOYMENT_NAME_KEY:
+                getattr(deployment,
+                        mii.constants.DEPLOYMENT_NAME_KEY),
+                mii.constants.TASK_NAME_KEY:
+                mii.utils.get_task_name(getattr(deployment,
+                                                mii.constants.TASK_NAME_KEY)),
+                mii.constants.MODEL_NAME_KEY:
+                getattr(deployment,
+                        mii.constants.MODEL_NAME_KEY),
+                mii.constants.ENABLE_DEEPSPEED_KEY:
+                getattr(deployment,
+                        mii.constants.ENABLE_DEEPSPEED_KEY),
+                mii.constants.MII_CONFIGS_KEY:
+                getattr(deployment,
+                        mii.constants.MII_CONFIGS_KEY).dict(),
+                mii.constants.ENABLE_DEEPSPEED_ZERO_KEY:
+                getattr(deployment,
+                        mii.constants.ENABLE_DEEPSPEED_ZERO_KEY),
+                mii.constants.DEEPSPEED_CONFIG_KEY:
+                getattr(deployment,
+                        mii.constants.DEEPSPEED_CONFIG_KEY),
+                mii.constants.GPU_INDEX_KEY:
+                getattr(deployment,
+                        mii.constants.GPU_INDEX_KEY)
             }
             config_dict[mii.constants.DEPLOYMENTS_KEY][
                 deployment.deployment_name] = deployment_config

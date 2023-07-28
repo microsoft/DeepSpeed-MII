@@ -38,8 +38,8 @@ class MIIServer():
             self.lb_enabled = lb_enabled
             self.deployments = deployments
             for deployment in deployments:
-                assert get_num_gpus(deployment.mii_config) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
-                mii_configs = deployment.mii_config
+                mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
+                assert get_num_gpus(mii_configs) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
                 if mii_configs.hostfile is None:
                     hostfile = tempfile.NamedTemporaryFile(delete=False)
                     num_gpu = torch.cuda.device_count()
@@ -106,8 +106,8 @@ class MIIServer():
 
         task = ""
         for deployment in self.deployments:
-            if deployment_name == deployment.deployment_name:
-                task = deployment.task
+            if deployment_name == getattr(deployment, mii.constants.DEPLOYMENT_NAME_KEY):
+                task = getattr(deployment, mii.constants.TASK_NAME_KEY)
                 break
         server_args_str = f"--deployment-name {deployment_name} --task-name {mii.utils.get_task_name(task)} --model {model_name} --model-path {model_path} --port {port}"
         server_args_str += " --ds-optimize" if ds_optimize else ""
@@ -284,7 +284,7 @@ class MIIServer():
             name = repl_config.deployment_name
             deployment = None
             for dep in deployments:
-                if dep.deployment_name == name:
+                if getattr(dep, mii.constants.DEPLOYMENT_NAME_KEY) == name:
                     deployment = dep
             if deployment is None:
                 continue
@@ -295,16 +295,22 @@ class MIIServer():
             processes.append(
                 self._launch_deepspeed(
                     name,
-                    deployment.model,
+                    getattr(deployment,
+                            mii.constants.MODEL_NAME_KEY),
                     model_path,
-                    deployment.enable_deepspeed,
-                    deployment.enable_zero,
-                    deployment.ds_config,
-                    deployment.mii_config,
+                    getattr(deployment,
+                            mii.constants.ENABLE_DEEPSPEED_KEY),
+                    getattr(deployment,
+                            mii.constants.ENABLE_DEEPSPEED_ZERO_KEY),
+                    getattr(deployment,
+                            mii.constants.DEEPSPEED_CONFIG_KEY),
+                    getattr(deployment,
+                            mii.constants.MII_CONFIGS_KEY),
                     hostfile.name,
                     repl_config.hostname,
                     repl_config.tensor_parallel_ports[0],
-                    deployment.mii_config.torch_dist_port + (100 * i) +
+                    getattr(deployment,
+                            mii.constants.MII_CONFIGS_KEY).torch_dist_port + (100 * i) +
                     repl_config.gpu_indices[0],
                     repl_config.gpu_indices))
 
@@ -316,17 +322,25 @@ class MIIServer():
             processes.append(self._launch_load_balancer(model_path, lb_config))
 
         for deployment in self.deployments:
-            if deployment.mii_config.enable_restful_api:
+            if getattr(deployment, mii.constants.MII_CONFIGS_KEY).enable_restful_api:
                 # start rest api server
                 processes.append(
-                    self._launch_restful_gateway(deployment.deployment_name,
-                                                 deployment.model,
-                                                 model_path,
-                                                 deployment.enable_deepspeed,
-                                                 deployment.enable_zero,
-                                                 deployment.ds_config,
-                                                 deployment.mii_config,
-                                                 deployment.mii_config.port_number))
+                    self._launch_restful_gateway(
+                        getattr(deployment,
+                                mii.constants.DEPLOYMENT_NAME_KEY),
+                        getattr(deployment,
+                                mii.constants.MODEL_NAME_KEY),
+                        model_path,
+                        getattr(deployment,
+                                mii.constants.ENABLE_DEEPSPEED_KEY),
+                        getattr(deployment,
+                                mii.constants.ENABLE_DEEPSPEED_ZERO_KEY),
+                        getattr(deployment,
+                                mii.constants.DEEPSPEED_CONFIG_KEY),
+                        getattr(deployment,
+                                mii.constants.MII_CONFIGS_KEY),
+                        getattr(deployment,
+                                mii.constants.MII_CONFIGS_KEY).port_number))
                 break
 
         return processes

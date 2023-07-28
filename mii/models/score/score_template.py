@@ -20,6 +20,7 @@ def init():
     deployments = []
     lb_enabled = configs[mii.constants.DEPLOYED_KEY]
     for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
+        """
         data = {
             'deployment_name': deployment[mii.constants.DEPLOYMENT_NAME_KEY],
             'task': deployment[mii.constants.TASK_NAME_KEY],
@@ -31,7 +32,8 @@ def init():
             'ds_config': deployment[mii.constants.DEEPSPEED_CONFIG_KEY],
             'version': 1
         }
-        deployments.append(mii.DeploymentConfig.parse_obj(data))
+        """
+        deployments.append(mii.DeploymentConfig(**deployment))
     """
     deployment_name = configs[mii.constants.DEPLOYMENT_NAME_KEY]
     model_name = configs[mii.constants.MODEL_NAME_KEY]

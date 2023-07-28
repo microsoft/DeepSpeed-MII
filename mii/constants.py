@@ -88,11 +88,11 @@ REQUIRED_KEYS_PER_TASK = {
      'generated_responses'],
     TEXT2IMG_NAME: ["query"]
 }
-GPU_INDEX_KEY = "index_keys"
+GPU_INDEX_KEY = "GPU_index_map"
 DEPLOYMENTS_KEY = 'deployments'
 PORT_MAP_KEY = 'port_map'
-MODEL_NAME_KEY = 'model_name'
-TASK_NAME_KEY = 'task_name'
+MODEL_NAME_KEY = 'model'
+TASK_NAME_KEY = 'task'
 DEPLOYMENT_NAME_KEY = 'deployment_name'
 MODEL_PATH_KEY = 'model_path'
 LOAD_BALANCER_CONFIG_KEY = 'load_balancer_config'
@@ -102,6 +102,7 @@ ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'
 CHECKPOINT_KEY = "checkpoint"
 DEPLOYED_KEY = "deployed"
+VERSION_KEY = "version"
 MII_TERMINATE_DEP_NAME = "__MII_TERMINATE_CALL__"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
