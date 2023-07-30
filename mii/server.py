@@ -47,7 +47,6 @@ class MIIServer():
         assert self.num_gpus > 0, "GPU count must be greater than 0"
 
         self.port_number = mii_configs.port_number
-
         if mii_configs.hostfile is None:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             num_gpu = torch.cuda.device_count()

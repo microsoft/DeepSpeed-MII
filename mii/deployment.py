@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+import tempfile
 import torch
 import string
 import os
@@ -103,7 +104,12 @@ def deploy(task,
         model_path = MII_MODEL_PATH_DEFAULT
     elif model_path is None and deployment_type == DeploymentType.AML:
         model_path = "model"
-
+    if mii_config.hostfile is None:
+        hostfile = tempfile.NamedTemporaryFile(delete=False)
+        num_gpu = torch.cuda.device_count()
+        with open(hostfile, "w") as f:
+            f.write(f"localhost slots={num_gpu}")
+        mii.configs.hostfile = hostfile
     # add fields for replica deployment
     replica_pool = _allocate_processes(mii_config.hostfile,
                                        mii_config.tensor_parallel,
@@ -174,6 +180,7 @@ def _deploy_aml(deployment_name, model_name, version):
 
 
 def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
+    
     resource_pool = fetch_hostfile(hostfile_path)
     assert resource_pool is not None and len(
         resource_pool) > 0, f'No hosts found in {hostfile_path}'
