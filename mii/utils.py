@@ -83,9 +83,16 @@ def _get_hf_models_by_type(model_type, task=None):
               if task is None else [m.modelId for m in models if m.pipeline_tag == task])
     if task == TEXT_GENERATION_NAME:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
-        models.append("microsoft/bloom-deepspeed-inference-fp16")
-        models.append("microsoft/bloom-deepspeed-inference-int8")
-        models.append("EleutherAI/gpt-neox-20b")
+        additional_models = [
+            "microsoft/bloom-deepspeed-inference-fp16",
+            "microsoft/bloom-deepspeed-inference-int8",
+            "EleutherAI/gpt-neox-20b",
+            # note -- the llama2 models require authorization to download
+            # you may have to manually authenticate and store a token from the hf hub login() command
+            "meta-llama/Llama-2-7b-hf",
+            "meta-llama/Llama-2-13b-hf",
+        ]
+        models.extend(additional_models)
     return models
 
 
