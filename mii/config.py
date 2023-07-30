@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 import torch
-from typing import Union, List
+from typing import Optional, Union, List
 from enum import Enum
 from pydantic import BaseModel, validator, root_validator
 
@@ -55,7 +55,7 @@ class MIIConfig(BaseModel):
     enable_restful_api: bool = False
     restful_api_port: int = 51080
     replica_num: int = 1
-    hostfile: str = DLTS_HOSTFILE
+    hostfile: Optional[str] = DLTS_HOSTFILE
     trust_remote_code: bool = False
 
     @validator("deploy_rank")
