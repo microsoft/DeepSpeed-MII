@@ -50,9 +50,9 @@ class MIIServer():
         if mii_configs.hostfile is None:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             num_gpu = torch.cuda.device_count()
-            with open(hostfile, "w") as f:
+            with open(hostfile.name, "w") as f:
                 f.write(f"localhost slots={num_gpu}")
-            mii.configs.hostfile = hostfile
+            mii_configs.hostfile = hostfile.name
 
         processes = self._initialize_service(deployment_name,
                                              model_name,

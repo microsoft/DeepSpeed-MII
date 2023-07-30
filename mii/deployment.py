@@ -107,9 +107,9 @@ def deploy(task,
     if mii_config.hostfile is None:
         hostfile = tempfile.NamedTemporaryFile(delete=False)
         num_gpu = torch.cuda.device_count()
-        with open(hostfile, "w") as f:
+        with open(hostfile.name, "w") as f:
             f.write(f"localhost slots={num_gpu}")
-        mii.configs.hostfile = hostfile
+        mii_config.hostfile = hostfile.name
     # add fields for replica deployment
     replica_pool = _allocate_processes(mii_config.hostfile,
                                        mii_config.tensor_parallel,
