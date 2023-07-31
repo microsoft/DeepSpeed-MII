@@ -167,15 +167,6 @@ class LBClient(MIIClient):
         self.port_map = port_map if port_map is not None else {}
         self.deployment_tag = deployment_tag
 
-    """
-    async def terminate_async(self):
-        await self.lb_stub.Terminate(
-            modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
-
-    def terminate(self):
-        self.asyncio_loop.run_until_complete(self.terminate_async())
-    """
-
     async def add_models_async(self, proto_request):
         await getattr(self.lb_stub, "AddDeployment")(proto_request)
 
