@@ -17,7 +17,7 @@ from mii.config import DeploymentConfig
 def _get_deployment_configs(deployment_tag):
     deployments = {}
     configs = mii.utils.import_score_file(deployment_tag).configs
-    for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
+    for deployment in configs.get(mii.constants.DEPLOYMENTS_KEY).values():
         deployment_name = deployment[mii.constants.DEPLOYMENT_NAME_KEY]
         deployments[deployment_name] = DeploymentConfig(**deployment)
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
