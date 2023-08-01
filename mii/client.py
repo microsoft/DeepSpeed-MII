@@ -87,7 +87,8 @@ class MIIClient():
     def _get_deployment_task(self, deployment_name=None):
         task = None
         if deployment_name is None or deployment_name == mii.constants.MII_TERMINATE_DEP_KEY:  #mii.terminate() or single model
-            assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
+            if deployment_name is None:
+                assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
             deployment = next(iter(self.deployments.values()))
             deployment_name = getattr(deployment, mii.constants.DEPLOYMENT_NAME_KEY)
             task = getattr(deployment, mii.constants.TASK_NAME_KEY)
@@ -182,7 +183,7 @@ class LBClient(MIIClient):
                    deployment_type=DeploymentType.LOCAL,
                    model_path=None,
                    version=1):
-
+        assert deployment_type != DeploymentType.AML, "Cannot currently add models to AML deployment"
         _, deployments = validate_deployment(task=task,
                                              model=model,
                                              deployment_name=deployment_name,
@@ -215,8 +216,7 @@ class LBClient(MIIClient):
                                      mii.constants.DEPLOYMENT_NAME_KEY)] = deployment
         if self.model_path is None and deployment_type == DeploymentType.LOCAL:
             self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
-        elif self.model_path is None and deployment_type == DeploymentType.AML:
-            model_path = "model"
+
         create_score_file(deployment_tag=self.deployment_tag,
                           deployment_type=deployment_type,
                           deployments=deps,
