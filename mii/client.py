@@ -21,7 +21,7 @@ def _get_deployment_configs(deployment_tag):
         deployment_name = deployment[mii.constants.DEPLOYMENT_NAME_KEY]
         deployments[deployment_name] = DeploymentConfig(**deployment)
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
-    model_path = configs[mii.constants.MODEL_PATH_KEY]
+    model_path = configs.get(mii.constants.MODEL_PATH_KEY)
     port_map = configs.get(mii.constants.PORT_MAP_KEY)
     return deployments, lb_config, model_path, port_map
 
