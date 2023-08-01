@@ -227,7 +227,7 @@ def multi_query(request):
     queries.append({
         "query": ["DeepSpeed is",
                   "Seattle is"],
-        "deployment_name": "bloom-560m_deployment"
+        "deployment_name": "bigscience/bloom-560m_deployment"
     })
 
     queries.append({

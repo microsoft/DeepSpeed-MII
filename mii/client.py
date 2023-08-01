@@ -86,7 +86,7 @@ class MIIClient():
 
     def _get_deployment_task(self, deployment_name=None):
         task = None
-        if deployment_name is None or deployment_name == mii.constants.MII_TERMINATE_DEP_NAME:  #mii.terminate() or single model
+        if deployment_name is None or deployment_name == mii.constants.MII_TERMINATE_DEP_KEY:  #mii.terminate() or single model
             assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
             deployment = next(iter(self.deployments.values()))
             deployment_name = getattr(deployment, mii.constants.DEPLOYMENT_NAME_KEY)
