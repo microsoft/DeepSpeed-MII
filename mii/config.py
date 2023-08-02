@@ -8,6 +8,7 @@ from enum import Enum
 from pydantic import BaseModel, validator, root_validator, Field
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 from mii.utils import get_task
+from mii.constants import DEPLOYMENT_NAME_KEY, TASK_NAME_KEY, MODEL_NAME_KEY, ENABLE_DEEPSPEED_KEY, ENABLE_DEEPSPEED_ZERO_KEY, GPU_INDEX_KEY, DEEPSPEED_CONFIG_KEY, VERSION_KEY
 
 
 class DtypeEnum(Enum):
@@ -57,7 +58,7 @@ class MIIConfig(BaseModel):
     replica_num: int = 1
     hostfile: str = DLTS_HOSTFILE
     trust_remote_code: bool = False
-
+    """
     @validator("deploy_rank")
     def deploy_valid(cls, field_value, values):
         if "tensor_parallel" not in values:
@@ -76,8 +77,9 @@ class MIIConfig(BaseModel):
         # number of ranks provided must be equal to TP size, DP is handled outside MII currently
         assert values["tensor_parallel"] == len(field_value), \
             f"{len(field_value)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {values['tensor_parallel']}"
-        return field_value
-
+    return field_value
+    """
+    """
     @validator('checkpoint_dict')
     def checkpoint_dict_valid(cls, value):
         if value is None:
@@ -90,7 +92,8 @@ class MIIConfig(BaseModel):
             if not value.get(k, ''):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return value
-
+    """
+    """
     @root_validator
     def meta_tensor_or_sys_mem(cls, values):
         if values.get("meta_tensor") and values.get("load_with_sys_mem"):
@@ -98,7 +101,7 @@ class MIIConfig(BaseModel):
                 "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
             )
         return values
-
+    """
     class Config:
         validate_all = True
         validate_assignment = True
@@ -131,16 +134,72 @@ class LoadBalancerConfig(BaseModel):
 
 
 class DeploymentConfig(BaseModel):
-    deployment_name: str = Field(alias="DEPLOYMENT_NAME_KEY")
-    task: str = Field(alias="TASK_NAME_KEY")
-    model: str = Field(alias="MODEL_NAME_KEY")
-    ds_optimize: bool = Field(default=True, alias="ENABLE_DEEPSPEED_KEY")
-    ds_zero: bool = Field(default=False, alias="ENABLE_DEEPSPEED_ZERO_KEY")
-    GPU_index_map: dict = Field(default=None, alias="GPU_INDEX_KEY")
-    mii_configs: MIIConfig = Field(default=MIIConfig.parse_obj({}),
-                                   alias="MII_CONFIGS_KEY")
-    ds_config: dict = Field(default=None, alias="DEEPSPEED_CONFIG_KEY")
-    version: int = Field(default=1, alias="VERSION_KEY")
+    deployment_name: str = Field(alias=DEPLOYMENT_NAME_KEY)
+    task: str = Field(alias=TASK_NAME_KEY)
+    model: str = Field(alias=MODEL_NAME_KEY)
+    ds_optimize: bool = Field(default=True, alias=ENABLE_DEEPSPEED_KEY)
+    ds_zero: bool = Field(default=False, alias=ENABLE_DEEPSPEED_ZERO_KEY)
+    GPU_index_map: dict = Field(default=None, alias=GPU_INDEX_KEY)
+    #mii_configs: MIIConfig = Field(default={}, alias=MII_CONFIGS_KEY)
+    ds_config: dict = Field(default=None, alias=DEEPSPEED_CONFIG_KEY)
+    version: int = Field(default=1, alias=VERSION_KEY)
+    tensor_parallel: int = 1
+    dtype: DtypeEnum = torch.float32
+    meta_tensor: bool = False
+    load_with_sys_mem: bool = False
+    replace_with_kernel_inject: bool = True
+    profile_model_time: bool = False
+    skip_model_check: bool = False
+    max_tokens: int = 1024
+    enable_restful_api: bool = False
+    replica_num: int = 1
+    hostfile: str = DLTS_HOSTFILE
+    deploy_rank: Union[int, List[int]] = -1
+    enable_cuda_graph: bool = False
+    checkpoint_dict: Union[dict, None] = None
+    hf_auth_token: str = None
+    trust_remote_code: bool = False
+
+    @validator('checkpoint_dict')
+    def checkpoint_dict_valid(cls, value):
+        if value is None:
+            return value
+        if value.get('base_dir', ''):
+            raise ValueError(
+                "please unset 'base_dir' it will be set w.r.t. the deployment 'model_path'"
+            )
+        for k in ['checkpoints', 'parallelization', 'version', 'type']:
+            if not value.get(k, ''):
+                raise ValueError(f"Missing key={k} in checkpoint_dict")
+        return value
+
+    @validator("deploy_rank")
+    def deploy_valid(cls, field_value, values):
+        if "tensor_parallel" not in values:
+            raise ValueError(
+                "'tensor_parallel' must be defined in the pydantic model before 'deploy_rank'"
+            )
+
+        # if deploy rank is not given, default to align with TP value
+        if field_value == -1:
+            field_value = list(range(values["tensor_parallel"]))
+
+        # ensure deploy rank type is always list for easier consumption later
+        if not isinstance(field_value, list):
+            field_value = [field_value]
+
+        # number of ranks provided must be equal to TP size, DP is handled outside MII currently
+        assert values["tensor_parallel"] == len(field_value), \
+            f"{len(field_value)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {values['tensor_parallel']}"
+        return field_value
+
+    @root_validator
+    def meta_tensor_or_sys_mem(cls, values):
+        if values.get("meta_tensor") and values.get("load_with_sys_mem"):
+            raise ValueError(
+                "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
+            )
+        return values
 
     @validator("task")
     def convert_task_str(cls, field_value, values):
@@ -148,3 +207,8 @@ class DeploymentConfig(BaseModel):
 
     class Config:
         allow_population_by_field_name = True
+        validate_all = True
+        validate_assignment = True
+        use_enum_values = True
+        extra = 'forbid'
+        json_encoders = {torch.dtype: lambda x: str(x)}

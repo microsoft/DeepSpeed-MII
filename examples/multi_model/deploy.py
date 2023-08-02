@@ -19,7 +19,8 @@ deployments.append(
                          model=name,
                          deployment_name=name + "_deployment",
                          GPU_index_map=gpu_index_map3,
-                         mii_configs=mii.config.MIIConfig(**mii_configs1)))
+                         tensor_parallel=2,
+                         dtype="fp16"))
 
 # gpt2
 name = "microsoft/DialogRPT-human-vs-rand"
@@ -31,11 +32,12 @@ deployments.append(
 
 name = "microsoft/DialoGPT-large"
 deployments.append(
-    mii.DeploymentConfig(task='conversational',
-                         model=name,
-                         deployment_name=name + "_deployment",
-                         GPU_index_map=gpu_index_map1,
-                         mii_configs=mii.config.MIIConfig(**mii_configs2)))
+    mii.DeploymentConfig(
+        task='conversational',
+        model=name,
+        deployment_name=name + "_deployment",
+        GPU_index_map=gpu_index_map1,
+    ))
 
 name = "deepset/roberta-large-squad2"
 deployments.append(

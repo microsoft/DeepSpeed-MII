@@ -104,6 +104,7 @@ CHECKPOINT_KEY = "checkpoint"
 DEPLOYED_KEY = "deployed"
 VERSION_KEY = "version"
 MII_TERMINATE_DEP_KEY = "__MII_TERMINATE_CALL__"
+DEPLOYMENT_TYPE_KEY = "deployment_type"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"

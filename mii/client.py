@@ -10,8 +10,8 @@ from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, Tasks, DeploymentType
 from mii.method_table import GRPC_METHOD_TABLE
-from mii.deployment import allocate_processes, create_score_file, validate_deployment
-from mii.config import DeploymentConfig
+from mii.deployment import allocate_processes
+from mii.config import DeploymentConfig, MIIConfig
 
 
 def _get_deployment_configs(deployment_tag):
@@ -23,7 +23,9 @@ def _get_deployment_configs(deployment_tag):
     lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
     model_path = configs.get(mii.constants.MODEL_PATH_KEY)
     port_map = configs.get(mii.constants.PORT_MAP_KEY)
-    return deployments, lb_config, model_path, port_map
+    deployment_type = configs.get(mii.constants.DEPLOYMENT_TYPE_KEY)
+    mii_configs = MIIConfig(**configs.get(mii.constants.MII_CONFIGS_KEY))
+    return deployments, lb_config, model_path, port_map, deployment_type, mii_configs
 
 
 def mii_query_handle(deployment_tag):
@@ -43,15 +45,17 @@ def mii_query_handle(deployment_tag):
         inference_pipeline, task = mii.non_persistent_models[deployment_tag]
         return MIINonPersistentClient(task, deployment_tag)
 
-    deployments, lb_config, model_path, port_map = _get_deployment_configs(deployment_tag)
-    mii_configs = None
+    deployments, lb_config, model_path, port_map, deployment_type, mii_configs = _get_deployment_configs(deployment_tag)
+    """mii_configs = None
     if len(deployments) > 0:
         mii_configs = getattr(next(iter(deployments.values())),
                               mii.constants.MII_CONFIGS_KEY)
+    """
     port_number = None if mii_configs == None else mii_configs.port_number
-    if port_number:
+    """if port_number:
         for deployment in deployments.values():
             assert getattr(deployment, mii.constants.MII_CONFIGS_KEY).port_number == port_number, f"All port numbers is each deployments mii_configs must match"
+    """
 
     return LBClient(deployments,
                     "localhost",
@@ -59,7 +63,9 @@ def mii_query_handle(deployment_tag):
                     lb_config,
                     model_path,
                     port_map,
-                    deployment_tag)
+                    deployment_tag,
+                    deployment_type,
+                    mii_configs)
 
 
 def create_channel(host, port):
@@ -157,7 +163,9 @@ class LBClient(MIIClient):
                  lb_config=None,
                  model_path=None,
                  port_map=None,
-                 deployment_tag=None):
+                 deployment_tag=None,
+                 deployment_type=DeploymentType.LOCAL,
+                 mii_configs={}):
         super().__init__(deployments, host, port)
         self.lb_stub = None
         if port is not None:
@@ -167,24 +175,15 @@ class LBClient(MIIClient):
         self.model_path = model_path
         self.port_map = port_map if port_map is not None else {}
         self.deployment_tag = deployment_tag
+        self.deployment_type = deployment_type
+        self.mii_configs = mii_configs
 
     async def add_models_async(self, proto_request):
         await getattr(self.lb_stub, "AddDeployment")(proto_request)
 
-    def add_models(self,
-                   task=None,
-                   model=None,
-                   deployment_name=None,
-                   enable_deepspeed=True,
-                   enable_zero=False,
-                   ds_config=None,
-                   mii_config={},
-                   deployments=[],
-                   deployment_type=DeploymentType.LOCAL,
-                   model_path=None,
-                   version=1):
-        assert deployment_type != DeploymentType.AML, "Cannot currently add models to AML deployment"
-        _, deployments = validate_deployment(task=task,
+    def add_models(self, deployments=[], model_path=None, version=1):
+        assert self.deployment_type != DeploymentType.AML, "Cannot currently add models to AML deployment"
+        """_, deployments = validate_deployment(task=task,
                                              model=model,
                                              deployment_name=deployment_name,
                                              enable_deepspeed=enable_deepspeed,
@@ -196,7 +195,7 @@ class LBClient(MIIClient):
                                              deployment_type=deployment_type,
                                              model_path=model_path,
                                              version=version)
-
+        """
         if not deployments:  #Empty deployment
             return None
 
@@ -205,7 +204,7 @@ class LBClient(MIIClient):
                     mii.constants.DEPLOYMENT_NAME_KEY): deployment
             for deployment in deployments
         }
-        lb_config, self.port_map = allocate_processes(deps, self.port_map)
+        lb_config, self.port_map = allocate_processes(deps, self.port_map, self.mii_configs)
         lb_enabled = True if len(self.deployments) else False
         if self.lb_config is not None:
             self.lb_config.replica_configs.extend(lb_config.replica_configs)
@@ -214,21 +213,30 @@ class LBClient(MIIClient):
         for deployment in deployments:
             self.deployments[getattr(deployment,
                                      mii.constants.DEPLOYMENT_NAME_KEY)] = deployment
-        if self.model_path is None and deployment_type == DeploymentType.LOCAL:
+        if self.model_path is None and self.deployment_type == DeploymentType.LOCAL:
             self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
-
-        create_score_file(deployment_tag=self.deployment_tag,
+        """create_score_file(deployment_tag=self.deployment_tag,
                           deployment_type=deployment_type,
                           deployments=deps,
                           model_path=self.model_path,
                           port_map=self.port_map,
                           lb_config=lb_config,
                           deployed=lb_enabled)
+
         if deployment_type == DeploymentType.LOCAL:
             mii.utils.import_score_file(self.deployment_tag).init()
+        """
+        if not self.mii_configs:
+            self.mii_configs = mii.configs.MIIConfigs(**{})
+        mii.MIIServer(self.deployment_tag,
+                      deps.values(),
+                      self.model_path,
+                      lb_config=lb_config,
+                      lb_enabled=lb_enabled,
+                      mii_configs=self.mii_configs)
+
         if self.lb_stub is None:
-            self.port_number = getattr(next(iter(self.deployments.values())),
-                                       mii.constants.MII_CONFIGS_KEY).port_number
+            self.port_number = self.mii_configs.port_number
             self.channel = create_channel(self.host, self.port_number)
             self.lb_stub = modelresponse_pb2_grpc.DeploymentManagementStub(self.channel)
             if not self.mr_stub:
@@ -346,8 +354,8 @@ class MIINonPersistentClient():
 
 
 def terminate_restful_gateway(deployment_tag):
-    deployments, _, _, _ = _get_deployment_configs(deployment_tag)
+    deployments, _, _, _, _, mii_configs = _get_deployment_configs(deployment_tag)
     for deployment in deployments.values():
-        mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
-        if mii_configs.enable_restful_api:
+        #mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
+        if deployment.enable_restful_api:
             requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")

@@ -15,9 +15,13 @@ def create_score_file(deployment_tag,
                       model_path,
                       port_map,
                       lb_config,
+                      mii_configs={},
                       deployed=False):
 
     config_dict = {}
+    config_dict[
+        mii.constants.MII_CONFIGS_KEY] = mii_configs.dict() if mii_configs else {}
+    config_dict[mii.constants.DEPLOYMENT_TYPE_KEY] = deployment_type.value
     config_dict[mii.constants.MODEL_PATH_KEY] = model_path
     config_dict[mii.constants.DEPLOYMENT_TAG_KEY] = deployment_tag
     config_dict[mii.constants.DEPLOYED_KEY] = deployed
@@ -40,9 +44,9 @@ def create_score_file(deployment_tag,
                 mii.constants.ENABLE_DEEPSPEED_KEY:
                 getattr(deployment,
                         mii.constants.ENABLE_DEEPSPEED_KEY),
-                mii.constants.MII_CONFIGS_KEY:
-                getattr(deployment,
-                        mii.constants.MII_CONFIGS_KEY).dict(),
+                #mii.constants.MII_CONFIGS_KEY:
+                #getattr(deployment,
+                #        mii.constants.MII_CONFIGS_KEY).dict(),
                 mii.constants.ENABLE_DEEPSPEED_ZERO_KEY:
                 getattr(deployment,
                         mii.constants.ENABLE_DEEPSPEED_ZERO_KEY),
@@ -51,7 +55,39 @@ def create_score_file(deployment_tag,
                         mii.constants.DEEPSPEED_CONFIG_KEY),
                 mii.constants.GPU_INDEX_KEY:
                 getattr(deployment,
-                        mii.constants.GPU_INDEX_KEY)
+                        mii.constants.GPU_INDEX_KEY),
+                'tensor_parallel':
+                deployment.tensor_parallel,
+                'dtype':
+                deployment.dtype,
+                'meta_tensor':
+                deployment.meta_tensor,
+                'load_with_sys_mem':
+                deployment.load_with_sys_mem,
+                'replace_with_kernel_inject':
+                deployment.replace_with_kernel_inject,
+                'profile_model_time':
+                deployment.profile_model_time,
+                'skip_model_check':
+                deployment.skip_model_check,
+                'max_tokens':
+                deployment.max_tokens,
+                'enable_restful_api':
+                deployment.enable_restful_api,
+                'replica_num':
+                deployment.replica_num,
+                'hostfile':
+                deployment.hostfile,
+                'deploy_rank':
+                deployment.deploy_rank,
+                'enable_cuda_graph':
+                deployment.enable_cuda_graph,
+                'checkpoint_dict':
+                deployment.checkpoint_dict,
+                'hf_auth_token':
+                deployment.hf_auth_token,
+                'trust_remote_code':
+                deployment.trust_remote_code
             }
             config_dict[mii.constants.DEPLOYMENTS_KEY][
                 deployment.deployment_name] = deployment_config

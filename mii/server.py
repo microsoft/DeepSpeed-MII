@@ -33,26 +33,26 @@ class MIIServer():
                  deployments,
                  model_path,
                  lb_config=None,
-                 lb_enabled=False):
+                 lb_enabled=False,
+                 mii_configs={}):
         if len(deployments) > 0:
             self.lb_enabled = lb_enabled
             self.deployments = deployments
             for deployment in deployments:
-                mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
-                assert get_num_gpus(mii_configs) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
-                if mii_configs.hostfile is None:
+                #mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
+                assert get_num_gpus(deployment) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
+                if deployment.hostfile is None:
                     hostfile = tempfile.NamedTemporaryFile(delete=False)
                     num_gpu = torch.cuda.device_count()
                     with open(hostfile, "w") as f:
                         f.write(f"localhost slots={num_gpu}")
-                    mii.configs.hostfile = hostfile
-
-            processes = self._initialize_service(
-                deployment_tag,
-                deployments,
-                model_path,
-                lb_config,
-            )
+                    deployment.hostfile = hostfile
+            deps = {dep.deployment_name: dep for dep in deployments}
+            processes = self._initialize_service(deployment_tag,
+                                                 deps,
+                                                 model_path,
+                                                 lb_config,
+                                                 mii_configs)
             self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
@@ -100,10 +100,11 @@ class MIIServer():
                            ds_zero,
                            ds_config,
                            mii_configs,
-                           port):
+                           port,
+                           deployment):
         # serialize mii config
         b64_config_str = config_to_b64_str(mii_configs)
-
+        b64_deployment = config_to_b64_str(deployment)
         task = ""
         for deployment in self.deployments:
             if deployment_name == getattr(deployment, mii.constants.DEPLOYMENT_NAME_KEY):
@@ -117,6 +118,7 @@ class MIIServer():
         server_args_str += f" --provider {provider}"
 
         server_args_str += f" --config {b64_config_str}"
+        server_args_str += f" -f {b64_deployment}"
         server_args_str += " --ds-zero" if ds_zero else ""
         if ds_zero and ds_config is not None:
             if isinstance(ds_config, dict):
@@ -175,17 +177,21 @@ class MIIServer():
                                 ds_zero,
                                 ds_config,
                                 mii_configs,
-                                port):
-        return self._launch_server_process(deployment_name,
-                                           model_name,
-                                           model_path,
-                                           ds_optimize,
-                                           ds_zero,
-                                           ds_config,
-                                           mii_configs,
-                                           port,
-                                           "restful api gateway",
-                                           ex_server_args=["--restful-gateway"])
+                                port,
+                                deployment):
+        return self._launch_server_process(
+            deployment_name,
+            model_name,
+            model_path,
+            ds_optimize,
+            ds_zero,
+            ds_config,
+            mii_configs,
+            port,
+            "restful api gateway",
+            deployment,
+            ex_server_args=["--restful-gateway"],
+        )
 
     def _launch_server_process(self,
                                deployment_name,
@@ -197,6 +203,7 @@ class MIIServer():
                                mii_configs,
                                port,
                                msg_server_type,
+                               deployment,
                                ds_launch_str=None,
                                ex_server_args=[]):
         launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
@@ -207,7 +214,8 @@ class MIIServer():
                                                   ds_zero,
                                                   ds_config,
                                                   mii_configs,
-                                                  port)
+                                                  port,
+                                                  deployment)
         server_args_str += f" " + \
             " ".join(ex_server_args) if ex_server_args else ""
 
@@ -233,7 +241,8 @@ class MIIServer():
                           host,
                           port,
                           master_port,
-                          deploy_ranks):
+                          deploy_ranks,
+                          deployment):
         # use different hostfiles for replica instances
         # pass /dev/null when no replica is used
         worker_str = f"-H {hostfile} "
@@ -256,12 +265,17 @@ class MIIServer():
                                            mii_configs,
                                            port,
                                            "MII server",
+                                           deployment,
                                            ds_launch_str=ds_launch_str)
 
-    def _initialize_service(self, deployment_tag, deployments, model_path, lb_config):
+    def _initialize_service(self,
+                            deployment_tag,
+                            deployments,
+                            model_path,
+                            lb_config,
+                            mii_configs):
 
         processes = []
-
         host_gpus = defaultdict(list)
         for repl_config in lb_config.replica_configs:
             host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
@@ -269,10 +283,11 @@ class MIIServer():
         # Start replica instances
         for i, repl_config in enumerate(lb_config.replica_configs):
             name = repl_config.deployment_name
-            deployment = None
-            for dep in deployments:
+            deployment = None if name not in deployments else deployments[name]
+            """for dep in deployments:
                 if getattr(dep, mii.constants.DEPLOYMENT_NAME_KEY) == name:
                     deployment = dep
+            """
             if deployment is None:
                 continue
             hostfile = tempfile.NamedTemporaryFile(delete=False)
@@ -291,15 +306,13 @@ class MIIServer():
                             mii.constants.ENABLE_DEEPSPEED_ZERO_KEY),
                     getattr(deployment,
                             mii.constants.DEEPSPEED_CONFIG_KEY),
-                    getattr(deployment,
-                            mii.constants.MII_CONFIGS_KEY),
+                    mii_configs,
                     hostfile.name,
                     repl_config.hostname,
                     repl_config.tensor_parallel_ports[0],
-                    getattr(deployment,
-                            mii.constants.MII_CONFIGS_KEY).torch_dist_port + (100 * i) +
-                    repl_config.gpu_indices[0],
-                    repl_config.gpu_indices))
+                    mii_configs.torch_dist_port + (100 * i) + repl_config.gpu_indices[0],
+                    repl_config.gpu_indices,
+                    deployment))
 
             # start load balancer here.
             # we don't use deepspeed launcher for the load balancer because it does not need a GPU.
@@ -309,7 +322,7 @@ class MIIServer():
             processes.append(self._launch_load_balancer(model_path, lb_config))
 
         for deployment in self.deployments:
-            if getattr(deployment, mii.constants.MII_CONFIGS_KEY).enable_restful_api:
+            if deployment.enable_restful_api:
                 # start rest api server
                 processes.append(
                     self._launch_restful_gateway(
@@ -324,10 +337,9 @@ class MIIServer():
                                 mii.constants.ENABLE_DEEPSPEED_ZERO_KEY),
                         getattr(deployment,
                                 mii.constants.DEEPSPEED_CONFIG_KEY),
-                        getattr(deployment,
-                                mii.constants.MII_CONFIGS_KEY),
-                        getattr(deployment,
-                                mii.constants.MII_CONFIGS_KEY).port_number))
+                        mii_configs,
+                        mii_configs.port_number),
+                    deployment)
                 break
 
         return processes

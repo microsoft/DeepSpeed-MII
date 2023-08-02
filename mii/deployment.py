@@ -68,6 +68,9 @@ def deploy(task=None,
         If deployment_type is `LOCAL`, returns just the name of the deployment that can be used to create a query handle using `mii.mii_query_handle(deployment_name)`
 
     """
+    if not mii_config:
+        mii_config = mii.config.MIIConfig(**{})
+
     if model_path is None and deployment_type == DeploymentType.LOCAL:
         model_path = MII_MODEL_PATH_DEFAULT
     elif model_path is None and deployment_type == DeploymentType.AML:
@@ -98,15 +101,15 @@ def deploy(task=None,
 
     # parse and validate mii config
     for deployment in deployments:
-        mii_config = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
+        #mii_config = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
         if getattr(deployment, mii.constants.ENABLE_DEEPSPEED_ZERO_KEY):
             if getattr(deployment,
                        mii.constants.DEEPSPEED_CONFIG_KEY).get("fp16",
                                                                {}).get("enabled",
                                                                        False):
-                assert (mii_config.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
+                assert (deployment.dtype == torch.half), "MII Config Error: MII dtype and ZeRO dtype must match"
             else:
-                assert (mii_config.dtype == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
+                assert (deployment.dtype == torch.float), "MII Config Error: MII dtype and ZeRO dtype must match"
         assert not (enable_deepspeed and enable_zero), "MII Config Error: DeepSpeed and ZeRO cannot both be enabled, select only one"
 
     # aml only allows certain characters for deployment names
@@ -137,12 +140,11 @@ def deploy(task=None,
             )
 
     deps = {deployment.deployment_name: deployment for deployment in deployments}
-
     # In local deployments use default path if no model path set
 
     # add fields for replica deployment
     port_map = {}
-    lb_config, port_map = allocate_processes(deps, port_map)
+    lb_config, port_map = allocate_processes(deps, port_map, mii_config)
 
     if deployment_type != DeploymentType.NON_PERSISTENT:
         create_score_file(deployment_tag=deployment_tag,
@@ -150,7 +152,8 @@ def deploy(task=None,
                           deployments=deps,
                           model_path=model_path,
                           port_map=port_map,
-                          lb_config=lb_config)
+                          lb_config=lb_config,
+                          mii_configs=mii_config)
 
     if deployment_type == DeploymentType.AML:
         _deploy_aml(deployment_tag=deployment_tag, model_name=model, version=version)
@@ -166,33 +169,35 @@ def deploy(task=None,
             enable_deepspeed,
             enable_zero,
             provider,
-            mii_config),
+            deployment),
                                                       task)
     else:
         raise Exception(f"Unknown deployment type: {deployment_type}")
 
 
-def allocate_processes(deployments, port_map):
+def allocate_processes(deployments, port_map, mii_config):
     replica_configs = []
     port_offset = 1
     for deployment in deployments.values():
-        mii_config = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
-        replica_pool = _allocate_processes(mii_config.hostfile,
-                                           mii_config.tensor_parallel,
-                                           mii_config.replica_num,
-                                           deployment.GPU_index_map)
+        #mii_config = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
+        replica_pool = _allocate_processes(
+            deployment.hostfile,
+            deployment.tensor_parallel,
+            deployment.replica_num,
+            getattr(deployment,
+                    mii.constants.GPU_INDEX_KEY))
 
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
             if hostname not in port_map:
                 port_map[hostname] = set()
-            base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+            base_port = mii_config.port_number + i * deployment.tensor_parallel + port_offset
             if base_port in port_map[hostname]:
                 base_port = max(port_map[hostname]) + 1
             tensor_parallel_ports = list(
                 range(base_port,
-                      base_port + mii_config.tensor_parallel))
-            for i in range(base_port, base_port + mii_config.tensor_parallel):
+                      base_port + deployment.tensor_parallel))
+            for i in range(base_port, base_port + deployment.tensor_parallel):
                 port_map[hostname].add(i)
             torch_dist_port = mii_config.torch_dist_port + i
             replica_configs.append(
@@ -236,6 +241,7 @@ def validate_deployment(task=None,
                           deployment_type=deployment_type,
                           deployments=None,
                           model_path=model_path,
+                          mii_configs={},
                           port_map=None,
                           lb_config=None)
         return deployment_tag, None
