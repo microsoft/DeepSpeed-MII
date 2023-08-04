@@ -6,7 +6,8 @@ import torch
 from typing import Union, List, Any, Optional
 from enum import Enum
 from pydantic import BaseModel, validator, root_validator, Field
-from deepspeed.launcher.runner import DLTS_HOSTFILE
+#from deepspeed.launcher.runner import DLTS_HOSTFILE
+DLTS_HOSTFILE = "dummy"
 import mii
 from mii.constants import (
     DEPLOYMENT_NAME_KEY,
@@ -19,7 +20,6 @@ from mii.constants import (
     VERSION_KEY,
     MII_MODEL_PATH_DEFAULT,
 )
-from deepspeed.launcher.runner import fetch_hostfile
 
 
 class DeploymentType(Enum):
@@ -91,7 +91,7 @@ class DeploymentConfig(MIIConfigModel):
     model_path: str = MII_MODEL_PATH_DEFAULT  # TODO or "model" if AML deployment
     ds_optimize: bool = Field(default=True, alias=ENABLE_DEEPSPEED_KEY)
     ds_zero: bool = Field(default=False, alias=ENABLE_DEEPSPEED_ZERO_KEY)
-    GPU_index_map: dict = Field({}, alias=GPU_INDEX_KEY)
+    GPU_index_map: List[dict] = Field([], alias=GPU_INDEX_KEY)
     ds_config: dict = Field(default={}, alias=DEEPSPEED_CONFIG_KEY)
     tensor_parallel: int = Field(1, gt=0)
     dtype: DtypeEnum = torch.float32
@@ -103,7 +103,7 @@ class DeploymentConfig(MIIConfigModel):
     max_tokens: int = 1024
     enable_restful_api: bool = False
     replica_num: int = 1
-    _replica_configs: List[ReplicaConfig] = []
+    replica_configs: List[ReplicaConfig] = []
     deploy_rank: Union[int, List[int]] = -1
     enable_cuda_graph: bool = False
     checkpoint_dict: Union[dict, None] = None
@@ -175,13 +175,12 @@ class DeploymentConfig(MIIConfigModel):
     @root_validator
     def validator_model_and_task(cls, fields):
         if not fields.get("skip_model_check"):
-            mii.utils.check_if_task_and_model_is_valid(
-                fields.get("task"), fields.get("model")
-            )
+            mii.utils.check_if_task_and_model_is_valid(fields.get("task"),
+                                                       fields.get("model"))
             if fields.get("ds_optimize"):
                 mii.utils.check_if_task_and_model_is_supported(
-                    fields.get("task"), fields.get("model")
-                )
+                    fields.get("task"),
+                    fields.get("model"))
         return fields
 
 
@@ -208,9 +207,8 @@ class MIIConfig(MIIConfigModel):
             assert (
                 len(fields.get("deployment_configs")) == 1
             ), "MII does not support empty/multi-model deployments on AML."
-            allowed_chars = set(
-                string.ascii_lowercase + string.ascii_uppercaes + string.digits + "-"
-            )
+            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
+                                string.digits + "-")
             assert (
                 set(fields.get("deployment_tag")) <= allowed_chars
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
@@ -236,32 +234,32 @@ class MIIConfig(MIIConfigModel):
         cls._used_tp_ports = [fields.get("port_number")]
         cls._used_dist_ports = [fields.get("torch_dist_port")]
         for dep_conf in fields.get("deployment_configs"):
-            if not dep_conf._replica_configs:
-                replica_configs = []
+            if not dep_conf.replica_configs:
                 base_gpu_index = 0
                 for i in range(dep_conf.replica_num):
                     # Get GPU indicies
                     if dep_conf.GPU_index_map:
                         gpu_indices = dep_conf.GPU_index_map[i]
                     else:
-                        gpu_indices = range(base_gpu_index, base_gpu_index+dep_conf.tensor_parallel)
+                        gpu_indices = list(
+                            range(base_gpu_index,
+                                  base_gpu_index + dep_conf.tensor_parallel))
                         base_gpu_index += dep_conf.tensor_parallel
 
                     # Get TP ports
-                    next_open_port = cls._used_tp_ports[-1]+1
-                    tensor_parallel_ports = range(next_open_port, next_open_port+dep_conf.tensor_parallel)
+                    next_open_port = cls._used_tp_ports[-1] + 1
+                    tensor_parallel_ports = list(
+                        range(next_open_port,
+                              next_open_port + dep_conf.tensor_parallel))
                     cls._used_tp_ports.extend(tensor_parallel_ports)
 
                     # Get torch dist port
-                    torch_dist_port = cls._used_dist_ports[-1]+1
-                    cls._used_dist_ports.extend(torch_dist_port)
+                    torch_dist_port = cls._used_dist_ports[-1] + 1
+                    cls._used_dist_ports.extend([torch_dist_port])
 
-                    replica_configs.append(
-                            {
-                                "gpu_indices": gpu_indices,
-                                "tensor_parallel_ports": tensor_parallel_ports,
-                                "torch_dist_port": torch_dist_port,
-                            }
-                        )
-                dep_conf._replica_configs = replica_configs
+                    dep_conf.replica_configs.append({
+                        "gpu_indices": gpu_indices,
+                        "tensor_parallel_ports": tensor_parallel_ports,
+                        "torch_dist_port": torch_dist_port,
+                    })
         return fields

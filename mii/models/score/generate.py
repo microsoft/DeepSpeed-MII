@@ -25,7 +25,10 @@ def create_score_file(mii_config):
     source_with_config = f"{score_src}\n"
     source_with_config += f"configs = {pprint.pformat(config_dict, indent=4)}"
 
-    with open(generated_score_path(mii_config.deployment_tag, mii_config.deployment_type), "w") as fd:
+    with open(
+            generated_score_path(mii_config.deployment_tag,
+                                 mii_config.deployment_type),
+            "w") as fd:
         fd.write(source_with_config)
         fd.write("\n")
 

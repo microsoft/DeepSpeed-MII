@@ -8,7 +8,7 @@ import os
 import json
 import torch
 import mii
-from mii.config import LoadBalancerConfig, ReplicaConfig, MIIConfig
+from mii.config import MIIConfig
 import time
 
 model = None

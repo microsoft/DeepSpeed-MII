@@ -14,7 +14,6 @@ from mii.config import Tasks
 from mii.constants import SUPPORTED_MODEL_TYPES, ModelProvider, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT
 
 
-
 def _get_hf_models_by_type(model_type, task=None):
     api = HfApi()
     models = api.list_models(filter=model_type)
