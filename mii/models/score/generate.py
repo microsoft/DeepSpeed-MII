@@ -9,29 +9,7 @@ from mii.utils import logger
 from mii.constants import DeploymentType
 
 
-def create_score_file(deployment_name,
-                      deployment_type,
-                      task,
-                      model_name,
-                      ds_optimize,
-                      ds_zero,
-                      ds_config,
-                      mii_config,
-                      model_path,
-                      lb_config):
-    config_dict = {}
-    config_dict[mii.constants.DEPLOYMENT_NAME_KEY] = deployment_name
-    config_dict[mii.constants.TASK_NAME_KEY] = mii.utils.get_task_name(task)
-    config_dict[mii.constants.MODEL_NAME_KEY] = model_name
-    config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize
-    config_dict[mii.constants.MII_CONFIGS_KEY] = mii_config.dict()
-    config_dict[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY] = ds_zero
-    config_dict[mii.constants.DEEPSPEED_CONFIG_KEY] = ds_config
-    config_dict[mii.constants.MODEL_PATH_KEY] = model_path
-
-    if lb_config is not None:
-        config_dict[mii.constants.LOAD_BALANCER_CONFIG_KEY] = lb_config
-
+def create_score_file(mii_config):
     if len(mii.__path__) > 1:
         logger.warning(
             f"Detected mii path as multiple sources: {mii.__path__}, might cause unknown behavior"
@@ -43,6 +21,7 @@ def create_score_file(deployment_name,
         score_src = fd.read()
 
     # update score file w. global config dict
+    config_dict = mii_config.dict()
     source_with_config = f"{score_src}\n"
     source_with_config += f"configs = {pprint.pformat(config_dict, indent=4)}"
 
