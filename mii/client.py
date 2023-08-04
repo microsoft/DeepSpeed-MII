@@ -147,6 +147,21 @@ class MIIClient():
         assert task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
+    async def load_async(self, request_proto):
+        await getattr(self.mr_stub, "Load")(request_proto)
+
+    def load(self, deployment_name):
+        request_proto = modelresponse_pb2.LoadRequest(
+                deployment_name=deployment_name)
+        self.asyncio_loop.run_until_complete(self.load_async(request_proto))
+    
+    async def offload_async(self, request_proto):
+        await getattr(self.mr_stub, "Offload")(request_proto)
+
+    def offload(self, deployment_name):
+        request_proto = modelresponse_pb2.LoadRequest(
+                deployment_name=deployment_name)
+        self.asyncio_loop.run_until_complete(self.offload_async(request_proto))
 
 class LBClient(MIIClient):
     def __init__(self,

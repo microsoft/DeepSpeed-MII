@@ -12,8 +12,9 @@ from .proto import modelresponse_pb2_grpc
 import sys
 import threading
 import time
-
-from mii.constants import GRPC_MAX_MSG_SIZE, ADD_DEPLOYMENT_METHOD, DELETE_DEPLOYMENT_METHOD, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
+import os
+import torch
+from mii.constants import GRPC_MAX_MSG_SIZE, ADD_DEPLOYMENT_METHOD, DELETE_DEPLOYMENT_METHOD, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LOAD_METHOD, OFFLOAD_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
 
@@ -54,6 +55,7 @@ class ModelResponse(ServiceBase):
         self.inference_pipeline = inference_pipeline
         self.method_name_to_task = {m.method: t for t, m in GRPC_METHOD_TABLE.items()}
         self.lock = threading.Lock()
+        self.mem = False
 
     def _get_model_time(self, model, sum_times=False):
         model_times = []
@@ -83,6 +85,10 @@ class ModelResponse(ServiceBase):
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def _run_inference(self, method_name, request_proto):
+        if not self.mem:
+            self.mem = True
+            local_rank = int(os.getenv('LOCAL_RANK', '0'))
+            self.inference_pipeline.model.to(torch.device(f"cuda:{local_rank}"))
         if method_name not in self.method_name_to_task:
             raise ValueError(f"unknown method: {method_name}")
 
@@ -126,6 +132,16 @@ class ModelResponse(ServiceBase):
     def ConversationalReply(self, request, context):
         return self._run_inference("ConversationalReply", request)
 
+    def Load(self, request, context):
+        self.mem = True
+        local_rank = int(os.getenv('LOCAL_RANK', '0'))
+        self.inference_pipeline.model.to(torch.device(f"cuda:{local_rank}"))
+        return google_dot_protobuf_dot_empty__pb2.Empty()
+
+    def Offload(self, request, context):
+        self.mem = False
+        self.inference_pipeline.model.to(torch.device(f"cpu"))
+        return google_dot_protobuf_dot_empty__pb2.Empty()
 
 class AtomicCounter:
     def __init__(self, initial_value=0):
@@ -184,10 +200,12 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         self.counter = {}
         self.replica_configs = replica_configs
         self.tasks = {}
+        self.mem = {}
         for repl in replica_configs:
             self.stubs[repl.deployment_name] = []
             self.counter[repl.deployment_name] = AtomicCounter()
             self.tasks[repl.deployment_name] = repl.task
+            self.mem[repl.deployment_name] = False
 
         for repl in replica_configs:
             self.stubs[repl.deployment_name].append(
@@ -211,6 +229,20 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
+            if method_name == OFFLOAD_METHOD:
+                deployment_name = str(getattr(request_proto, "deployment_name"))
+                for stub in self.stubs[deployment_name]:
+                    stub.invoke(method_name, request_proto)
+                print(f"Model for deployment: {deployment_name} offloaded")
+                return google_dot_protobuf_dot_empty__pb2.Empty()
+
+            if method_name == LOAD_METHOD:
+                deployment_name = str(getattr(request_proto, "deployment_name"))
+                for stub in self.stubs[deployment_name]:
+                    stub.invoke(method_name, request_proto)
+                print(f"Model for deployment: {deployment_name} loaded to GPU")
+                return google_dot_protobuf_dot_empty__pb2.Empty()
+
             if method_name == ADD_DEPLOYMENT_METHOD:
                 deployment_name = str(getattr(request_proto, "deployment_name"))
                 if deployment_name not in self.stubs:
@@ -228,6 +260,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                         ParallelStubInvoker(hostname,
                                             tensor_parallel_ports,
                                             self.asyncio_loop))
+                    self.mem[deployment_name] = False
                 else:
                     print(f"deployment: {deployment_name} already exists")
                 return google_dot_protobuf_dot_empty__pb2.Empty()

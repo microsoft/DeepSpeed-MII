@@ -34,6 +34,8 @@ service ModelResponse {
   rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
   rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
   rpc Txt2ImgReply(MultiStringRequest) returns (ImageReply) {}
+  rpc Load(LoadRequest) returns (google.protobuf.Empty) {}
+  rpc Offload(LoadRequest) returns (google.protobuf.Empty) {}
 }
 
 service DeploymentManagement {
@@ -127,5 +129,9 @@ message AddDeployRequest {
 }
 
 message DeleteDeployRequest {
+  string deployment_name = 1;
+}
+
+message LoadRequest {
   string deployment_name = 1;
 }
