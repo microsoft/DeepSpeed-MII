@@ -10,70 +10,9 @@ import torch
 import mii
 from huggingface_hub import HfApi
 
-from mii.constants import (CONVERSATIONAL_NAME,
-                           FILL_MASK_NAME,
-                           MII_CACHE_PATH,
-                           MII_CACHE_PATH_DEFAULT,
-                           TEXT_GENERATION_NAME,
-                           TEXT_CLASSIFICATION_NAME,
-                           QUESTION_ANSWERING_NAME,
-                           TOKEN_CLASSIFICATION_NAME,
-                           SUPPORTED_MODEL_TYPES,
-                           ModelProvider,
-                           REQUIRED_KEYS_PER_TASK,
-                           TEXT2IMG_NAME)
+from mii.config import Tasks
+from mii.constants import SUPPORTED_MODEL_TYPES, ModelProvider, MII_CACHE_PATH, MII_CACHE_PATH_DEFAULT
 
-from mii.constants import Tasks
-
-
-def get_task_name(task):
-    if task == Tasks.QUESTION_ANSWERING:
-        return QUESTION_ANSWERING_NAME
-
-    if task == Tasks.TEXT_GENERATION:
-        return TEXT_GENERATION_NAME
-
-    if task == Tasks.TEXT_CLASSIFICATION:
-        return TEXT_CLASSIFICATION_NAME
-
-    if task == Tasks.FILL_MASK:
-        return FILL_MASK_NAME
-
-    if task == Tasks.TOKEN_CLASSIFICATION:
-        return TOKEN_CLASSIFICATION_NAME
-
-    if task == Tasks.CONVERSATIONAL:
-        return CONVERSATIONAL_NAME
-
-    if task == Tasks.TEXT2IMG:
-        return TEXT2IMG_NAME
-
-    raise ValueError(f"Unknown Task {task}")
-
-
-def get_task(task_name):
-    if task_name == QUESTION_ANSWERING_NAME:
-        return Tasks.QUESTION_ANSWERING
-
-    if task_name == TEXT_GENERATION_NAME:
-        return Tasks.TEXT_GENERATION
-
-    if task_name == TEXT_CLASSIFICATION_NAME:
-        return Tasks.TEXT_CLASSIFICATION
-
-    if task_name == FILL_MASK_NAME:
-        return Tasks.FILL_MASK
-
-    if task_name == TOKEN_CLASSIFICATION_NAME:
-        return Tasks.TOKEN_CLASSIFICATION
-
-    if task_name == CONVERSATIONAL_NAME:
-        return Tasks.CONVERSATIONAL
-
-    if task_name == TEXT2IMG_NAME:
-        return Tasks.TEXT2IMG
-
-    assert False, f"Unknown Task {task_name}"
 
 
 def _get_hf_models_by_type(model_type, task=None):
@@ -81,7 +20,7 @@ def _get_hf_models_by_type(model_type, task=None):
     models = api.list_models(filter=model_type)
     models = ([m.modelId for m in models]
               if task is None else [m.modelId for m in models if m.pipeline_tag == task])
-    if task == TEXT_GENERATION_NAME:
+    if task == Tasks.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         models.append("microsoft/bloom-deepspeed-inference-fp16")
         models.append("microsoft/bloom-deepspeed-inference-int8")
@@ -92,13 +31,13 @@ def _get_hf_models_by_type(model_type, task=None):
 # TODO read this from a file containing list of files supported for each task
 def _get_supported_models_name(task):
     supported_models = []
-    task_name = get_task_name(task)
+    task_name = task
 
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
             models = _get_hf_models_by_type(model_type, task_name)
         elif provider == ModelProvider.ELEUTHER_AI:
-            if task_name == TEXT_GENERATION_NAME:
+            if task_name == Tasks.TEXT_GENERATION:
                 models = [model_type]
         elif provider == ModelProvider.DIFFUSERS:
             models = _get_hf_models_by_type(model_type, task_name)
@@ -115,7 +54,7 @@ def check_if_task_and_model_is_supported(task, model_name):
 
 
 def check_if_task_and_model_is_valid(task, model_name):
-    task_name = get_task_name(task)
+    task_name = task
     valid_task_models = _get_hf_models_by_type(None, task_name)
     assert (
         model_name in valid_task_models
@@ -196,14 +135,6 @@ def extract_query_dict(task, request_dict):
             raise ValueError("Request for task: {task} is missing required key: {key}.")
         query_dict[key] = value
     return query_dict
-
-
-def get_num_gpus(mii_configs):
-    num_gpus = mii_configs.tensor_parallel
-
-    assert torch.cuda.device_count(
-    ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
-    return num_gpus
 
 
 def get_provider_name(model_name, task):

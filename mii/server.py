@@ -14,7 +14,7 @@ from pathlib import Path
 from collections import defaultdict
 
 import mii
-from mii.utils import get_num_gpus, logger, get_provider_name
+from mii.utils import logger, get_provider_name
 
 
 def config_to_b64_str(config):
@@ -28,32 +28,19 @@ def config_to_b64_str(config):
 
 class MIIServer():
     '''Initialize the model, setup the server for the model under model_path'''
-    def __init__(self,
-                 deployment_tag,
-                 deployments,
-                 model_path,
-                 lb_config=None,
-                 lb_enabled=False,
-                 mii_configs={}):
-        if len(deployments) > 0:
-            self.lb_enabled = lb_enabled
-            self.deployments = deployments
-            for deployment in deployments:
-                #mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
-                assert get_num_gpus(deployment) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
-                if deployment.hostfile is None:
-                    hostfile = tempfile.NamedTemporaryFile(delete=False)
-                    num_gpu = torch.cuda.device_count()
-                    with open(hostfile, "w") as f:
-                        f.write(f"localhost slots={num_gpu}")
-                    deployment.hostfile = hostfile
-            deps = {dep.deployment_name: dep for dep in deployments}
-            processes = self._initialize_service(deployment_tag,
-                                                 deps,
-                                                 model_path,
-                                                 lb_config,
-                                                 mii_configs)
-            self._wait_until_server_is_live(processes, lb_config.replica_configs)
+    def __init__(self, mii_config):
+        if not mii_config.hostfile:
+            hostfile = tempfile.NamedTemporaryFile(delete=False)
+            num_gpu = torch.cuda.device_count()
+            with open(hostfile, "w") as f:
+                f.write(f"localhost slots={num_gpu}")
+            mii_config.hostfile = hostfile
+        self.deployments = mii_config.deployment_configs
+        processes = self._initialize_service(mii_config.deployment_tag,
+                                             deps,
+                                             mii_config.lb_config,
+                                             mii_config)
+        self._wait_until_server_is_live(processes, lb_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):

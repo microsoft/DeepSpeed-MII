@@ -4,7 +4,7 @@
 # DeepSpeed Team
 from abc import ABC, abstractmethod
 from transformers import Conversation
-from mii.constants import Tasks
+from mii.config import Tasks
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
 from mii.models.utils import ImageResponse

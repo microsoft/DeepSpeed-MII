@@ -15,25 +15,6 @@ class DeploymentType(enum.Enum):
 MII_CONFIGS_KEY = 'mii_configs'
 
 
-class Tasks(enum.Enum):
-    TEXT_GENERATION = 1
-    TEXT_CLASSIFICATION = 2
-    QUESTION_ANSWERING = 3
-    FILL_MASK = 4
-    TOKEN_CLASSIFICATION = 5
-    CONVERSATIONAL = 6
-    TEXT2IMG = 7
-
-
-TEXT_GENERATION_NAME = 'text-generation'
-TEXT_CLASSIFICATION_NAME = 'text-classification'
-QUESTION_ANSWERING_NAME = 'question-answering'
-FILL_MASK_NAME = 'fill-mask'
-TOKEN_CLASSIFICATION_NAME = 'token-classification'
-CONVERSATIONAL_NAME = 'conversational'
-TEXT2IMG_NAME = "text-to-image"
-
-
 class ModelProvider(enum.Enum):
     HUGGING_FACE = 1
     ELEUTHER_AI = 2
@@ -64,17 +45,8 @@ SUPPORTED_MODEL_TYPES = {
     'llama': ModelProvider.HUGGING_FACE
 }
 
-SUPPORTED_TASKS = [
-    TEXT_GENERATION_NAME,
-    TEXT_CLASSIFICATION_NAME,
-    QUESTION_ANSWERING_NAME,
-    FILL_MASK_NAME,
-    TOKEN_CLASSIFICATION_NAME,
-    CONVERSATIONAL_NAME,
-    TEXT2IMG_NAME
-]
-
-REQUIRED_KEYS_PER_TASK = {
+REQUIRED_KEYS_PER_TASK = {}
+"""
     TEXT_GENERATION_NAME: ["query"],
     TEXT_CLASSIFICATION_NAME: ["query"],
     QUESTION_ANSWERING_NAME: ["context",
@@ -88,6 +60,7 @@ REQUIRED_KEYS_PER_TASK = {
      'generated_responses'],
     TEXT2IMG_NAME: ["query"]
 }
+"""
 GPU_INDEX_KEY = "GPU_index_map"
 DEPLOYMENTS_KEY = 'deployments'
 PORT_MAP_KEY = 'port_map'

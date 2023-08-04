@@ -6,11 +6,10 @@ import asyncio
 import grpc
 import requests
 import mii
-from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.constants import GRPC_MAX_MSG_SIZE, Tasks, DeploymentType
+from mii.constants import GRPC_MAX_MSG_SIZE
+from mii.config import Tasks, DeploymentType
 from mii.method_table import GRPC_METHOD_TABLE
-from mii.deployment import allocate_processes
 from mii.config import DeploymentConfig, MIIConfig
 
 
@@ -271,7 +270,7 @@ class MIITensorParallelClient():
     This is used to call multiple servers deployed for tensor parallelism.
     """
     def __init__(self, task_name, host, ports):
-        self.task = get_task(task_name)
+        self.task = task_name
         self.clients = [MIIClient(task_name, host, port) for port in ports]
         self.asyncio_loop = asyncio.get_event_loop()
 
@@ -322,7 +321,7 @@ class MIITensorParallelClient():
 
 class MIINonPersistentClient():
     def __init__(self, task, deployment_name):
-        self.task = get_task(task)
+        self.task = task
         self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
