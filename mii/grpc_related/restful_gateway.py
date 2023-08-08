@@ -17,9 +17,9 @@ def shutdown(thread):
     thread.server.shutdown()
 
 
-def createRestfulGatewayApp(deployment_name, task, mii_config, server_thread):
+def createRestfulGatewayApp(deployment_config, lb_port, server_thread):
     # client must be thread-safe
-    client = mii.MIIClient(task, "localhost", mii_config.port_number)
+    client = mii.MIIClient(task, "localhost", lb_port)
 
     class RestfulGatewayService(Resource):
         def __init__(self):
@@ -33,26 +33,26 @@ def createRestfulGatewayApp(deployment_name, task, mii_config, server_thread):
 
     app = Flask("RestfulGateway")
 
-    @app.route("/terminate", methods=['GET'])
+    @app.route("/terminate", methods=["GET"])
     def terminate():
         # Need to shutdown *after* completing the request
-        threading.Thread(target=shutdown, args=(server_thread, )).start()
+        threading.Thread(target=shutdown, args=(server_thread,)).start()
         return "Shutting down RESTful API gateway server"
 
     api = Api(app)
-    path = '/{}/{}'.format(RESTFUL_API_PATH, deployment_name)
+    path = "/{}/{}".format(RESTFUL_API_PATH, deployment_config.deployment_name)
     api.add_resource(RestfulGatewayService, path)
 
     return app
 
 
 class RestfulGatewayThread(threading.Thread):
-    def __init__(self, deployment_name, task, mii_config):
+    def __init__(self, deployment_config, lb_port, rest_port):
         threading.Thread.__init__(self)
         self.mii_config = mii_config
 
-        app = createRestfulGatewayApp(deployment_name, task, mii_config, self)
-        self.server = make_server('127.0.0.1', mii_config.restful_api_port, app)
+        app = createRestfulGatewayApp(deployment_config, lb_port, self)
+        self.server = make_server("127.0.0.1", rest_port, app)
         self.ctx = app.app_context()
         self.ctx.push()
 

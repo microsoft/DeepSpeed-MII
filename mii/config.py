@@ -3,32 +3,19 @@
 
 # DeepSpeed Team
 import torch
-from typing import Union, List
+import os
+from typing import Union, List, Optional, Dict, Any
 from enum import Enum
 from pydantic import validator, root_validator
+import mii
+from mii.constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
-from deepspeed.runtime.config import DTypeEnum
-from deepspeed.launcher.runner import DLTS_HOSTFILE
+from deepspeed.inference.config import DtypeEnum
+from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
 
 
-class DeploymentType(Enum):
-    LOCAL = "local"
-    AML = "aml"
-    NON_PERSISTENT = "non-persistent"
-
-
-class TaskType(Enum):
-    TEXT_GENERATION = "text-generation"
-    TEXT_CLASSIFICATION = "text-classification"
-    QUESTION_ANSWERING = "question-answering"
-    FILL_MASK = "fill-mask"
-    TOKEN_CLASSIFICATION = "token-classification"
-    CONVERSATIONAL = "conversational"
-    TEXT2IMG = "text-to-image"
-
-
-class ReplicaConfig(BaseModel):
+class ReplicaConfig(DeepSpeedConfigModel):
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
     torch_dist_port: int = None
@@ -55,28 +42,49 @@ class DeploymentConfig(DeepSpeedConfigModel):
     enable_deepspeed: bool = True
     enable_zero: bool = False
     ds_config: Dict[str, Any] = {}
-    model_path: Optional[str] = ""
+    model_path: str = ""
     replica_num: int = 1
     replica_configs: List[ReplicaConfig] = []
 
-    @validator('checkpoint_dict')
-    def checkpoint_dict_valid(cls, value):
-        if value is None:
-            return value
-        if value.get('base_dir', ''):
+    @validator("checkpoint_dict")
+    def checkpoint_dict_valid(cls, field_value, values):
+        if field_value is None:
+            return field_value
+        if field_value.get("base_dir", ""):
             raise ValueError(
                 "please unset 'base_dir' it will be set w.r.t. the deployment 'model_path'"
             )
-        for k in ['checkpoints', 'parallelization', 'version', 'type']:
-            if not value.get(k, ''):
+        for k in ["checkpoints", "parallelization", "version", "type"]:
+            if not field_value.get(k, ""):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
-        return value
+        return vfield_alue
 
     @validator("deploy_rank", pre=True)
     def deploy_rank_to_list(cls, field_value, values):
-        if not isinstance(field_value, list):
+        if field_value and not isinstance(field_value, list):
             field_value = [field_value]
         return field_value
+
+    @root_validator
+    def zero_or_meta(cls, values):
+        if values.get("enable_zero"):
+            assert not values.get(
+                "meta_tensor"
+            ), "ZeRO-Inference does not support meta tensors."
+        return values
+
+    @root_validator
+    def bloom_model_valid(cls, values):
+        if "bigscience/bloom" in values.get("model"):
+            dtype = values.get("dtype")
+            assert dtype in [
+                DtypeEnum.int8,
+                DtypeEnum.fp16,
+            ], "Bloom models only support fp16/int8."
+            assert not values.get(
+                "enable_cuda_graph"
+            ), "Bloom models do not support CUDA Graph."
+        return values
 
     @root_validator
     def deploy_rank_valid(cls, values):
@@ -88,21 +96,32 @@ class DeploymentConfig(DeepSpeedConfigModel):
             deploy_rank = list(range(tensor_parallel))
 
         # number of ranks provided must be equal to TP size, DP is handled outside MII currently
-        assert tensor_parallel == len(deploy_rank), \
-            f"{len(deploy_rank)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {tensor_parallel}"
+        assert tensor_parallel == len(
+            deploy_rank
+        ), f"{len(deploy_rank)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {tensor_parallel}"
 
         values["deploy_rank"] = deploy_rank
         return values
 
     @root_validator
     def set_model_path(cls, values):
-        if values.get("model_path") is None:
-            deployment_type = values.get("deployment_type")
-            if deployment_type == DeploymentType.LOCAL:
-                model_path = MII_MODEL_PATH_DEFAULT
-            if deployment_tpye == DeploymentType.AML:
+        model_path = values.get("model_path")
+        if not model_path:
+            if values.get("deployment_type") == DeploymentType.AML:
                 model_path = "model"
-            values["model_path"] = model_path
+            else:
+                model_path = MII_MODEL_PATH_DEFAULT
+        aml_model_dir = os.environ.get("AZUREML_MODEL_DIR", None)
+        if aml_model_dir:
+            assert os.path.isabs(
+                aml_model_dir
+            ), "AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path."
+            assert not os.path.isabs(
+                model_path
+            ), f"model_path={model_path} must be relative to append w/ AML path."
+            model_path = os.path.join(aml_model_dir, model_path)
+
+        values["model_path"] = model_path
         return values
 
     @root_validator
@@ -145,6 +164,7 @@ class DeploymentConfig(DeepSpeedConfigModel):
 
 
 class MIIConfig(DeepSpeedConfigModel):
+    deployment_config: DeploymentConfig = {}
     hf_auth_token: str = None
     port_number: int = 50050
     enable_restful_api: bool = False
@@ -154,21 +174,22 @@ class MIIConfig(DeepSpeedConfigModel):
     version: int = 1
 
     @root_validator
-    def AML_name_valid(cls, fields):
-        if fields.get("deployment_type") == DeploymentType.AML:
-            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
-                                string.digits + "-")
+    def AML_name_valid(cls, values):
+        if values.get("deployment_type") == DeploymentType.AML:
+            allowed_chars = set(
+                string.ascii_lowercase + string.ascii_uppercaes + string.digits + "-"
+            )
             assert (
-                set(fields.get("deployment_config").deployment_name) <= allowed_chars
+                set(values.get("deployment_config").deployment_name) <= allowed_chars
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
-        return fields
+        return values
 
     @root_validator
     def generate_replica_configs(cls, values):
         replica_configs = values.get("deployment_config").replica_configs
-        num_replicas = values.get("deployment_config").num_replicas
+        replica_num = values.get("deployment_config").replica_num
         if replica_configs:
-            assert len(replica_confgs) == num_replicas
+            assert len(replica_configs) == replica_num
             return values
 
         hostfile = values.get("hostfile")
@@ -183,48 +204,58 @@ class MIIConfig(DeepSpeedConfigModel):
             port_offset = 1
             base_port = port_number + i * tensor_parallel + port_offset
             tensor_parallel_ports = list(range(base_port, base_port + tensor_parallel))
-            replica_torch_dist_port = torch_dist_port + i
+            replica_torch_dist_port = torch_dist_port + (100 * i)
             replica_configs.append(
-                ReplicaConfig(hostname=hostname,
-                              tensor_parallel_ports=tensor_parallel_ports,
-                              torch_dist_port=replica_torch_dist_port,
-                              gpu_indices=gpu_indices))
+                ReplicaConfig(
+                    hostname=hostname,
+                    tensor_parallel_ports=tensor_parallel_ports,
+                    torch_dist_port=replica_torch_dist_port,
+                    gpu_indices=gpu_indices,
+                )
+            )
 
         values.get("deployment_config").replica_configs = replica_configs
         return values
 
 
-def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
+def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
     resource_pool = fetch_hostfile(hostfile_path)
-    assert resource_pool is not None and len(
-        resource_pool) > 0, f'No hosts found in {hostfile_path}'
+    assert (
+        resource_pool is not None and len(resource_pool) > 0
+    ), f"No hosts found in {hostfile_path}"
 
     replica_pool = []
     allocated_num = 0
     for host, slots in resource_pool.items():
         available_on_host = slots
         while available_on_host >= tensor_parallel:
-            if allocated_num >= num_replicas:
+            if allocated_num >= replica_num:
                 break
             if slots < tensor_parallel:
                 raise ValueError(
-                    f'Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required'
+                    f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required"
                 )
 
             allocated_num_on_host = slots - available_on_host
             replica_pool.append(
-                (host,
-                 [
-                     i for i in range(allocated_num_on_host,
-                                      allocated_num_on_host + tensor_parallel)
-                 ]))
+                (
+                    host,
+                    [
+                        i
+                        for i in range(
+                            allocated_num_on_host,
+                            allocated_num_on_host + tensor_parallel,
+                        )
+                    ],
+                )
+            )
             allocated_num += 1
 
             available_on_host -= tensor_parallel
 
-    if allocated_num < num_replicas:
+    if allocated_num < replica_num:
         raise ValueError(
-            f'No sufficient GPUs for {num_replicas} replica(s), only {allocated_num} replica(s) can be deployed'
+            f"No sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
         )
 
     return replica_pool

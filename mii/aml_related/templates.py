@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-deployment = \
-"""$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
+deployment = """$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
 name: <deployment-name>
 endpoint_name: <endpoint-name>
 model:
@@ -36,14 +35,12 @@ readiness_probe:
 instance_count: 1
 """
 
-endpoint = \
-"""$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineEndpoint.schema.json
+endpoint = """$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineEndpoint.schema.json
 name: <endpoint-name>
 auth_mode: key
 """
 
-environment = \
-"""$schema: https://azuremlschemas.azureedge.net/latest/environment.schema.json
+environment = """$schema: https://azuremlschemas.azureedge.net/latest/environment.schema.json
 name: <environment-name>
 version: <version>
 image: <acr-name>.azurecr.io/<image-name>:<version>
@@ -59,8 +56,7 @@ inference_config:
     port: 5001
 """
 
-model_download = \
-"""import os
+model_download = """import os
 import glob
 import shutil
 
@@ -97,8 +93,7 @@ except OSError:
     shutil.rmtree(tmp_download_path)
 """
 
-deploy = \
-"""set -e
+deploy = """set -e
 python3 model_download.py
 az acr build -r <acr-name> --build-arg no-cache=True -t "<image-name>:<version>" build
 az ml environment create -f environment.yml
@@ -106,8 +101,7 @@ az ml online-endpoint create -n "<endpoint-name>" -f endpoint.yml
 az ml online-deployment create -n "<deployment-name>" -f deployment.yml
 """
 
-dockerfile = \
-"""FROM nvidia/cuda:11.3.1-devel-ubuntu18.04
+dockerfile = """FROM nvidia/cuda:11.3.1-devel-ubuntu18.04
 
 ENV AML_APP_ROOT=/var/azureml-model/code \
     BUILD_DIR=/tmp/build \
@@ -176,8 +170,7 @@ WORKDIR $AZUREML_MODEL_DIR/code
 CMD sudo service nginx start && cd $AZUREML_MODEL_DIR/code && azmlinfsrv --model_dir $AZUREML_MODEL_DIR --entry_script $AZUREML_MODEL_DIR/code/score.py --port 31311
 """
 
-gunicorn = \
-"""upstream gunicorn {
+gunicorn = """upstream gunicorn {
     server 127.0.0.1:31311;
 }
 
@@ -202,8 +195,7 @@ listen *:5001;
   }
 """
 
-gunicorn_run = \
-"""#!/bin/bash
+gunicorn_run = """#!/bin/bash
 
 
 SCRIPT_PATH=$(dirname $(realpath -s "$0"))
@@ -377,8 +369,7 @@ else
 fi
 """
 
-gunicorn_finish = \
-"""#!/bin/bash
+gunicorn_finish = """#!/bin/bash
 
 exit_code="$1" # The exit code from gunicorn
 signal="$2"    # The signal which caused gunicorn to exit (or 0)
@@ -389,8 +380,7 @@ echo "`date -uIns` - Exit code $exit_code is not normal. Killing image."
 killall -SIGHUP runsvdir
 """
 
-requirements = \
-"""torch==1.12.0
+requirements = """torch==1.12.0
 grpcio
 grpcio-tools
 pydantic

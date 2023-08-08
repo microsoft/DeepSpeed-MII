@@ -2,103 +2,59 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import enum
+from enum import Enum
 
 
-#TODO naming..
-class DeploymentType(enum.Enum):
-    LOCAL = 1
-    AML = 2
-    NON_PERSISTENT = 3
+class DeploymentType(str, Enum):
+    LOCAL = "local"
+    AML = "aml"
+    NON_PERSISTENT = "non-persistent"
 
 
-MII_CONFIGS_KEY = 'mii_configs'
+class TaskType(str, Enum):
+    TEXT_GENERATION = "text-generation"
+    TEXT_CLASSIFICATION = "text-classification"
+    QUESTION_ANSWERING = "question-answering"
+    FILL_MASK = "fill-mask"
+    TOKEN_CLASSIFICATION = "token-classification"
+    CONVERSATIONAL = "conversational"
+    TEXT2IMG = "text-to-image"
 
 
-class Tasks(enum.Enum):
-    TEXT_GENERATION = 1
-    TEXT_CLASSIFICATION = 2
-    QUESTION_ANSWERING = 3
-    FILL_MASK = 4
-    TOKEN_CLASSIFICATION = 5
-    CONVERSATIONAL = 6
-    TEXT2IMG = 7
+class ModelProvider(str, Enum):
+    HUGGING_FACE = "hugging-face"
+    ELEUTHER_AI = "eleuther-ai"
+    DIFFUSERS = "diffusers"
 
-
-TEXT_GENERATION_NAME = 'text-generation'
-TEXT_CLASSIFICATION_NAME = 'text-classification'
-QUESTION_ANSWERING_NAME = 'question-answering'
-FILL_MASK_NAME = 'fill-mask'
-TOKEN_CLASSIFICATION_NAME = 'token-classification'
-CONVERSATIONAL_NAME = 'conversational'
-TEXT2IMG_NAME = "text-to-image"
-
-
-class ModelProvider(enum.Enum):
-    HUGGING_FACE = 1
-    ELEUTHER_AI = 2
-    DIFFUSERS = 3
-
-
-MODEL_PROVIDER_NAME_HF = "hugging-face"
-MODEL_PROVIDER_NAME_EA = "eleuther-ai"
-MODEL_PROVIDER_NAME_DIFFUSERS = "diffusers"
-
-MODEL_PROVIDER_MAP = {
-    MODEL_PROVIDER_NAME_HF: ModelProvider.HUGGING_FACE,
-    MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI,
-    MODEL_PROVIDER_NAME_DIFFUSERS: ModelProvider.DIFFUSERS
-}
 
 SUPPORTED_MODEL_TYPES = {
-    'roberta': ModelProvider.HUGGING_FACE,
-    'xlm-roberta': ModelProvider.HUGGING_FACE,
-    'gpt2': ModelProvider.HUGGING_FACE,
-    'bert': ModelProvider.HUGGING_FACE,
-    'gpt_neo': ModelProvider.HUGGING_FACE,
-    'gptj': ModelProvider.HUGGING_FACE,
-    'opt': ModelProvider.HUGGING_FACE,
-    'bloom': ModelProvider.HUGGING_FACE,
-    'gpt-neox': ModelProvider.ELEUTHER_AI,
-    'stable-diffusion': ModelProvider.DIFFUSERS,
-    'llama': ModelProvider.HUGGING_FACE
+    "roberta": ModelProvider.HUGGING_FACE,
+    "xlm-roberta": ModelProvider.HUGGING_FACE,
+    "gpt2": ModelProvider.HUGGING_FACE,
+    "bert": ModelProvider.HUGGING_FACE,
+    "gpt_neo": ModelProvider.HUGGING_FACE,
+    "gptj": ModelProvider.HUGGING_FACE,
+    "opt": ModelProvider.HUGGING_FACE,
+    "bloom": ModelProvider.HUGGING_FACE,
+    "gpt-neox": ModelProvider.ELEUTHER_AI,
+    "stable-diffusion": ModelProvider.DIFFUSERS,
+    "llama": ModelProvider.HUGGING_FACE,
 }
-
-SUPPORTED_TASKS = [
-    TEXT_GENERATION_NAME,
-    TEXT_CLASSIFICATION_NAME,
-    QUESTION_ANSWERING_NAME,
-    FILL_MASK_NAME,
-    TOKEN_CLASSIFICATION_NAME,
-    CONVERSATIONAL_NAME,
-    TEXT2IMG_NAME
-]
 
 REQUIRED_KEYS_PER_TASK = {
-    TEXT_GENERATION_NAME: ["query"],
-    TEXT_CLASSIFICATION_NAME: ["query"],
-    QUESTION_ANSWERING_NAME: ["context",
-                              "question"],
-    FILL_MASK_NAME: ["query"],
-    TOKEN_CLASSIFICATION_NAME: ["query"],
-    CONVERSATIONAL_NAME:
-    ['text',
-     'conversation_id',
-     'past_user_inputs',
-     'generated_responses'],
-    TEXT2IMG_NAME: ["query"]
+    TaskType.TEXT_GENERATION: ["query"],
+    TaskType.TEXT_CLASSIFICATION: ["query"],
+    TaskType.QUESTION_ANSWERING: ["context", "question"],
+    TaskType.FILL_MASK: ["query"],
+    TaskType.TOKEN_CLASSIFICATION: ["query"],
+    TaskType.CONVERSATIONAL: [
+        "text",
+        "conversation_id",
+        "past_user_inputs",
+        "generated_responses",
+    ],
+    TaskType.TEXT2IMG: ["query"],
 }
-
-MODEL_NAME_KEY = 'model_name'
-TASK_NAME_KEY = 'task_name'
-DEPLOYMENT_NAME_KEY = 'deployment_name'
-MODEL_PATH_KEY = 'model_path'
-LOAD_BALANCER_CONFIG_KEY = 'load_balancer_config'
-
-ENABLE_DEEPSPEED_KEY = 'ds_optimize'
-ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
-DEEPSPEED_CONFIG_KEY = 'ds_config'
-CHECKPOINT_KEY = "checkpoint"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"
