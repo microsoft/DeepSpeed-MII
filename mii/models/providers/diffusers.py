@@ -6,7 +6,7 @@ import os
 import torch
 
 
-def diffusers_provider(model_path, model_name, task_name, deployment_config):
+def diffusers_provider(deployment_config):
     from diffusers import DiffusionPipeline
 
     local_rank = int(os.getenv("LOCAL_RANK", "0"))
@@ -17,7 +17,7 @@ def diffusers_provider(model_path, model_name, task_name, deployment_config):
         kwargs["revision"] = "fp16"
 
     pipeline = DiffusionPipeline.from_pretrained(
-        model_name, use_auth_token=deployment_config.hf_auth_token, **kwargs
+        deployment_config.model, use_auth_token=deployment_config.hf_auth_token, **kwargs
     )
     pipeline = pipeline.to(f"cuda:{local_rank}")
     pipeline.set_progress_bar_config(disable=True)

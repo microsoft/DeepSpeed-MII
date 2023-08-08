@@ -35,8 +35,6 @@ class MIIServer:
         self.num_gpus = get_num_gpus(mii_config)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
 
-        self.port_number = mii_configs.port_number
-
         """
         if mii_configs.hostfile is None:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
@@ -46,17 +44,8 @@ class MIIServer:
             mii_config.hostfile = hostfile
         """
 
-        processes = self._initialize_service(
-            deployment_name,
-            model_name,
-            model_path,
-            ds_optimize,
-            ds_zero,
-            ds_config,
-            mii_configs,
-            lb_config,
-        )
-        self._wait_until_server_is_live(processes, lb_config.replica_configs)
+        processes = self._initialize_service(mii_config)
+        self._wait_until_server_is_live(processes, mii_config.deployment_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):
@@ -105,7 +94,7 @@ class MIIServer:
         b64_config_str = config_to_b64_str(deployment_config)
         server_args.append(f"--deployment-config {b64_config_str}")
         server_args_str = " ".join(server_args)
-        cmd = f"{ds_launch_str} {launch_str} {server_args_str}".split(" ")
+        cmd = f"{ds_launch_str} {launch_str} {server_args_str}".strip().split(" ")
 
         mii_env = os.environ.copy()
         mii_env["TRANSFORMERS_CACHE"] = deployment_config.model_path
@@ -117,7 +106,7 @@ class MIIServer:
         # pass /dev/null when no replica is used
         worker_str = f"-H {hostfile} "
         # pin deepspeed launch to specific gpu id(s)
-        included_gpus = f"{host}:{','.join(map(str, replica_config.gpu_indices))}"
+        included_gpus = f"{replica_config.hostname}:{','.join(map(str, replica_config.gpu_indices))}"
         worker_str += f"-i {included_gpus} "
 
         # adjust torch dist port depending on rank, otherwise multi-replica deployments will conflict
@@ -145,14 +134,14 @@ class MIIServer:
             hostfile.write(
                 f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n".encode()
             )
-            ds_launch_str = self._generate_ds_launch_str(replica_config, hostfile.name)
+            ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name)
             processes.append(
                 self._launch_server_process(
-                    deployment_config,
+                    mii_config.deployment_config,
                     "MII server",
                     ds_launch_str=ds_launch_str,
                     server_args=server_args
-                    + [f"--server-port {replica_config.tensor_parallel_port[0]}"],
+                    + [f"--server-port {repl_config.tensor_parallel_ports[0]}"],
                 )
             )
             # start load balancer here.
@@ -161,7 +150,7 @@ class MIIServer:
             # and it is expected to assign one GPU to one process.
         processes.append(
             self._launch_server_process(
-                deployment_config,
+                mii_config.deployment_config,
                 "load balancer",
                 server_args=server_args + ["--load-balancer"],
             )
@@ -170,7 +159,7 @@ class MIIServer:
         if mii_config.enable_restful_api:
             processes.append(
                 self._launch_server_process(
-                    deployment_config,
+                    mii_config.deployment_config,
                     "restful api gateway",
                     server_args=server_args + ["--restful-gateway"],
                 )

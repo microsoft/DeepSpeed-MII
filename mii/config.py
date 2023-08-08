@@ -27,10 +27,11 @@ class DeploymentConfig(DeepSpeedConfigModel):
     model: str
     task: TaskType
     tensor_parallel: int = 1
-    dtype: DtypeEnum = torch.float32
+    dtype: DtypeEnum = DtypeEnum.fp32
     meta_tensor: bool = False
     load_with_sys_mem: bool = False
     enable_cuda_graph: bool = False
+    hf_auth_token: str = ""
     checkpoint_dict: Optional[Dict[str, Any]] = None
     deploy_rank: Optional[List[int]] = None
     torch_dist_port: int = 29500
@@ -45,6 +46,9 @@ class DeploymentConfig(DeepSpeedConfigModel):
     model_path: str = ""
     replica_num: int = 1
     replica_configs: List[ReplicaConfig] = []
+
+    class Config:
+        json_encoders = {torch.dtype: lambda x: str(x)}
 
     @validator("checkpoint_dict")
     def checkpoint_dict_valid(cls, field_value, values):
@@ -76,14 +80,14 @@ class DeploymentConfig(DeepSpeedConfigModel):
     @root_validator
     def bloom_model_valid(cls, values):
         if "bigscience/bloom" in values.get("model"):
-            dtype = values.get("dtype")
-            assert dtype in [
-                DtypeEnum.int8,
-                DtypeEnum.fp16,
+            # TODO: SHould be albe to use DtypeEnum here
+            assert values.get("dtype") in [
+                torch.int8,
+                torch.float16,
             ], "Bloom models only support fp16/int8."
-            assert not values.get(
+            assert (not values.get(
                 "enable_cuda_graph"
-            ), "Bloom models do not support CUDA Graph."
+            )), "Bloom models do not support CUDA Graph."
         return values
 
     @root_validator
@@ -130,7 +134,7 @@ class DeploymentConfig(DeepSpeedConfigModel):
         model = values.get("model")
         if not values.get("skip_model_check"):
             mii.utils.check_if_task_and_model_is_valid(task, model)
-            if values.get("ds_optimize"):
+            if values.get("enable_deepspeed"):
                 mii.utils.check_if_task_and_model_is_supported(task, model)
         return values
 
@@ -165,13 +169,22 @@ class DeploymentConfig(DeepSpeedConfigModel):
 
 class MIIConfig(DeepSpeedConfigModel):
     deployment_config: DeploymentConfig = {}
-    hf_auth_token: str = None
+    hf_auth_token: str = ""
     port_number: int = 50050
     enable_restful_api: bool = False
     restful_api_port: int = 51080
     hostfile: str = DLTS_HOSTFILE
     deployment_type: DeploymentType = DeploymentType.LOCAL
     version: int = 1
+
+    @root_validator
+    def propagate_hf_auth(cls, values):
+        # This validator is for when we support multiple models in a deployment
+        hf_auth_token = values.get("hf_auth_token")
+        deployment_config = values.get("deployment_config")
+        if not deployment_config.hf_auth_token:
+            deployment_config.hf_auth_token = hf_auth_token
+        return values
 
     @root_validator
     def AML_name_valid(cls, values):

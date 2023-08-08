@@ -126,7 +126,7 @@ def get_checkpoint_files(pretrained_model_name_or_path):
         return resolved_archive_file
 
 
-def create_checkpoint_dict(model_name, model_path, deployment_config):
+def create_checkpoint_dict(model_name, model_path, checkpoint_dict):
     if USE_NEW_HF_CACHE:
         model_path = snapshot_download(
             model_name,
@@ -138,9 +138,9 @@ def create_checkpoint_dict(model_name, model_path, deployment_config):
             ],
             revision=None,
         )
-    if deployment_config.checkpoint_dict:
-        deployment_config.checkpoint_dict["base_dir"] = model_path
-        return deployment_config.checkpoint_dict
+    if checkpoint_dict:
+        checkpoint_dict["base_dir"] = model_path
+        return checkpoint_dict
     elif os.path.isfile(os.path.join(model_path, "ds_inference_config.json")):
         with open(os.path.join(model_path, "ds_inference_config.json")) as f:
             data = json.load(f)
@@ -164,25 +164,25 @@ def create_checkpoint_dict(model_name, model_path, deployment_config):
         return data
 
 
-def load_with_meta_tensor(model_path, model_name, task_name, deployment_config):
+def load_with_meta_tensor(deployment_config):
     deepspeed.init_distributed("nccl")
 
     cache_path = mii_cache_path()
 
     tokenizer = _attempt_load(
         AutoTokenizer.from_pretrained,
-        model_name,
+        deployment_config.model,
         cache_path,
         kwargs={"padding_side": "left"},
     )
     tokenizer.pad_token = tokenizer.eos_token
 
-    config = _attempt_load(AutoConfig.from_pretrained, model_name, cache_path)
+    config = _attempt_load(AutoConfig.from_pretrained, deployment_config.model, cache_path)
 
     with OnDevice(dtype=torch.float16, device="meta", enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
-    checkpoint_dict = create_checkpoint_dict(model_name, model_path, deployment_config)
+    checkpoint_dict = create_checkpoint_dict(deployment_config.model, deployment_config.model_path, deployment_config.checkpoint_dict)
     torch.distributed.barrier()
     inference_pipeline = MetaTensorPipeline(
         model=model, tokenizer=tokenizer, checkpoint_dict=checkpoint_dict
@@ -190,16 +190,14 @@ def load_with_meta_tensor(model_path, model_name, task_name, deployment_config):
     return inference_pipeline
 
 
-def hf_provider(model_path, model_name, task_name, deployment_config):
+def hf_provider(deployment_config):
     if deployment_config.meta_tensor:
-        return load_with_meta_tensor(
-            model_path, model_name, task_name, deployment_config
-        )
+        return load_with_meta_tensor(deployment_config)
     else:
         device = get_device(load_with_sys_mem=deployment_config.load_with_sys_mem)
         inference_pipeline = pipeline(
-            task_name,
-            model=model_name,
+            deployment_config.task,
+            model=deployment_config.model,
             device=device,
             framework="pt",
             use_auth_token=deployment_config.hf_auth_token,

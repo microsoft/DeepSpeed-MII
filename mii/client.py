@@ -9,16 +9,7 @@ import mii
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.constants import GRPC_MAX_MSG_SIZE, TaskType
 from mii.method_table import GRPC_METHOD_TABLE
-
-
-def _get_deployment_info(deployment_name):
-    configs = mii.utils.import_score_file(deployment_name).configs
-    task = configs[mii.constants.TASK_NAME_KEY]
-    mii_configs_dict = configs[mii.constants.MII_CONFIGS_KEY]
-    mii_configs = mii.config.MIIConfig(**mii_configs_dict)
-
-    assert task is not None, "The task name should be set before calling init"
-    return task, mii_configs
+from mii.config import MIIConfig
 
 
 def mii_query_handle(deployment_name):
@@ -38,8 +29,10 @@ def mii_query_handle(deployment_name):
         inference_pipeline, task = mii.non_persistent_models[deployment_name]
         return MIINonPersistentClient(task, deployment_name)
 
-    task, mii_configs = _get_deployment_info(deployment_name)
-    return MIIClient(task, "localhost", mii_configs.port_number)
+    mii_config = mii.utils.import_score_file(deployment_name).mii_config
+    # TODO: Avoid model checking when we laod the config
+    mii_config = MIIConfig(**mii_config)
+    return MIIClient(mii_config.deployment_config.task, "localhost", mii_config.port_number)
 
 
 def create_channel(host, port):

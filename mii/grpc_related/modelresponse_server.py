@@ -20,11 +20,11 @@ from mii.constants import (
     TERMINATE_METHOD,
     LB_MAX_WORKER_THREADS,
     SERVER_SHUTDOWN_TIMEOUT,
-    Tasks,
+    TaskType,
 )
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
-from mii.utils import get_task, unpack_proto_query_kwargs
+from mii.utils import unpack_proto_query_kwargs
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):

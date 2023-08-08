@@ -11,10 +11,14 @@ import mii
 def get_acr_name():
     try:
         acr_name = subprocess.check_output(
-            ["az", "ml", "workspace", "show", "--query", "container_registry"],
-            text=True,
-        )
-        return acr_name.strip().replace('"', "").rsplit("/", 1)[-1]
+            ["az",
+             "ml",
+             "workspace",
+             "show",
+             "--query",
+             "container_registry"],
+            text=True)
+        return acr_name.strip().replace('"', '').rsplit('/', 1)[-1]
     except subprocess.CalledProcessError as e:
         print("\n", "-" * 30, "\n")
         print("Unable to obtain ACR name from Azure-CLI. Please verify that you:")
@@ -76,49 +80,60 @@ def generate_aml_scripts(acr_name, deployment_name, model_name, version):
     }
 
     # Docker files
+    write_out_script(os.path.join(output_dir,
+                                  "build",
+                                  "Dockerfile"),
+                     fill_template(mii.aml_related.templates.dockerfile,
+                                   replace_dict))
+    write_out_script(os.path.join(output_dir,
+                                  "build",
+                                  "gunicorn_app"),
+                     fill_template(mii.aml_related.templates.gunicorn,
+                                   replace_dict))
+    write_out_script(os.path.join(output_dir,
+                                  "build",
+                                  "runit",
+                                  "gunicorn",
+                                  "run"),
+                     fill_template(mii.aml_related.templates.gunicorn_run,
+                                   replace_dict))
     write_out_script(
-        os.path.join(output_dir, "build", "Dockerfile"),
-        fill_template(mii.aml_related.templates.dockerfile, replace_dict),
-    )
-    write_out_script(
-        os.path.join(output_dir, "build", "gunicorn_app"),
-        fill_template(mii.aml_related.templates.gunicorn, replace_dict),
-    )
-    write_out_script(
-        os.path.join(output_dir, "build", "runit", "gunicorn", "run"),
-        fill_template(mii.aml_related.templates.gunicorn_run, replace_dict),
-    )
-    write_out_script(
-        os.path.join(output_dir, "build", "runit", "gunicorn", "finish"),
-        fill_template(mii.aml_related.templates.gunicorn_finish, replace_dict),
-    )
-    write_out_script(
-        os.path.join(output_dir, "build", "requirements.txt"),
-        fill_template(mii.aml_related.templates.requirements, replace_dict),
-    )
+        os.path.join(output_dir,
+                     "build",
+                     "runit",
+                     "gunicorn",
+                     "finish"),
+        fill_template(mii.aml_related.templates.gunicorn_finish,
+                      replace_dict))
+    write_out_script(os.path.join(output_dir,
+                                  "build",
+                                  "requirements.txt"),
+                     fill_template(mii.aml_related.templates.requirements,
+                                   replace_dict))
 
     # Model download script
     write_out_script(
-        os.path.join(output_dir, "model_download.py"),
-        fill_template(mii.aml_related.templates.model_download, replace_dict),
-    )
+        os.path.join(output_dir,
+                     "model_download.py"),
+        fill_template(mii.aml_related.templates.model_download,
+                      replace_dict))
 
     # Deployment script
-    write_out_script(
-        os.path.join(output_dir, "deploy.sh"),
-        fill_template(mii.aml_related.templates.deploy, replace_dict),
-    )
+    write_out_script(os.path.join(output_dir,
+                                  "deploy.sh"),
+                     fill_template(mii.aml_related.templates.deploy,
+                                   replace_dict))
 
     # Yaml configs
-    write_out_yaml(
-        os.path.join(output_dir, "deployment.yml"),
-        fill_template(mii.aml_related.templates.deployment, replace_dict),
-    )
-    write_out_yaml(
-        os.path.join(output_dir, "endpoint.yml"),
-        fill_template(mii.aml_related.templates.endpoint, replace_dict),
-    )
-    write_out_yaml(
-        os.path.join(output_dir, "environment.yml"),
-        fill_template(mii.aml_related.templates.environment, replace_dict),
-    )
+    write_out_yaml(os.path.join(output_dir,
+                                "deployment.yml"),
+                   fill_template(mii.aml_related.templates.deployment,
+                                 replace_dict))
+    write_out_yaml(os.path.join(output_dir,
+                                "endpoint.yml"),
+                   fill_template(mii.aml_related.templates.endpoint,
+                                 replace_dict))
+    write_out_yaml(os.path.join(output_dir,
+                                "environment.yml"),
+                   fill_template(mii.aml_related.templates.environment,
+                                 replace_dict))

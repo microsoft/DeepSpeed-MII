@@ -33,9 +33,7 @@ def load_models(deployment_config):
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
         from mii.models.providers.huggingface import hf_provider
 
-        inference_pipeline = hf_provider(
-            model_path, model_name, task_name, deployment_config
-        )
+        inference_pipeline = hf_provider(deployment_config)
         if deployment_config.meta_tensor:
             inf_config["checkpoint"] = inference_pipeline.checkpoint_dict
             if deployment_config.dtype == torch.int8:
@@ -64,9 +62,7 @@ def load_models(deployment_config):
     elif provider == mii.constants.ModelProvider.DIFFUSERS:
         from mii.models.providers.diffusers import diffusers_provider
 
-        inference_pipeline = diffusers_provider(
-            model_path, model_name, task_name, deployment_config
-        )
+        inference_pipeline = diffusers_provider(deployment_config)
         inf_config["enable_cuda_graph"] = True
     else:
         raise ValueError(f"Unknown model provider {provider}")
@@ -76,7 +72,7 @@ def load_models(deployment_config):
         f"> --------- MII Settings: ds_optimize={ds_optimize}, replace_with_kernel_inject={mii_config.replace_with_kernel_inject}, enable_cuda_graph={mii_config.enable_cuda_graph} "
     )
     """
-    if deployment_config.ds_optimize:
+    if deployment_config.enable_deepspeed:
         engine = deepspeed.init_inference(
             getattr(inference_pipeline, "model", inference_pipeline), config=inf_config
         )
@@ -85,7 +81,7 @@ def load_models(deployment_config):
         if hasattr(inference_pipeline, "model"):
             inference_pipeline.model = engine
 
-    elif ds_zero:
+    elif deployment_config.enable_zero:
         ds_config = DeepSpeedConfig(deployment_config.ds_config)
         assert (
             ds_config.zero_optimization_stage == ZeroStageEnum.weights
