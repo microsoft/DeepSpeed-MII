@@ -64,7 +64,7 @@ import mii
     ],
 )
 def test_single_GPU(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result
 
@@ -83,6 +83,6 @@ def test_single_GPU(deployment, query):
     ],
 )
 def test_multi_GPU(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result

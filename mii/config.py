@@ -23,29 +23,34 @@ class ReplicaConfig(DeepSpeedConfigModel):
 
 
 class DeploymentConfig(DeepSpeedConfigModel):
+    # Deployment configs
     deployment_name: str
-    model: str
-    task: TaskType
-    tensor_parallel: int = 1
-    dtype: DtypeEnum = DtypeEnum.fp32
-    meta_tensor: bool = False
     load_with_sys_mem: bool = False
-    enable_cuda_graph: bool = False
+    meta_tensor: bool = False
     hf_auth_token: str = ""
-    checkpoint_dict: Optional[Dict[str, Any]] = None
     deploy_rank: Optional[List[int]] = None
     torch_dist_port: int = 29500
-    replace_with_kernel_inject: bool = True
+    replica_num: int = 1
+    replica_configs: List[ReplicaConfig] = []
     profile_model_time: bool = False
     skip_model_check: bool = False
-    max_tokens: int = 1024
     trust_remote_code: bool = False
+
+    # Model configs
+    model: str
+    task: TaskType
+    dtype: DtypeEnum = DtypeEnum.fp32
+    model_path: str = ""
+    checkpoint_dict: Optional[Dict[str, Any]] = None
+    max_tokens: int = 1024
+
+    # Performance configs
     enable_deepspeed: bool = True
     enable_zero: bool = False
     ds_config: Dict[str, Any] = {}
-    model_path: str = ""
-    replica_num: int = 1
-    replica_configs: List[ReplicaConfig] = []
+    tensor_parallel: int = 1
+    enable_cuda_graph: bool = False
+    replace_with_kernel_inject: bool = True
 
     class Config:
         json_encoders = {torch.dtype: lambda x: str(x)}
@@ -136,6 +141,8 @@ class DeploymentConfig(DeepSpeedConfigModel):
             mii.utils.check_if_task_and_model_is_valid(task, model)
             if values.get("enable_deepspeed"):
                 mii.utils.check_if_task_and_model_is_supported(task, model)
+        # Skip any future checks
+        values["skip_model_check"] = True
         return values
 
     @root_validator
@@ -168,16 +175,16 @@ class DeploymentConfig(DeepSpeedConfigModel):
 
 
 class MIIConfig(DeepSpeedConfigModel):
-    deployment_config: DeploymentConfig = {}
+    deployment_config: DeploymentConfig
+    deployment_type: DeploymentType = DeploymentType.LOCAL
     hf_auth_token: str = ""
     port_number: int = 50050
     enable_restful_api: bool = False
     restful_api_port: int = 51080
     hostfile: str = DLTS_HOSTFILE
-    deployment_type: DeploymentType = DeploymentType.LOCAL
     version: int = 1
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def propagate_hf_auth(cls, values):
         # This validator is for when we support multiple models in a deployment
         hf_auth_token = values.get("hf_auth_token")
@@ -186,7 +193,7 @@ class MIIConfig(DeepSpeedConfigModel):
             deployment_config.hf_auth_token = hf_auth_token
         return values
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def AML_name_valid(cls, values):
         if values.get("deployment_type") == DeploymentType.AML:
             allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
@@ -196,7 +203,7 @@ class MIIConfig(DeepSpeedConfigModel):
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
         return values
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def generate_replica_configs(cls, values):
         replica_configs = values.get("deployment_config").replica_configs
         replica_num = values.get("deployment_config").replica_num
@@ -263,7 +270,7 @@ def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
 
     if allocated_num < replica_num:
         raise ValueError(
-            f"No sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
+            f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
         )
 
     return replica_pool

@@ -46,7 +46,11 @@ def support_legacy_api(
     return deployment_config, mii_config
 
 
-def deploy(deployment_name, deployment_config=None, mii_config=None, *args, **kwargs):
+def deploy(deployment_name: str,
+           deployment_config: dict,
+           mii_config: dict = None,
+           *args,
+           **kwargs):
     if mii_config is None:
         mii_config = {}
 

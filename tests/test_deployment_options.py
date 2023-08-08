@@ -13,14 +13,14 @@ import mii
 @pytest.mark.parametrize("meta_tensor", [True])
 @pytest.mark.parametrize("tensor_parallel", [2])
 def test_meta_tensor(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result
 
 
 @pytest.mark.parametrize("enable_restful_api", [True])
 def test_restful_api(deployment, query, restful_api_port):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     for _ in range(2):
         result = generator.query(query)
 
@@ -36,14 +36,14 @@ def test_restful_api(deployment, query, restful_api_port):
 
 @pytest.mark.parametrize("load_with_sys_mem", [True])
 def test_load_to_sys_mem(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result
 
 
 @pytest.mark.parametrize("replica_num", [2])
 def test_replicas(deployment, query, replica_num):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     # Replicas are given queries in round-robin, so test each model is responding
     for _ in range(replica_num):
         result = generator.query(query)
@@ -72,7 +72,7 @@ def test_replicas(deployment, query, replica_num):
                              },
                          ])
 def test_zero_config(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result
 
