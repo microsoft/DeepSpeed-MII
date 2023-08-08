@@ -24,7 +24,7 @@ def test_restful_api(deployment, query, restful_api_port):
     for _ in range(2):
         result = generator.query(query)
 
-    url = f'http://localhost:{restful_api_port}/mii/{deployment.deployment_name}'
+    url = f'http://localhost:{restful_api_port}/mii/{deployment}'
     params = {"request": query}
     json_params = json.dumps(params)
     result = requests.post(url,
