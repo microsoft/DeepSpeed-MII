@@ -46,11 +46,13 @@ def support_legacy_api(
     return deployment_config, mii_config
 
 
-def deploy(deployment_name: str,
-           deployment_config: dict,
-           mii_config: dict = None,
-           *args,
-           **kwargs):
+def deploy(
+    deployment_name: str,
+    deployment_config: dict,
+    mii_config: dict = None,
+    *args,
+    **kwargs,
+):
     if mii_config is None:
         mii_config = {}
 
@@ -80,18 +82,9 @@ def deploy(deployment_name: str,
     if mii_config.deployment_type == DeploymentType.AML:
         _deploy_aml(mii_config)
     elif mii_config.deployment_type == DeploymentType.LOCAL:
-        return _deploy_local(mii_config)
+        _deploy_local(mii_config)
     elif mii_config.deployment_type == DeploymentType.NON_PERSISTENT:
-        assert (
-            int(os.getenv("WORLD_SIZE", "1"))
-            == mii_config.deployment_config.tensor_parallel
-        ), "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
-        deployment_name = mii_config.deployment_config.deployment_name
-        task = mii_config.deployment_config.task
-        mii.non_persistent_models[deployment_name] = (
-            load_models(deployment_config),
-            task,
-        )
+        _deploy_nonpersistent(mii_config)
 
 
 def _deploy_local(mii_config):
@@ -110,3 +103,15 @@ def _deploy_aml(mii_config):
         f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.deployment_config.deployment_name)}"
     )
     print("Please run 'deploy.sh' to bring your deployment online")
+
+
+def _deploy_nonpersistent(mii_config):
+    assert (
+        int(os.getenv("WORLD_SIZE", "1"))
+        == mii_config.deployment_config.tensor_parallel
+    ), "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
+    deployment_name = mii_config.deployment_config.deployment_name
+    mii.non_persistent_models[deployment_name] = (
+        load_models(mii_config.deployment_config),
+        mii_config.deployment_config.task,
+    )

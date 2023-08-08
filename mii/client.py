@@ -14,7 +14,6 @@ from mii.config import MIIConfig
 
 def _get_mii_config(deployment_name):
     mii_config = mii.utils.import_score_file(deployment_name).mii_config
-    # TODO: Avoid model checking when we load the config
     return MIIConfig(**mii_config)
 
 
