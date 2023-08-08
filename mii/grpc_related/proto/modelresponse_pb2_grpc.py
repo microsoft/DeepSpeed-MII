@@ -13,7 +13,6 @@ import mii.grpc_related.proto.modelresponse_pb2 as modelresponse__pb2
 
 class ModelResponseStub(object):
     """Missing associated documentation comment in .proto file."""
-
     def __init__(self, channel):
         """Constructor.
 
@@ -22,7 +21,8 @@ class ModelResponseStub(object):
         """
         self.Terminate = channel.unary_unary(
             "/modelresponse.ModelResponse/Terminate",
-            request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
             response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
         self.CreateSession = channel.unary_unary(
@@ -74,7 +74,6 @@ class ModelResponseStub(object):
 
 class ModelResponseServicer(object):
     """Missing associated documentation comment in .proto file."""
-
     def Terminate(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -138,67 +137,78 @@ class ModelResponseServicer(object):
 
 def add_ModelResponseServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        "Terminate": grpc.unary_unary_rpc_method_handler(
+        "Terminate":
+        grpc.unary_unary_rpc_method_handler(
             servicer.Terminate,
             request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
         ),
-        "CreateSession": grpc.unary_unary_rpc_method_handler(
+        "CreateSession":
+        grpc.unary_unary_rpc_method_handler(
             servicer.CreateSession,
             request_deserializer=modelresponse__pb2.SessionID.FromString,
-            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
         ),
-        "DestroySession": grpc.unary_unary_rpc_method_handler(
+        "DestroySession":
+        grpc.unary_unary_rpc_method_handler(
             servicer.DestroySession,
             request_deserializer=modelresponse__pb2.SessionID.FromString,
-            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
         ),
-        "GeneratorReply": grpc.unary_unary_rpc_method_handler(
+        "GeneratorReply":
+        grpc.unary_unary_rpc_method_handler(
             servicer.GeneratorReply,
             request_deserializer=modelresponse__pb2.MultiStringRequest.FromString,
             response_serializer=modelresponse__pb2.MultiStringReply.SerializeToString,
         ),
-        "ClassificationReply": grpc.unary_unary_rpc_method_handler(
+        "ClassificationReply":
+        grpc.unary_unary_rpc_method_handler(
             servicer.ClassificationReply,
             request_deserializer=modelresponse__pb2.SingleStringRequest.FromString,
             response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
         ),
-        "QuestionAndAnswerReply": grpc.unary_unary_rpc_method_handler(
+        "QuestionAndAnswerReply":
+        grpc.unary_unary_rpc_method_handler(
             servicer.QuestionAndAnswerReply,
             request_deserializer=modelresponse__pb2.QARequest.FromString,
             response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
         ),
-        "FillMaskReply": grpc.unary_unary_rpc_method_handler(
+        "FillMaskReply":
+        grpc.unary_unary_rpc_method_handler(
             servicer.FillMaskReply,
             request_deserializer=modelresponse__pb2.SingleStringRequest.FromString,
             response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
         ),
-        "TokenClassificationReply": grpc.unary_unary_rpc_method_handler(
+        "TokenClassificationReply":
+        grpc.unary_unary_rpc_method_handler(
             servicer.TokenClassificationReply,
             request_deserializer=modelresponse__pb2.SingleStringRequest.FromString,
             response_serializer=modelresponse__pb2.SingleStringReply.SerializeToString,
         ),
-        "ConversationalReply": grpc.unary_unary_rpc_method_handler(
+        "ConversationalReply":
+        grpc.unary_unary_rpc_method_handler(
             servicer.ConversationalReply,
             request_deserializer=modelresponse__pb2.ConversationRequest.FromString,
             response_serializer=modelresponse__pb2.ConversationReply.SerializeToString,
         ),
-        "Txt2ImgReply": grpc.unary_unary_rpc_method_handler(
+        "Txt2ImgReply":
+        grpc.unary_unary_rpc_method_handler(
             servicer.Txt2ImgReply,
             request_deserializer=modelresponse__pb2.MultiStringRequest.FromString,
             response_serializer=modelresponse__pb2.ImageReply.SerializeToString,
         ),
     }
-    generic_handler = grpc.method_handlers_generic_handler(
-        "modelresponse.ModelResponse", rpc_method_handlers
-    )
-    server.add_generic_rpc_handlers((generic_handler,))
+    generic_handler = grpc.method_handlers_generic_handler("modelresponse.ModelResponse",
+                                                           rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler, ))
 
 
 # This class is part of an EXPERIMENTAL API.
 class ModelResponse(object):
     """Missing associated documentation comment in .proto file."""
-
     @staticmethod
     def Terminate(
         request,

@@ -4,12 +4,10 @@
 # DeepSpeed Team
 import os
 import argparse
-import mii
 import base64
 import json
 
-from mii import DeploymentConfig
-
+from mii.config import DeploymentConfig
 from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 from mii.grpc_related.restful_gateway import RestfulGatewayThread
@@ -39,9 +37,9 @@ def main():
         default=0,
         help="Port to user for DeepSpeed inference server.",
     )
-    parser.add_argument(
-        "--load-balancer", action="store_true", help="Launch load balancer process."
-    )
+    parser.add_argument("--load-balancer",
+                        action="store_true",
+                        help="Launch load balancer process.")
     parser.add_argument(
         "--load-balancer-port",
         type=int,

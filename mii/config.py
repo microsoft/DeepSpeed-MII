@@ -4,8 +4,8 @@
 # DeepSpeed Team
 import torch
 import os
-from typing import Union, List, Optional, Dict, Any
-from enum import Enum
+import string
+from typing import List, Optional, Dict, Any
 from pydantic import validator, root_validator
 import mii
 from mii.constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
@@ -61,7 +61,7 @@ class DeploymentConfig(DeepSpeedConfigModel):
         for k in ["checkpoints", "parallelization", "version", "type"]:
             if not field_value.get(k, ""):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
-        return vfield_alue
+        return field_value
 
     @validator("deploy_rank", pre=True)
     def deploy_rank_to_list(cls, field_value, values):
@@ -189,9 +189,8 @@ class MIIConfig(DeepSpeedConfigModel):
     @root_validator
     def AML_name_valid(cls, values):
         if values.get("deployment_type") == DeploymentType.AML:
-            allowed_chars = set(
-                string.ascii_lowercase + string.ascii_uppercaes + string.digits + "-"
-            )
+            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
+                                string.digits + "-")
             assert (
                 set(values.get("deployment_config").deployment_name) <= allowed_chars
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
@@ -224,8 +223,7 @@ class MIIConfig(DeepSpeedConfigModel):
                     tensor_parallel_ports=tensor_parallel_ports,
                     torch_dist_port=replica_torch_dist_port,
                     gpu_indices=gpu_indices,
-                )
-            )
+                ))
 
         values.get("deployment_config").replica_configs = replica_configs
         return values
@@ -250,18 +248,15 @@ def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
                 )
 
             allocated_num_on_host = slots - available_on_host
-            replica_pool.append(
-                (
-                    host,
-                    [
-                        i
-                        for i in range(
-                            allocated_num_on_host,
-                            allocated_num_on_host + tensor_parallel,
-                        )
-                    ],
-                )
-            )
+            replica_pool.append((
+                host,
+                [
+                    i for i in range(
+                        allocated_num_on_host,
+                        allocated_num_on_host + tensor_parallel,
+                    )
+                ],
+            ))
             allocated_num += 1
 
             available_on_host -= tensor_parallel

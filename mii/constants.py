@@ -44,7 +44,8 @@ SUPPORTED_MODEL_TYPES = {
 REQUIRED_KEYS_PER_TASK = {
     TaskType.TEXT_GENERATION: ["query"],
     TaskType.TEXT_CLASSIFICATION: ["query"],
-    TaskType.QUESTION_ANSWERING: ["context", "question"],
+    TaskType.QUESTION_ANSWERING: ["context",
+                                  "question"],
     TaskType.FILL_MASK: ["query"],
     TaskType.TOKEN_CLASSIFICATION: ["query"],
     TaskType.CONVERSATIONAL: [

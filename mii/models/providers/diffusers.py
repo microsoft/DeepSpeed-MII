@@ -17,8 +17,9 @@ def diffusers_provider(deployment_config):
         kwargs["revision"] = "fp16"
 
     pipeline = DiffusionPipeline.from_pretrained(
-        deployment_config.model, use_auth_token=deployment_config.hf_auth_token, **kwargs
-    )
+        deployment_config.model,
+        use_auth_token=deployment_config.hf_auth_token,
+        **kwargs)
     pipeline = pipeline.to(f"cuda:{local_rank}")
     pipeline.set_progress_bar_config(disable=True)
     return pipeline

@@ -4,7 +4,6 @@
 # DeepSpeed Team
 import os
 import mii
-import json
 import torch
 import inspect
 import deepspeed
@@ -18,7 +17,10 @@ def load_models(deployment_config):
     world_size = int(os.getenv("WORLD_SIZE", "1"))
 
     inf_config = {
-        "tensor_parallel": {"tp_size": deployment_config.tensor_parallel, "mpu": None},
+        "tensor_parallel": {
+            "tp_size": deployment_config.tensor_parallel,
+            "mpu": None
+        },
         "dtype": deployment_config.dtype,
         "replace_method": "auto",
         "enable_cuda_graph": deployment_config.enable_cuda_graph,
@@ -38,10 +40,8 @@ def load_models(deployment_config):
             inf_config["checkpoint"] = inference_pipeline.checkpoint_dict
             if deployment_config.dtype == torch.int8:
                 # Support for older DeepSpeed versions
-                if (
-                    "enable_qkv_quantization"
-                    in inspect.signature(deepspeed.init_inference).parameters
-                ):
+                if ("enable_qkv_quantization"
+                        in inspect.signature(deepspeed.init_inference).parameters):
                     inf_config["enable_qkv_quantization"] = True
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         assert False, "Eleuther AI support is currently disabled."
@@ -66,16 +66,16 @@ def load_models(deployment_config):
         inf_config["enable_cuda_graph"] = True
     else:
         raise ValueError(f"Unknown model provider {provider}")
-
     """
     print(
         f"> --------- MII Settings: ds_optimize={ds_optimize}, replace_with_kernel_inject={mii_config.replace_with_kernel_inject}, enable_cuda_graph={mii_config.enable_cuda_graph} "
     )
     """
     if deployment_config.enable_deepspeed:
-        engine = deepspeed.init_inference(
-            getattr(inference_pipeline, "model", inference_pipeline), config=inf_config
-        )
+        engine = deepspeed.init_inference(getattr(inference_pipeline,
+                                                  "model",
+                                                  inference_pipeline),
+                                          config=inf_config)
         if deployment_config.profile_model_time:
             engine.profile_model_time()
         if hasattr(inference_pipeline, "model"):
@@ -88,9 +88,8 @@ def load_models(deployment_config):
         ), "DeepSpeed ZeRO inference is only supported for ZeRO-3"
 
         # initialise Deepspeed ZeRO and store only the engine object
-        ds_engine = deepspeed.initialize(
-            model=inference_pipeline.model, config_params=ds_config
-        )[0]
+        ds_engine = deepspeed.initialize(model=inference_pipeline.model,
+                                         config_params=ds_config)[0]
         ds_engine.module.eval()  # inference
         inference_pipeline.model = ds_engine.module
 

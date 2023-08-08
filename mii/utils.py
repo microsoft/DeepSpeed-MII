@@ -24,11 +24,8 @@ from mii.config import TaskType
 def _get_hf_models_by_type(model_type, task=None):
     api = HfApi()
     models = api.list_models(filter=model_type)
-    models = (
-        [m.modelId for m in models]
-        if task is None
-        else [m.modelId for m in models if m.pipeline_tag == task]
-    )
+    models = ([m.modelId for m in models]
+              if task is None else [m.modelId for m in models if m.pipeline_tag == task])
     if task == TaskType.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         models.append("microsoft/bloom-deepspeed-inference-fp16")
@@ -79,8 +76,10 @@ def mii_cache_path():
 
 def import_score_file(deployment_name):
     spec = importlib.util.spec_from_file_location(
-        "score", os.path.join(mii_cache_path(), deployment_name, "score.py")
-    )
+        "score",
+        os.path.join(mii_cache_path(),
+                     deployment_name,
+                     "score.py"))
     score = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(score)
     return score
@@ -105,7 +104,10 @@ def kwarg_dict_to_proto(kwarg_dict):
 
 def unpack_proto_query_kwargs(query_kwargs):
     query_kwargs = {
-        k: getattr(v, v.WhichOneof("oneof_values")) for k, v in query_kwargs.items()
+        k: getattr(v,
+                   v.WhichOneof("oneof_values"))
+        for k,
+        v in query_kwargs.items()
     }
     return query_kwargs
 
@@ -165,8 +167,7 @@ class LoggerFactory:
 
         formatter = logging.Formatter(
             "[%(asctime)s] [%(levelname)s] "
-            "[%(filename)s:%(lineno)d:%(funcName)s] %(message)s"
-        )
+            "[%(filename)s:%(lineno)d:%(funcName)s] %(message)s")
 
         logger_ = logging.getLogger(name)
         logger_.setLevel(level)

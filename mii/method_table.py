@@ -12,33 +12,32 @@ from mii.models.utils import ImageResponse
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.SingleStringRequest(
-        request=request_dict["query"], query_kwargs=kwarg_dict_to_proto(query_kwargs)
-    )
+        request=request_dict["query"],
+        query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
 def single_string_response_to_proto(self, response, time_taken, model_time_taken):
-    return modelresponse_pb2.SingleStringReply(
-        response=f"{response}", time_taken=time_taken, model_time_taken=model_time_taken
-    )
+    return modelresponse_pb2.SingleStringReply(response=f"{response}",
+                                               time_taken=time_taken,
+                                               model_time_taken=model_time_taken)
 
 
 def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.MultiStringRequest(
-        request=request_dict["query"]
-        if isinstance(request_dict["query"], list)
-        else [request_dict["query"]],
+        request=request_dict["query"] if isinstance(request_dict["query"],
+                                                    list) else [request_dict["query"]],
         query_kwargs=kwarg_dict_to_proto(query_kwargs),
     )
 
 
 def proto_request_to_single_input(self, request):
-    args = (request.request,)
+    args = (request.request, )
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     return args, kwargs
 
 
 def proto_request_to_list(self, request):
-    args = ([r for r in request.request],)
+    args = ([r for r in request.request], )
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
     return args, kwargs
 
@@ -93,7 +92,7 @@ class TextGenerationMethods(TaskMethods):
         if len(args[0]) != 1:
             raise ValueError(f"You can pass only one prompt with a session_id")
 
-        args = ([self.session_context[session_id] + args[0][0]],)
+        args = ([self.session_context[session_id] + args[0][0]], )
         return args
 
     def run_inference(self, inference_pipeline, args, kwargs):
@@ -110,7 +109,7 @@ class TextGenerationMethods(TaskMethods):
     def postprocess_session(self, session_id, args, response):
         generated_text = response[0][0]["generated_text"]
         self.session_context[session_id] = generated_text
-        response[0][0]["generated_text"] = generated_text[len(args[0][0]) :]
+        response[0][0]["generated_text"] = generated_text[len(args[0][0]):]
         return response
 
     def pack_response_to_proto(self, response, time_taken, model_time_taken):
@@ -191,9 +190,8 @@ class ConversationalMethods(TaskMethods):
                 and "generated_responses" in request
             ), "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
             text = request["text"]
-            conversation_id = (
-                request["conversation_id"] if "conversation_id" in request else None
-            )
+            conversation_id = (request["conversation_id"]
+                               if "conversation_id" in request else None)
             past_user_inputs = request["past_user_inputs"]
             generated_responses = request["generated_responses"]
 
@@ -224,7 +222,7 @@ class ConversationalMethods(TaskMethods):
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
         conv = self.create_conversation(request, **kwargs)
-        args = (conv,)
+        args = (conv, )
         kwargs = {}
         return args, kwargs
 
@@ -232,8 +230,7 @@ class ConversationalMethods(TaskMethods):
         return modelresponse_pb2.ConversationRequest(
             text=request_dict["text"],
             conversation_id=request_dict["conversation_id"]
-            if "conversation_id" in request_dict
-            else None,
+            if "conversation_id" in request_dict else None,
             past_user_inputs=request_dict["past_user_inputs"],
             generated_responses=request_dict["generated_responses"],
             query_kwargs=kwarg_dict_to_proto(query_kwargs),

@@ -31,7 +31,6 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
     """
     Base class to provide common features of an inference server
     """
-
     def __init__(self):
         self._stop_event = threading.Event()
 
@@ -47,7 +46,6 @@ class ModelResponse(ServiceBase):
     """
     Implementation class of an MII inference server
     """
-
     def __init__(self, inference_pipeline):
         super().__init__()
         self.inference_pipeline = inference_pipeline
@@ -72,12 +70,12 @@ class ModelResponse(ServiceBase):
         return model_time
 
     def CreateSession(self, request, context):
-        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods = GRPC_METHOD_TABLE[TaskType.TEXT_GENERATION]
         task_methods.create_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def DestroySession(self, request, context):
-        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods = GRPC_METHOD_TABLE[TaskType.TEXT_GENERATION]
         task_methods.destroy_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
@@ -97,11 +95,10 @@ class ModelResponse(ServiceBase):
             response = task_methods.run_inference(self.inference_pipeline, args, kwargs)
         end = time.time()
 
-        model_time = (
-            self._get_model_time(self.inference_pipeline.model, sum_times=True)
-            if hasattr(self.inference_pipeline, "model")
-            else -1
-        )
+        model_time = (self._get_model_time(self.inference_pipeline.model,
+                                           sum_times=True) if hasattr(
+                                               self.inference_pipeline,
+                                               "model") else -1)
 
         return task_methods.pack_response_to_proto(response, end - start, model_time)
 
@@ -149,7 +146,6 @@ class ParallelStubInvoker:
     This class aims to call gRPC methods without conversions between proto and python object.
     TensorParallelClient can be used for invocation with the conversions.
     """
-
     def __init__(self, host, ports):
         # Assumption: target services are all on the same host
         self.stubs = []
@@ -170,8 +166,9 @@ class ParallelStubInvoker:
     def invoke(self, method_name, proto_request):
         # This is needed because gRPC calls from interceptor are launched from
         return asyncio.run_coroutine_threadsafe(
-            self._invoke_async(method_name, proto_request), self.asyncio_loop
-        ).result()
+            self._invoke_async(method_name,
+                               proto_request),
+            self.asyncio_loop).result()
 
 
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
@@ -180,7 +177,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         self.asyncio_loop = asyncio.get_event_loop()
 
         self.stubs = [
-            ParallelStubInvoker(replica.hostname, replica.tensor_parallel_ports)
+            ParallelStubInvoker(replica.hostname,
+                                replica.tensor_parallel_ports)
             for replica in deployment_config.replica_configs
         ]
         self.counter = AtomicCounter()
@@ -192,7 +190,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             asyncio.set_event_loop(loop)
             loop.run_forever()
 
-        threading.Thread(target=run_asyncio_loop, args=(self.asyncio_loop,)).start()
+        threading.Thread(target=run_asyncio_loop, args=(self.asyncio_loop, )).start()
 
     def choose_stub(self, call_count):
         return self.stubs[call_count % len(self.stubs)]
@@ -206,9 +204,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
             if method_name == TERMINATE_METHOD:
                 for stub in self.stubs:
-                    stub.invoke(
-                        TERMINATE_METHOD, google_dot_protobuf_dot_empty__pb2.Empty()
-                    )
+                    stub.invoke(TERMINATE_METHOD,
+                                google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
 
@@ -218,8 +215,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             if method_name == CREATE_SESSION_METHOD:
                 if request_proto.session_id in self.sessions:
                     raise ValueError(
-                        f"session {request_proto.session_id} already exists"
-                    )
+                        f"session {request_proto.session_id} already exists")
                 self.replica_sessions[request_proto.session_id] = replica_index
                 self.stubs[replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
@@ -252,8 +248,10 @@ def _do_serve(service_impl, port, interceptors=[]):
         futures.ThreadPoolExecutor(max_workers=LB_MAX_WORKER_THREADS),
         interceptors=interceptors,
         options=[
-            ("grpc.max_send_message_length", GRPC_MAX_MSG_SIZE),
-            ("grpc.max_receive_message_length", GRPC_MAX_MSG_SIZE),
+            ("grpc.max_send_message_length",
+             GRPC_MAX_MSG_SIZE),
+            ("grpc.max_receive_message_length",
+             GRPC_MAX_MSG_SIZE),
         ],
     )
     modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)

@@ -30,7 +30,6 @@ class MetaTensorPipeline(object):
     """
     Class for loading HuggingFace models using meta tensors
     """
-
     def __init__(self, model, tokenizer, checkpoint_dict):
         self.model = model
         self.tokenizer = tokenizer
@@ -44,9 +43,9 @@ class MetaTensorPipeline(object):
 
         # expand proto list into py-list
         inputs = [i for i in inputs]
-        tokens = self.tokenizer.batch_encode_plus(
-            inputs, return_tensors="pt", padding=True
-        )
+        tokens = self.tokenizer.batch_encode_plus(inputs,
+                                                  return_tensors="pt",
+                                                  padding=True)
         for t in tokens:
             if torch.is_tensor(tokens[t]):
                 tokens[t] = tokens[t].to(device)
@@ -87,9 +86,9 @@ def get_checkpoint_files(pretrained_model_name_or_path):
     local_files_only = False
 
     filename = WEIGHTS_NAME
-    archive_file = hf_bucket_url(
-        pretrained_model_name_or_path, filename=filename, revision=revision
-    )
+    archive_file = hf_bucket_url(pretrained_model_name_or_path,
+                                 filename=filename,
+                                 revision=revision)
 
     try:
         resolved_archive_file = cached_path(
@@ -150,8 +149,7 @@ def create_checkpoint_dict(model_name, model_path, checkpoint_dict):
         if USE_NEW_HF_CACHE:
             checkpoint_files = [
                 str(entry).split("/")[-1]
-                for entry in Path(model_path).rglob("*.[bp][it][n]")
-                if entry.is_file()
+                for entry in Path(model_path).rglob("*.[bp][it][n]") if entry.is_file()
             ]
         else:
             checkpoint_files = get_checkpoint_files(model_name)
@@ -177,16 +175,20 @@ def load_with_meta_tensor(deployment_config):
     )
     tokenizer.pad_token = tokenizer.eos_token
 
-    config = _attempt_load(AutoConfig.from_pretrained, deployment_config.model, cache_path)
+    config = _attempt_load(AutoConfig.from_pretrained,
+                           deployment_config.model,
+                           cache_path)
 
     with OnDevice(dtype=torch.float16, device="meta", enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
-    checkpoint_dict = create_checkpoint_dict(deployment_config.model, deployment_config.model_path, deployment_config.checkpoint_dict)
+    checkpoint_dict = create_checkpoint_dict(deployment_config.model,
+                                             deployment_config.model_path,
+                                             deployment_config.checkpoint_dict)
     torch.distributed.barrier()
-    inference_pipeline = MetaTensorPipeline(
-        model=model, tokenizer=tokenizer, checkpoint_dict=checkpoint_dict
-    )
+    inference_pipeline = MetaTensorPipeline(model=model,
+                                            tokenizer=tokenizer,
+                                            checkpoint_dict=checkpoint_dict)
     return inference_pipeline
 
 

@@ -2,11 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import torch
-import string
 import os
 import mii
-
 
 from .utils import logger
 from .models.score import create_score_file
@@ -106,6 +103,6 @@ def _deploy_aml(mii_config):
         version=mii_config.version,
     )
     print(
-        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_name)}"
+        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.deployment_config.deployment_name)}"
     )
     print("Please run 'deploy.sh' to bring your deployment online")
