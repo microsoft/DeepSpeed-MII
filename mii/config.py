@@ -43,6 +43,7 @@ class DeploymentConfig(DeepSpeedConfigModel):
     model_path: str = ""
     checkpoint_dict: Optional[Dict[str, Any]] = None
     max_tokens: int = 1024
+    GPU_index_map: dict = None
 
     # Performance configs
     enable_deepspeed: bool = True
@@ -174,9 +175,16 @@ class DeploymentConfig(DeepSpeedConfigModel):
         ), "DeepSpeed and ZeRO cannot both be enabled, select only one"
         return values
 
+    @root_validator
+    def index_map_valid(cls, values):
+        if values.get("GPU_index_map"):
+            for host in gpu_index_map:
+                assert host in resource_pool, f"Host: {host} was not found"
+                assert resource_pool[host] >= tensor_parallel, f"Host {host} has {resource_pool[host]} slot(s), but {tensor_parallel} slot(s) are required"
+        return values
 
 class MIIConfig(DeepSpeedConfigModel):
-    deployment_config: DeploymentConfig
+    deployment_config: List[DeploymentConfig]
     deployment_type: DeploymentType = DeploymentType.LOCAL
     hf_auth_token: Optional[str] = None
     port_number: int = 50050
@@ -184,14 +192,15 @@ class MIIConfig(DeepSpeedConfigModel):
     restful_api_port: int = 51080
     hostfile: str = DLTS_HOSTFILE
     version: int = 1
-
+    port_map: dict = {}
     @root_validator(skip_on_failure=True)
     def propagate_hf_auth(cls, values):
         # This validator is for when we support multiple models in a deployment
         hf_auth_token = values.get("hf_auth_token")
-        deployment_config = values.get("deployment_config")
-        if not deployment_config.hf_auth_token:
-            deployment_config.hf_auth_token = hf_auth_token
+        deployment_config_list = values.get("deployment_config")
+        for deployment_config in deployment_config_list:
+            if not deployment_config.hf_auth_token:
+                deployment_config.hf_auth_token = hf_auth_token
         return values
 
     @root_validator(skip_on_failure=True)
@@ -206,44 +215,61 @@ class MIIConfig(DeepSpeedConfigModel):
 
     @root_validator(skip_on_failure=True)
     def generate_replica_configs(cls, values):
-        replica_configs = values.get("deployment_config").replica_configs
-        replica_num = values.get("deployment_config").replica_num
-        if replica_configs:
-            assert len(replica_configs) == replica_num
-            return values
-
+        port_map = values.get("port_map")
         hostfile = values.get("hostfile")
         port_number = values.get("port_number")
-        torch_dist_port = values.get("deployment_config").torch_dist_port
-        tensor_parallel = values.get("deployment_config").tensor_parallel
-        replica_num = values.get("deployment_config").replica_num
-        replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
-        replica_configs = []
-        for i, (hostname, gpu_indices) in enumerate(replica_pool):
-            # Reserver port for a LB proxy when replication is enabled
-            port_offset = 1
-            base_port = port_number + i * tensor_parallel + port_offset
-            tensor_parallel_ports = list(range(base_port, base_port + tensor_parallel))
-            replica_torch_dist_port = torch_dist_port + (100 * i)
-            replica_configs.append(
-                ReplicaConfig(
-                    hostname=hostname,
-                    tensor_parallel_ports=tensor_parallel_ports,
-                    torch_dist_port=replica_torch_dist_port,
-                    gpu_indices=gpu_indices,
-                ))
+        port_offset = 1
+        for deployment_config in values.get("deployment_config"):
 
-        values.get("deployment_config").replica_configs = replica_configs
+            replica_configs = deployment_config.replica_configs
+            replica_num = deployment_config.replica_num
+            if replica_configs:
+                assert len(replica_configs) == replica_num
+                return values
+
+            torch_dist_port = deployment_config.torch_dist_port
+            tensor_parallel = deployment_config.tensor_parallel
+            replica_num = deployment_config.replica_num
+            GPU_index_map = deployment_config.GPU_index_map
+            replica_pool, GPU_index_map = _allocate_processes(hostfile, tensor_parallel, replica_num, GPU_index_map)
+            deployment_config.GPU_index_map = GPU_index_map
+            replica_configs = []
+            for i, (hostname, gpu_indices) in enumerate(replica_pool):
+                # Reserver port for a LB proxy when replication is enabled
+                if hostname not in port_map:
+                    port_map[hostname] = set()
+                base_port = port_number + i * tensor_parallel + port_offset
+                if base_port in port_map[hostname]:
+                    base_port = max(port_map[hostname]) + 1
+                tensor_parallel_ports = list(range(base_port, base_port + tensor_parallel))
+                for i in range(base_port, base_port + tensor_parallel):
+                    port_map[hostname].add(i)
+                replica_torch_dist_port = torch_dist_port + (100 * i)
+                replica_configs.append(
+                    ReplicaConfig(
+                        hostname=hostname,
+                        tensor_parallel_ports=tensor_parallel_ports,
+                        torch_dist_port=replica_torch_dist_port,
+                        gpu_indices=gpu_indices,
+                    ))
+
+            deployment_config.replica_configs = replica_configs
         return values
 
 
-def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
+def _allocate_processes(hostfile_path, tensor_parallel, replica_num, GPU_index_map=None):
     resource_pool = fetch_hostfile(hostfile_path)
     assert (
         resource_pool is not None and len(resource_pool) > 0
     ), f"No hosts found in {hostfile_path}"
 
     replica_pool = []
+
+    if gpu_index_map is not None:
+        for host in gpu_index_map:
+            replica_pool.append((host, gpu_index_map[host]))
+        return replica_pool
+    
     allocated_num = 0
     for host, slots in resource_pool.items():
         available_on_host = slots
