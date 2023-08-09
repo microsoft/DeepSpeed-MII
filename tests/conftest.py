@@ -9,7 +9,7 @@ import mii
 from types import SimpleNamespace
 
 
-@pytest.fixture(scope="function", params=['fp16'])
+@pytest.fixture(scope="function", params=["fp16"])
 def dtype(request):
     return request.param
 
@@ -85,27 +85,31 @@ def ds_config(request):
 
 
 @pytest.fixture(scope="function")
-def deployment_config(task_name: str,
-                      model_name: str,
-                      dtype: str,
-                      tensor_parallel: int,
-                      meta_tensor: bool,
-                      load_with_sys_mem: bool,
-                      replica_num: int,
-                      enable_deepspeed: bool,
-                      enable_zero: bool,
-                      ds_config: dict):
-    config = SimpleNamespace(task=task_name,
-                             model=model_name,
-                             dtype=dtype,
-                             tensor_parallel=tensor_parallel,
-                             model_path=os.getenv("TRANSFORMERS_CACHE",
-                                                  ""),
-                             meta_tensor=meta_tensor,
-                             replica_num=replica_num,
-                             enable_deepspeed=enable_deepspeed,
-                             enable_zero=enable_zero,
-                             ds_config=ds_config)
+def deployment_config(
+    task_name: str,
+    model_name: str,
+    dtype: str,
+    tensor_parallel: int,
+    meta_tensor: bool,
+    load_with_sys_mem: bool,
+    replica_num: int,
+    enable_deepspeed: bool,
+    enable_zero: bool,
+    ds_config: dict,
+):
+    config = SimpleNamespace(
+        task=task_name,
+        model=model_name,
+        dtype=dtype,
+        tensor_parallel=tensor_parallel,
+        model_path=os.getenv("TRANSFORMERS_CACHE",
+                             ""),
+        meta_tensor=meta_tensor,
+        replica_num=replica_num,
+        enable_deepspeed=enable_deepspeed,
+        enable_zero=enable_zero,
+        ds_config=ds_config,
+    )
     return config.__dict__
 
 
@@ -134,14 +138,18 @@ def expected_failure(request):
 def deployment(deployment_name, mii_config, deployment_config, expected_failure):
     if expected_failure is not None:
         with pytest.raises(expected_failure) as excinfo:
-            mii.deploy(deployment_name=deployment_name,
-                       mii_config=mii_config,
-                       deployment_config=deployment_config)
+            mii.deploy(
+                deployment_name=deployment_name,
+                mii_config=mii_config,
+                deployment_config=deployment_config,
+            )
         yield excinfo
     else:
-        mii.deploy(deployment_name=deployment_name,
-                   mii_config=mii_config,
-                   deployment_config=deployment_config)
+        mii.deploy(
+            deployment_name=deployment_name,
+            mii_config=mii_config,
+            deployment_config=deployment_config,
+        )
         yield deployment_name
         mii.terminate(deployment_name)
 

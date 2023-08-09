@@ -89,7 +89,7 @@ def load_models(deployment_config):
 
         # initialise Deepspeed ZeRO and store only the engine object
         ds_engine = deepspeed.initialize(model=inference_pipeline.model,
-                                         config_params=ds_config)[0]
+                                         config=deployment_config.ds_config)[0]
         ds_engine.module.eval()  # inference
         inference_pipeline.model = ds_engine.module
 

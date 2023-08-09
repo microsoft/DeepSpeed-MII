@@ -157,12 +157,13 @@ class DeploymentConfig(DeepSpeedConfigModel):
     def zero_dtype_valid(cls, values):
         if values.get("enable_zero"):
             if values.get("ds_config").get("fp16", {}).get("enabled", False):
+                # TODO: We should be able to use DtypeEnum instead of torch.float
                 assert (
-                    values.get("dtype") == DtypeEnum.float16
+                    values.get("dtype") == torch.float16
                 ), "ZeRO FP16 enabled, `dtype` must be set to `torch.float16`"
             else:
                 assert (
-                    values.get("dtype") == DtypeEnum.float32
+                    values.get("dtype") == torch.float32
                 ), "ZeRO FP16 disabled, `dtype` must be set to `torch.float32`"
         return values
 

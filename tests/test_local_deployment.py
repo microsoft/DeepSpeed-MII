@@ -46,14 +46,16 @@ import mii
             "bigscience/bloom-560m",
             {
                 "query": ["DeepSpeed is the greatest",
-                          'Seattle is']
+                          "Seattle is"]
             },
         ),
-        ("token-classification",
-         "Jean-Baptiste/roberta-large-ner-english",
-         {
-             "query": "My name is jean-baptiste and I live in montreal."
-         }),
+        (
+            "token-classification",
+            "Jean-Baptiste/roberta-large-ner-english",
+            {
+                "query": "My name is jean-baptiste and I live in montreal."
+            },
+        ),
         (
             "text-classification",
             "roberta-large-mnli",
@@ -77,7 +79,7 @@ def test_single_GPU(deployment, query):
             "bigscience/bloom-560m",
             {
                 "query": ["DeepSpeed is the greatest",
-                          'Seattle is']
+                          "Seattle is"]
             },
         ),
     ],
