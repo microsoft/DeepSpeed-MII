@@ -27,7 +27,7 @@ class DeploymentConfig(DeepSpeedConfigModel):
     deployment_name: str
     load_with_sys_mem: bool = False
     meta_tensor: bool = False
-    hf_auth_token: str = ""
+    hf_auth_token: Optional[str] = None
     deploy_rank: Optional[List[int]] = None
     torch_dist_port: int = 29500
     replica_num: int = 1
@@ -178,7 +178,7 @@ class DeploymentConfig(DeepSpeedConfigModel):
 class MIIConfig(DeepSpeedConfigModel):
     deployment_config: DeploymentConfig
     deployment_type: DeploymentType = DeploymentType.LOCAL
-    hf_auth_token: str = ""
+    hf_auth_token: Optional[str] = None
     port_number: int = 50050
     enable_restful_api: bool = False
     restful_api_port: int = 51080
