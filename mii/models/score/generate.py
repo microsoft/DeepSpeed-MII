@@ -32,7 +32,7 @@ def create_score_file(mii_config):
 
 def generated_score_path(mii_config):
     deployment_type = mii_config.deployment_type
-    deployment_name = mii_config.deployment_config.deployment_name
+    deployment_name = mii_config.deployment_tag
     if deployment_type == DeploymentType.LOCAL:
         score_path = os.path.join(mii.utils.mii_cache_path(), deployment_name)
     elif deployment_type == DeploymentType.AML:

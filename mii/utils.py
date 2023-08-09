@@ -123,8 +123,8 @@ def extract_query_dict(task, request_dict):
     return query_dict
 
 
-def get_num_gpus(mii_config):
-    num_gpus = mii_config.deployment_config.tensor_parallel
+def get_num_gpus(deployment_config):
+    num_gpus = deployment_config.tensor_parallel
 
     assert (
         torch.cuda.device_count() >= num_gpus

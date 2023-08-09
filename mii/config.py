@@ -184,8 +184,9 @@ class DeploymentConfig(DeepSpeedConfigModel):
         return values
 
 class MIIConfig(DeepSpeedConfigModel):
-    deployment_config: List[DeploymentConfig]
+    deployment_configs: List[DeploymentConfig]
     deployment_type: DeploymentType = DeploymentType.LOCAL
+    deployment_tag: str = None
     hf_auth_token: Optional[str] = None
     port_number: int = 50050
     enable_restful_api: bool = False
@@ -197,7 +198,7 @@ class MIIConfig(DeepSpeedConfigModel):
     def propagate_hf_auth(cls, values):
         # This validator is for when we support multiple models in a deployment
         hf_auth_token = values.get("hf_auth_token")
-        deployment_config_list = values.get("deployment_config")
+        deployment_config_list = values.get("deployment_configs")
         for deployment_config in deployment_config_list:
             if not deployment_config.hf_auth_token:
                 deployment_config.hf_auth_token = hf_auth_token
@@ -209,7 +210,7 @@ class MIIConfig(DeepSpeedConfigModel):
             allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
                                 string.digits + "-")
             assert (
-                set(values.get("deployment_config").deployment_name) <= allowed_chars
+                set(values.get("deployment_configs").deployment_name) <= allowed_chars
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
         return values
 
@@ -219,7 +220,7 @@ class MIIConfig(DeepSpeedConfigModel):
         hostfile = values.get("hostfile")
         port_number = values.get("port_number")
         port_offset = 1
-        for deployment_config in values.get("deployment_config"):
+        for deployment_config in values.get("deployment_configs"):
 
             replica_configs = deployment_config.replica_configs
             replica_num = deployment_config.replica_num

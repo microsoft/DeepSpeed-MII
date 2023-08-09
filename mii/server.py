@@ -26,9 +26,14 @@ class MIIServer:
     """Initialize the model, setup the server for the model under model_path"""
     def __init__(self, mii_config):
 
-        self.task = mii_config.deployment_config.task
-        self.num_gpus = get_num_gpus(mii_config)
-        assert self.num_gpus > 0, "GPU count must be greater than 0"
+        #self.task = mii_config.deployment_config.task
+        
+
+        #self.num_gpus = get_num_gpus(mii_config)
+        #assert self.num_gpus > 0, "GPU count must be greater than 0"
+        
+        for deployment_config in mii_config.deployment_configs:
+            assert get_num_gpus(deployment_config) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
         """
         if mii_configs.hostfile is None:
             hostfile = tempfile.NamedTemporaryFile(delete=False)

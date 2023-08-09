@@ -4,11 +4,11 @@
 # DeepSpeed Team
 import os
 import mii
-
+from typing import List
 from .utils import logger
 from .models.score import create_score_file
 from .models import load_models
-from .config import MIIConfig, DeploymentType
+from .config import MIIConfig, DeploymentType, DeploymentConfig
 
 
 def support_legacy_api(
@@ -48,7 +48,7 @@ def support_legacy_api(
 
 def deploy(
     deployment_name: str,
-    deployment_config: dict,
+    deployment_configs: List[dict],
     mii_config: dict = None,
     *args,
     **kwargs,
@@ -63,18 +63,26 @@ def deploy(
         kwargs["mii_config"] = mii_config
         deployment_config, mii_config = support_legacy_api(*args, **kwargs)
 
-    deployment_config["deployment_name"] = deployment_name
-    mii_config["deployment_config"] = deployment_config
+        deployment_config["deployment_name"] = deployment_name
+        mii_config["deployment_tag"] = deployment_name
+        mii_config["deployment_configs"] = [DeploymentConfig(**deployment_config)]
+    else:
+        for deployment_config in deployment_configs:
+            deployment_config = DeploymentConfig(**deployment_config)
+        mii_config["deployment_configs"] = deployment_configs
+        mii_config["deployment_tag"] = kwargs["deployment_tag"]
+    
     mii_config = mii.config.MIIConfig(**mii_config)
 
-    if mii_config.deployment_config.enable_deepspeed:
-        logger.info(
-            f"************* MII is using DeepSpeed Optimizations to accelerate your model *************"
-        )
-    else:
-        logger.info(
-            f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
-        )
+    for deployment_config in mii_config.deployment_configs:
+        if deployment_config.enable_deepspeed:
+            logger.info(
+                f"************* MII is using DeepSpeed Optimizations to accelerate your model *************"
+            )
+        else:
+            logger.info(
+                f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
+            )
 
     if mii_config.deployment_type != DeploymentType.NON_PERSISTENT:
         create_score_file(mii_config)
@@ -88,7 +96,7 @@ def deploy(
 
 
 def _deploy_local(mii_config):
-    mii.utils.import_score_file(mii_config.deployment_config.deployment_name).init()
+    mii.utils.import_score_file(mii_config.deployment_tag).init()
 
 
 def _deploy_aml(mii_config):
