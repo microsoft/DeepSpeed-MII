@@ -8,6 +8,7 @@ from mii.constants import Tasks
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
 from mii.models.utils import ImageResponse
+import uuid
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
@@ -189,7 +190,7 @@ class ConversationalMethods(TaskMethods):
 
         else:
             text = getattr(request, 'text')
-            conversation_id = getattr(request, 'conversation_id')
+            conversation_id = uuid.UUID(getattr(request, 'conversation_id'))
             past_user_inputs = getattr(request, 'past_user_inputs')
             generated_responses = getattr(request, 'generated_responses')
 
@@ -220,7 +221,7 @@ class ConversationalMethods(TaskMethods):
     def pack_request_to_proto(self, request_dict, **query_kwargs):
         return modelresponse_pb2.ConversationRequest(
             text=request_dict['text'],
-            conversation_id=request_dict['conversation_id']
+            conversation_id=str(request_dict['conversation_id'])
             if 'conversation_id' in request_dict else None,
             past_user_inputs=request_dict['past_user_inputs'],
             generated_responses=request_dict['generated_responses'],
