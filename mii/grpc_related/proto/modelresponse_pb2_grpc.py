@@ -3,7 +3,7 @@
 import grpc
 
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-import modelresponse_pb2 as modelresponse__pb2
+import mii.grpc_related.proto.modelresponse_pb2 as modelresponse__pb2
 
 
 class ModelResponseStub(object):
