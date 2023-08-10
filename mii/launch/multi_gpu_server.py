@@ -5,24 +5,14 @@
 import os
 import argparse
 import mii
-import base64
-import json
-
+import torch
 from mii import MIIConfig, LoadBalancerConfig
 
 from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 from mii.grpc_related.restful_gateway import RestfulGatewayThread
-
-
-def decode_config_from_str(config_str):
-    # str -> bytes
-    b64_bytes = config_str.encode()
-    # decode b64 bytes -> json bytes
-    config_bytes = base64.urlsafe_b64decode(b64_bytes)
-    # convert json bytes -> str -> dict
-    return json.loads(config_bytes.decode())
-
+from .utils import decode_config_from_str
+from deepspeed.runtime.utils import see_memory_usage
 
 def main():
     parser = argparse.ArgumentParser()
@@ -88,7 +78,8 @@ def main():
                                          ds_config_path=args.ds_config,
                                          provider=provider,
                                          mii_config=mii_config)
-
+        inference_pipeline.model.to(torch.device("cpu"))
+        torch.cuda.empty_cache()
         print(f"Starting server on port: {port}")
         serve_inference(inference_pipeline, port)
     else:

@@ -108,6 +108,55 @@ def ds_config(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=["Multi_Model_Tag"])
+def deployment_tag(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[[]])
+def deployments(request):
+    ret = {}
+    gpu_index_map1 = {'master': [0]}
+    gpu_index_map2 = {'master': [1]}
+    gpu_index_map3 = {'master': [0, 1]}
+
+    deployments = []
+
+    mii_configs1 = {"tensor_parallel": 2, "dtype": "fp16"}
+    mii_configs2 = {"tensor_parallel": 1}
+
+    name = "bigscience/bloom-560m"
+    deployments.append(
+        mii.DeploymentConfig(task='text-generation',
+                             model=name,
+                             deployment_name=name + "_deployment",
+                             GPU_index_map=gpu_index_map3,
+                             mii_configs=mii.config.MIIConfig(**mii_configs1)))
+
+    name = "microsoft/DialogRPT-human-vs-rand"
+    deployments.append(
+        mii.DeploymentConfig(task='text-classification',
+                             model=name,
+                             deployment_name=name + "_deployment",
+                             GPU_index_map=gpu_index_map2))
+
+    name = "microsoft/DialoGPT-large"
+    deployments.append(
+        mii.DeploymentConfig(task='conversational',
+                             model=name,
+                             deployment_name=name + "_deployment",
+                             GPU_index_map=gpu_index_map1,
+                             mii_configs=mii.config.MIIConfig(**mii_configs2)))
+
+    name = "deepset/roberta-large-squad2"
+    deployments.append(
+        mii.DeploymentConfig(task="question-answering",
+                             model=name,
+                             deployment_name=name + "-qa-deployment",
+                             GPU_index_map=gpu_index_map2))
+    return deployments
+
+
 @pytest.fixture(scope="function")
 def deployment_config(task_name: str,
                       model_name: str,
@@ -130,6 +179,19 @@ def deployment_config(task_name: str,
     return config
 
 
+@pytest.fixture(scope="function")
+def multi_deployment_config(deployments: list,
+                            deployment_tag: str,
+                            deployment_type: str):
+    config = SimpleNamespace(deployments=deployments,
+                             deployment_type=deployment_type,
+                             deployment_tag=deployment_tag,
+                             model_path=os.getenv("TRANSFORMERS_CACHE",
+                                                  None))
+    validate_config(config)
+    return config
+
+
 @pytest.fixture(scope="function", params=[None])
 def expected_failure(request):
     return request.param
@@ -147,6 +209,43 @@ def deployment(deployment_config, expected_failure):
         mii.terminate(deployment_config.deployment_name)
 
 
+@pytest.fixture(scope="function")
+def multi_deployment(deployment_tag, multi_deployment_config):
+    mii.deploy(**multi_deployment_config.__dict__)
+    yield multi_deployment_config
+    mii.terminate(deployment_tag)
+
+
 @pytest.fixture(scope="function", params=[{"query": "DeepSpeed is the greatest"}])
 def query(request):
     return request.param
+
+
+@pytest.fixture(scope="function")
+def multi_query(request):
+    queries = []
+    queries.append({
+        "query": ["DeepSpeed is",
+                  "Seattle is"],
+        "deployment_name": "bigscience/bloom-560m_deployment"
+    })
+
+    queries.append({
+        'query': "DeepSpeed is the greatest",
+        "deployment_name": "microsoft/DialogRPT-human-vs-rand_deployment"
+    })
+
+    queries.append({
+        'text': "DeepSpeed is the greatest",
+        'conversation_id': 3,
+        'past_user_inputs': [],
+        'generated_responses': [],
+        "deployment_name": "microsoft/DialoGPT-large_deployment"
+    })
+
+    queries.append({
+        'question': "What is the greatest?",
+        'context': "DeepSpeed is the greatest",
+        "deployment_name": "deepset/roberta-large-squad2" + "-qa-deployment"
+    })
+    return queries

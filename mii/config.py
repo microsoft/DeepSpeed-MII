@@ -5,9 +5,9 @@
 import torch
 from typing import Union, List
 from enum import Enum
-from pydantic import BaseModel, validator, root_validator
-
+from pydantic import BaseModel, validator, root_validator, Field
 from deepspeed.launcher.runner import DLTS_HOSTFILE
+from mii.utils import get_task
 
 
 class DtypeEnum(Enum):
@@ -108,6 +108,8 @@ class MIIConfig(BaseModel):
 
 
 class ReplicaConfig(BaseModel):
+    task: str = ""
+    deployment_name: str = ""
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
     torch_dist_port: int = None
@@ -124,4 +126,25 @@ class LoadBalancerConfig(BaseModel):
 
     class Config:
         validate_all = True
-        validate_assignment = True
+
+    validate_assignment = True
+
+
+class DeploymentConfig(BaseModel):
+    deployment_name: str = Field(alias="DEPLOYMENT_NAME_KEY")
+    task: str = Field(alias="TASK_NAME_KEY")
+    model: str = Field(alias="MODEL_NAME_KEY")
+    ds_optimize: bool = Field(default=True, alias="ENABLE_DEEPSPEED_KEY")
+    ds_zero: bool = Field(default=False, alias="ENABLE_DEEPSPEED_ZERO_KEY")
+    GPU_index_map: dict = Field(default=None, alias="GPU_INDEX_KEY")
+    mii_configs: MIIConfig = Field(default=MIIConfig.parse_obj({}),
+                                   alias="MII_CONFIGS_KEY")
+    ds_config: dict = Field(default=None, alias="DEEPSPEED_CONFIG_KEY")
+    version: int = Field(default=1, alias="VERSION_KEY")
+
+    @validator("task")
+    def convert_task_str(cls, field_value, values):
+        return get_task(field_value)
+
+    class Config:
+        allow_population_by_field_name = True

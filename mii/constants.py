@@ -88,17 +88,22 @@ REQUIRED_KEYS_PER_TASK = {
      'generated_responses'],
     TEXT2IMG_NAME: ["query"]
 }
-
-MODEL_NAME_KEY = 'model_name'
-TASK_NAME_KEY = 'task_name'
+GPU_INDEX_KEY = "GPU_index_map"
+DEPLOYMENTS_KEY = 'deployments'
+PORT_MAP_KEY = 'port_map'
+MODEL_NAME_KEY = 'model'
+TASK_NAME_KEY = 'task'
 DEPLOYMENT_NAME_KEY = 'deployment_name'
 MODEL_PATH_KEY = 'model_path'
 LOAD_BALANCER_CONFIG_KEY = 'load_balancer_config'
-
+DEPLOYMENT_TAG_KEY = 'deployment_tag'
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
 DEEPSPEED_CONFIG_KEY = 'ds_config'
 CHECKPOINT_KEY = "checkpoint"
+DEPLOYED_KEY = "deployed"
+VERSION_KEY = "version"
+MII_TERMINATE_DEP_KEY = "__MII_TERMINATE_CALL__"
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
 MII_CACHE_PATH_DEFAULT = "/tmp/mii_cache"
@@ -118,7 +123,10 @@ GRPC_MAX_MSG_SIZE = 2**27  # ~100MB
 TERMINATE_METHOD = "Terminate"
 CREATE_SESSION_METHOD = "CreateSession"
 DESTROY_SESSION_METHOD = "DestroySession"
-
+ADD_DEPLOYMENT_METHOD = "AddDeployment"
+DELETE_DEPLOYMENT_METHOD = "DeleteDeployment"
+LOAD_METHOD = "Load"
+OFFLOAD_METHOD = "Offload"
 LB_MAX_WORKER_THREADS = 32
 
 SERVER_SHUTDOWN_TIMEOUT = 10
