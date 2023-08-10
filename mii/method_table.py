@@ -197,8 +197,7 @@ class ConversationalMethods(TaskMethods):
         conv = Conversation(text=text,
                             conversation_id=conversation_id,
                             past_user_inputs=past_user_inputs,
-                            generated_responses=generated_responses,
-                            **kwargs)
+                            generated_responses=generated_responses)
         return conv
 
     def pack_response_to_proto(self, conv, time_taken, model_time_taken):
@@ -208,7 +207,7 @@ class ConversationalMethods(TaskMethods):
             generated_responses=conv.generated_responses,
             time_taken=time_taken,
             model_time_taken=model_time_taken)
-
+    
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
         conv = self.create_conversation(request)
