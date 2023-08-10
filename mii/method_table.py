@@ -203,7 +203,7 @@ class ConversationalMethods(TaskMethods):
 
     def pack_response_to_proto(self, conv, time_taken, model_time_taken):
         return modelresponse_pb2.ConversationReply(
-            conversation_id=conv.uuid,
+            conversation_id=str(conv.uuid),
             past_user_inputs=conv.past_user_inputs,
             generated_responses=conv.generated_responses,
             time_taken=time_taken,
