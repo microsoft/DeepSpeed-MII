@@ -210,9 +210,8 @@ class ConversationalMethods(TaskMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        conv = self.create_conversation(request, **kwargs)
+        conv = self.create_conversation(request)
         args = (conv, )
-        kwargs = {}
         return args, kwargs
 
     def pack_request_to_proto(self, request_dict, **query_kwargs):
