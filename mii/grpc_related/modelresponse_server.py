@@ -89,6 +89,7 @@ class ModelResponse(ServiceBase):
             self.mem = True
             local_rank = int(os.getenv('LOCAL_RANK', '0'))
             self.inference_pipeline.model.to(torch.device(f"cuda:{local_rank}"))
+            print(f"Model loaded on demand")
         if method_name not in self.method_name_to_task:
             raise ValueError(f"unknown method: {method_name}")
 
@@ -141,6 +142,7 @@ class ModelResponse(ServiceBase):
     def Offload(self, request, context):
         self.mem = False
         self.inference_pipeline.model.to(torch.device(f"cpu"))
+        torch.cuda.empty_cache()
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
 class AtomicCounter:

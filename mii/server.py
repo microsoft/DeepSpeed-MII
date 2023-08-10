@@ -54,6 +54,7 @@ class MIIServer():
                 lb_config,
             )
             self._wait_until_server_is_live(processes, lb_config.replica_configs)
+            torch.cuda.empty_cache()
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):

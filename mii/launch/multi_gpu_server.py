@@ -78,9 +78,8 @@ def main():
                                          ds_config_path=args.ds_config,
                                          provider=provider,
                                          mii_config=mii_config)
-        see_memory_usage("BEFORE SWITCH", force=True)
         inference_pipeline.model.to(torch.device("cpu"))
-        see_memory_usage("AFTER SWITCH", force=True)
+        torch.cuda.empty_cache()
         print(f"Starting server on port: {port}")
         serve_inference(inference_pipeline, port)
     else:
