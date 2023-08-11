@@ -125,31 +125,33 @@ class MIIServer:
         ]
 
         host_gpus = defaultdict(list)
-        for repl_config in mii_config.deployment_config.replica_configs:
-            host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
+        for deployment in mii_config.deployment_configs:
+            for repl_config in deployment.replica_configs:
+                host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
         # Start replica instances
-        for repl_config in mii_config.deployment_config.replica_configs:
-            hostfile = tempfile.NamedTemporaryFile(delete=False)
-            hostfile.write(
-                f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
-                .encode())
-            ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name)
-            processes.append(
-                self._launch_server_process(
-                    mii_config.deployment_config,
-                    "MII server",
-                    ds_launch_str=ds_launch_str,
-                    server_args=server_args +
-                    [f"--server-port {repl_config.tensor_parallel_ports[0]}"],
-                ))
+        for deployment_config in mii_config.deployment_configs:
+            for repl_config in mii_config.deployment_config.replica_configs:
+                hostfile = tempfile.NamedTemporaryFile(delete=False)
+                hostfile.write(
+                    f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
+                    .encode())
+                ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name)
+                processes.append(
+                    self._launch_server_process(
+                        deployment_config,
+                        "MII server",
+                        ds_launch_str=ds_launch_str,
+                        server_args=server_args +
+                        [f"--server-port {repl_config.tensor_parallel_ports[0]}"],
+                    ))
             # start load balancer here.
             # we don't use deepspeed launcher for the load balancer because it does not need a GPU.
             # The deepspeed launcher determines the number of processes to launch based on GPUs available on the host or CUDA_VISIBLE_DEVICES,
             # and it is expected to assign one GPU to one process.
         processes.append(
             self._launch_server_process(
-                mii_config.deployment_config,
+                mii_config,
                 "load balancer",
                 server_args=server_args + ["--load-balancer"],
             ))

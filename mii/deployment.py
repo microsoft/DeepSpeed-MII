@@ -65,11 +65,11 @@ def deploy(
 
         deployment_config["deployment_name"] = deployment_name
         mii_config["deployment_tag"] = deployment_name
-        mii_config["deployment_configs"] = [DeploymentConfig(**deployment_config)]
+        mii_config["deployment_configs"] = {deployment_name: DeploymentConfig(**deployment_config)}
     else:
         for deployment_config in deployment_configs:
             deployment_config = DeploymentConfig(**deployment_config)
-        mii_config["deployment_configs"] = deployment_configs
+        mii_config["deployment_configs"] = {dep.deployment_name: dep for dep in deployment_configs}
         mii_config["deployment_tag"] = kwargs["deployment_tag"]
     
     mii_config = mii.config.MIIConfig(**mii_config)

@@ -7,7 +7,7 @@ import argparse
 import base64
 import json
 
-from mii.config import DeploymentConfig
+from mii.config import DeploymentConfig, MIIConfig
 from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 from mii.grpc_related.restful_gateway import RestfulGatewayThread
@@ -23,6 +23,15 @@ def b64_encoded_config(config_str):
     # return mii.DeploymentConfig object
     return DeploymentConfig(**config_dict)
 
+def b64_encoded_config(config_str):
+    # str -> bytes
+    b64_bytes = config_str.encode()
+    # decode b64 bytes -> json bytes
+    config_bytes = base64.urlsafe_b64decode(b64_bytes)
+    # convert json bytes -> str -> dict
+    config_dict = json.loads(config_bytes.decode())
+    # return mii.MIIConfig object
+    return MIIConfig(**config_dict)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -30,6 +39,11 @@ def main():
         "--deployment-config",
         type=b64_encoded_config,
         help="base64 encoded deployment config",
+    )
+    parser.add_argument(
+        "--mii-config",
+        type=b64_encoded_config,
+        help="base64 encoded mii config",
     )
     parser.add_argument(
         "--server-port",
@@ -77,7 +91,7 @@ def main():
     elif args.load_balancer:
         assert args.load_balancer_port, "--load-balancer-port must be provided."
         print(f"Starting load balancer on port: {args.load_balancer_port}")
-        serve_load_balancing(args.deployment_config, args.load_balancer_port)
+        serve_load_balancing(args.mii_config, args.load_balancer_port)
 
     else:
         assert args.server_port, "--server-port must be provided."

@@ -56,24 +56,44 @@ class MIIClient:
     """
     Client to send queries to a single endpoint.
     """
-    def __init__(self, task, host, port):
+    def __init__(self, mii_config, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
-        self.task = task
+        self.mii_config = mii_config
+    
+      def _get_deployment_task(self, deployment_name=None):
+        task = None
+        if deployment_name is None:  #mii.terminate() or single model
+            if deployment_name is None:
+                assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
+            deployment = self.mii_config.deployment_configs[0] 
+            deployment_name = getattr(deployment, deployment_name)
+            task = getattr(deployment, task)
+        else:
+            if deployment_name in self.deployments:
+                deployment = self.mii_config.deployment_configs[deployment_name]
+                task = getattr(deployment, task)
+            else:
+                assert False, f"{deployment_name} not found in list of deployments"
+        return deployment_name, task
 
-    async def _request_async_response(self, request_dict, **query_kwargs):
-        if self.task not in GRPC_METHOD_TABLE:
-            raise ValueError(f"unknown task: {self.task}")
+    async def _request_async_response(self, request_dict, task, **query_kwargs):
+        if task not in GRPC_METHOD_TABLE:
+            raise ValueError(f"unknown task: {task}")
 
-        task_methods = GRPC_METHOD_TABLE[self.task]
+        task_methods = GRPC_METHOD_TABLE[task]
         proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
-        proto_response = await getattr(self.stub, task_methods.method)(proto_request)
+        proto_response = await getattr(self.mr_stub, task_methods.method)(proto_request)
         return task_methods.unpack_response_from_proto(proto_response)
 
     def query(self, request_dict, **query_kwargs):
+        deployment_name = request_dict.get(mii.constants.DEPLOYMENT_NAME_KEY)
+        deployment_name, task = self._get_deployment_task(deployment_name)
+        request_dict['deployment_name'] = deployment_name
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,
+                                         task,
                                          **query_kwargs))
 
     async def terminate_async(self):

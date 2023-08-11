@@ -171,19 +171,29 @@ class ParallelStubInvoker:
             self.asyncio_loop).result()
 
 
+
+
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
-    def __init__(self, deployment_config):
+     def __init__(self, mii_config):
         super().__init__()
         self.asyncio_loop = asyncio.get_event_loop()
 
-        self.stubs = [
-            ParallelStubInvoker(replica.hostname,
-                                replica.tensor_parallel_ports)
-            for replica in deployment_config.replica_configs
-        ]
-        self.counter = AtomicCounter()
-        self.task = deployment_config.task
-        self.replica_sessions = {}
+        self.stubs = {}
+        self.counter = {}
+        self.replica_configs = replica_configs
+        self.tasks = {}
+        for deployment in mii_config.deployment_configs:
+            self.stubs[deployment.deployment_name] = []
+            self.counter[deployment.deployment_name] = AtomicCounter()
+            self.tasks[deployment.deployment_name] = repl.task
+        
+        for deployment in mii_config.deployment_configs:
+            deployment_name = deployment.deployment_name
+            for repl in deployment.replica_configs:
+                self.stubs[deployment_name].append(
+                    ParallelStubInvoker(repl.hostname,
+                                        repl.tensor_parallel_ports,
+                                        self.asyncio_loop))
 
         # Start the asyncio loop in a separate thread
         def run_asyncio_loop(loop):
@@ -201,46 +211,51 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
-
             if method_name == TERMINATE_METHOD:
-                for stub in self.stubs:
-                    stub.invoke(TERMINATE_METHOD,
-                                google_dot_protobuf_dot_empty__pb2.Empty())
+                for deployment_name in self.stubs:
+                    for stub in self.stubs[deployment_name]:
+                        stub.invoke(TERMINATE_METHOD,
+                                    google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
-
-            call_count = self.counter.get_and_increment()
-            replica_index = call_count % len(self.stubs)
 
             if method_name == CREATE_SESSION_METHOD:
                 if request_proto.session_id in self.sessions:
                     raise ValueError(
                         f"session {request_proto.session_id} already exists")
                 self.replica_sessions[request_proto.session_id] = replica_index
-                self.stubs[replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
+                self.stubs[deployment_name][replica_index].invoke(
+                    CREATE_SESSION_METHOD,
+                    request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
             if method_name == DESTROY_SESSION_METHOD:
                 replica_index = self.replica_sessions.pop(request_proto.session_id)
-                self.stubs[replica_index].invoke(DESTROY_SESSION_METHOD, request_proto)
+                self.stubs[deployment_name][replica_index].invoke(
+                    DESTROY_SESSION_METHOD,
+                    request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
 
-            kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
-            if "session_id" in kwargs:
-                session_id = kwargs["session_id"]
+            if "session_id" in request_proto.query_kwargs:
+                session_id = request_proto.query_kwargs["session_id"]
                 if session_id not in self.replica_sessions:
                     raise ValueError(f"session not found")
                 replica_index = self.replica_sessions[session_id]
 
-            ret = self.stubs[replica_index].invoke(method_name, request_proto)
+            deployment_name = getattr(request_proto, 'deployment_name')
+            assert deployment_name in self.stubs, f"Deployment: {deployment_name} not found"
+            call_count = self.counter[deployment_name].get_and_increment()
+            replica_index = call_count % len(self.stubs[deployment_name])
+
+            ret = self.stubs[deployment_name][replica_index].invoke(
+                method_name,
+                request_proto)
             return ret
 
         return grpc.unary_unary_rpc_method_handler(
             invoke_intercept_method,
             request_deserializer=next_handler.request_deserializer,
-            response_serializer=next_handler.response_serializer,
-        )
-
+            response_serializer=next_handler.response_serializer)
 
 def _do_serve(service_impl, port, interceptors=[]):
     stop_event = service_impl.get_stop_event()
@@ -267,8 +282,8 @@ def serve_inference(inference_pipeline, port):
     _do_serve(ModelResponse(inference_pipeline), port)
 
 
-def serve_load_balancing(deployment_config, lb_port):
-    _do_serve(ServiceBase(), lb_port, [LoadBalancingInterceptor(deployment_config)])
+def serve_load_balancing(mii_config, lb_port):
+    _do_serve(ServiceBase(), lb_port, [LoadBalancingInterceptor(mii_config)])
 
 
 if __name__ == "__main__":
