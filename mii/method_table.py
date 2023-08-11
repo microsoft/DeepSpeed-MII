@@ -13,7 +13,8 @@ from mii.models.utils import ImageResponse
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.SingleStringRequest(
         request=request_dict['query'],
-        query_kwargs=kwarg_dict_to_proto(query_kwargs))
+        query_kwargs=kwarg_dict_to_proto(query_kwargs),
+        deployment_name=request_dict.get('deployment_name'))
 
 
 def single_string_response_to_proto(self, response, time_taken, model_time_taken):
@@ -26,7 +27,8 @@ def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.MultiStringRequest(
         request=request_dict['query'] if isinstance(request_dict['query'],
                                                     list) else [request_dict['query']],
-        query_kwargs=kwarg_dict_to_proto(query_kwargs))
+        query_kwargs=kwarg_dict_to_proto(query_kwargs),
+        deployment_name=request_dict.get('deployment_name'))
 
 
 def proto_request_to_single_input(self, request):
@@ -143,7 +145,8 @@ class QuestionAnsweringMethods(TaskMethods):
         return modelresponse_pb2.QARequest(
             question=request_dict['question'],
             context=request_dict['context'],
-            query_kwargs=kwarg_dict_to_proto(query_kwargs))
+            query_kwargs=kwarg_dict_to_proto(query_kwargs),
+            deployment_name=request_dict.get('deployment_name'))
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
@@ -222,7 +225,8 @@ class ConversationalMethods(TaskMethods):
             if 'conversation_id' in request_dict else None,
             past_user_inputs=request_dict['past_user_inputs'],
             generated_responses=request_dict['generated_responses'],
-            query_kwargs=kwarg_dict_to_proto(query_kwargs))
+            query_kwargs=kwarg_dict_to_proto(query_kwargs),
+            deployment_name=request_dict.get('deployment_name'))
 
 
 class Text2ImgMethods(TaskMethods):

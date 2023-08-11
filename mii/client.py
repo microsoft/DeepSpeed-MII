@@ -8,21 +8,27 @@ import requests
 import mii
 from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
+from mii.constants import GRPC_MAX_MSG_SIZE, Tasks, DeploymentType
 from mii.method_table import GRPC_METHOD_TABLE
+from mii.deployment import allocate_processes
+from mii.config import DeploymentConfig, MIIConfig
 
 
-def _get_deployment_info(deployment_name):
-    configs = mii.utils.import_score_file(deployment_name).configs
-    task = configs[mii.constants.TASK_NAME_KEY]
-    mii_configs_dict = configs[mii.constants.MII_CONFIGS_KEY]
-    mii_configs = mii.config.MIIConfig(**mii_configs_dict)
+def _get_deployment_configs(deployment_tag):
+    deployments = {}
+    configs = mii.utils.import_score_file(deployment_tag).configs
+    for deployment in configs.get(mii.constants.DEPLOYMENTS_KEY).values():
+        deployment_name = deployment[mii.constants.DEPLOYMENT_NAME_KEY]
+        deployments[deployment_name] = DeploymentConfig(**deployment)
+    lb_config = configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY)
+    model_path = configs.get(mii.constants.MODEL_PATH_KEY)
+    port_map = configs.get(mii.constants.PORT_MAP_KEY)
+    deployment_type = configs.get(mii.constants.DEPLOYMENT_TYPE_KEY)
+    mii_configs = MIIConfig(**configs.get(mii.constants.MII_CONFIGS_KEY))
+    return deployments, lb_config, model_path, port_map, deployment_type, mii_configs
 
-    assert task is not None, "The task name should be set before calling init"
-    return task, mii_configs
 
-
-def mii_query_handle(deployment_name):
+def mii_query_handle(deployment_tag):
     """Get a query handle for a local deployment:
 
         mii/examples/local/gpt2-query-example.py
@@ -35,12 +41,31 @@ def mii_query_handle(deployment_name):
         query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
     """
 
-    if deployment_name in mii.non_persistent_models:
-        inference_pipeline, task = mii.non_persistent_models[deployment_name]
-        return MIINonPersistentClient(task, deployment_name)
+    if deployment_tag in mii.non_persistent_models:
+        inference_pipeline, task = mii.non_persistent_models[deployment_tag]
+        return MIINonPersistentClient(task, deployment_tag)
 
-    task_name, mii_configs = _get_deployment_info(deployment_name)
-    return MIIClient(task_name, "localhost", mii_configs.port_number)
+    deployments, lb_config, model_path, port_map, deployment_type, mii_configs = _get_deployment_configs(deployment_tag)
+    """mii_configs = None
+    if len(deployments) > 0:
+        mii_configs = getattr(next(iter(deployments.values())),
+                              mii.constants.MII_CONFIGS_KEY)
+    """
+    port_number = None if mii_configs == None else mii_configs.port_number
+    """if port_number:
+        for deployment in deployments.values():
+            assert getattr(deployment, mii.constants.MII_CONFIGS_KEY).port_number == port_number, f"All port numbers is each deployments mii_configs must match"
+    """
+
+    return LBClient(deployments,
+                    "localhost",
+                    port_number,
+                    lb_config,
+                    model_path,
+                    port_map,
+                    deployment_tag,
+                    deployment_type,
+                    mii_configs)
 
 
 def create_channel(host, port):
@@ -55,49 +80,189 @@ class MIIClient():
     """
     Client to send queries to a single endpoint.
     """
-    def __init__(self, task_name, host, port):
+    def __init__(self, deployments, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
-        channel = create_channel(host, port)
-        self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
-        self.task = get_task(task_name)
+        self.mr_stub = None
+        self.channel = None
+        self.host = host
+        if port is not None:
+            self.channel = create_channel(host, port)
+            self.mr_stub = modelresponse_pb2_grpc.ModelResponseStub(self.channel)
+        self.deployments = deployments
 
-    async def _request_async_response(self, request_dict, **query_kwargs):
-        if self.task not in GRPC_METHOD_TABLE:
-            raise ValueError(f"unknown task: {self.task}")
+    def _get_deployment_task(self, deployment_name=None):
+        task = None
+        if deployment_name is None or deployment_name == mii.constants.MII_TERMINATE_DEP_KEY:  #mii.terminate() or single model
+            if deployment_name is None:
+                assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
+            deployment = next(iter(self.deployments.values()))
+            deployment_name = getattr(deployment, mii.constants.DEPLOYMENT_NAME_KEY)
+            task = getattr(deployment, mii.constants.TASK_NAME_KEY)
+        else:
+            if deployment_name in self.deployments:
+                deployment = self.deployments[deployment_name]
+                task = getattr(deployment, mii.constants.TASK_NAME_KEY)
+            else:
+                assert False, f"{deployment_name} not found in list of deployments"
+        return deployment_name, task
 
-        task_methods = GRPC_METHOD_TABLE[self.task]
+    async def _request_async_response(self, request_dict, task, **query_kwargs):
+        if task not in GRPC_METHOD_TABLE:
+            raise ValueError(f"unknown task: {task}")
+
+        task_methods = GRPC_METHOD_TABLE[task]
         proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
-        proto_response = await getattr(self.stub, task_methods.method)(proto_request)
+        proto_response = await getattr(self.mr_stub, task_methods.method)(proto_request)
         return task_methods.unpack_response_from_proto(proto_response)
 
     def query(self, request_dict, **query_kwargs):
+        deployment_name = request_dict.get(mii.constants.DEPLOYMENT_NAME_KEY)
+        deployment_name, task = self._get_deployment_task(deployment_name)
+        request_dict['deployment_name'] = deployment_name
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,
+                                         task,
                                          **query_kwargs))
 
     async def terminate_async(self):
-        await self.stub.Terminate(
+        await self.lb_stub.Terminate(
             modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
     def terminate(self):
         self.asyncio_loop.run_until_complete(self.terminate_async())
 
     async def create_session_async(self, session_id):
-        return await self.stub.CreateSession(
+        return await self.mr_stub.CreateSession(
             modelresponse_pb2.SessionID(session_id=session_id))
 
-    def create_session(self, session_id):
-        assert self.task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
+    def create_session(self, session_id, deployment_name=None):
+        if len(self.deployments > 1):
+            assert deployment_name is not None, "Deployment name must be passed in to create session when there are multiple models"
+        deployment_name, task = self._get_deployment_task(deployment_name)
+        assert task == Tasks.TEXT_GENERATION, f"Session creation only available for task '{Tasks.TEXT_GENERATION}'."
         return self.asyncio_loop.run_until_complete(
             self.create_session_async(session_id))
 
     async def destroy_session_async(self, session_id):
-        await self.stub.DestroySession(modelresponse_pb2.SessionID(session_id=session_id)
-                                       )
+        await self.mr_stub.DestroySession(
+            modelresponse_pb2.SessionID(session_id=session_id))
 
-    def destroy_session(self, session_id):
-        assert self.task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
+    def destroy_session(self, session_id, deployment_name=None):
+        if len(self.deployments > 1):
+            assert deployment_name is not None, "Deployment name must be passed in to destroy session when there are multiple models"
+        deployment_name, task = self._get_deployment_task(deployment_name)
+        assert task == Tasks.TEXT_GENERATION, f"Session deletion only available for task '{Tasks.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
+
+
+class LBClient(MIIClient):
+    def __init__(self,
+                 deployments,
+                 host,
+                 port,
+                 lb_config=None,
+                 model_path=None,
+                 port_map=None,
+                 deployment_tag=None,
+                 deployment_type=DeploymentType.LOCAL,
+                 mii_configs={}):
+        super().__init__(deployments, host, port)
+        self.lb_stub = None
+        if port is not None:
+            channel = create_channel(host, port) if not self.channel else self.channel
+            self.lb_stub = modelresponse_pb2_grpc.DeploymentManagementStub(channel)
+        self.lb_config = lb_config
+        self.model_path = model_path
+        self.port_map = port_map if port_map is not None else {}
+        self.deployment_tag = deployment_tag
+        self.deployment_type = deployment_type
+        self.mii_configs = mii_configs
+
+    async def add_models_async(self, proto_request):
+        await getattr(self.lb_stub, "AddDeployment")(proto_request)
+
+    def add_models(self, deployments=[], model_path=None, version=1):
+        assert self.deployment_type != DeploymentType.AML, "Cannot currently add models to AML deployment"
+        """_, deployments = validate_deployment(task=task,
+                                             model=model,
+                                             deployment_name=deployment_name,
+                                             enable_deepspeed=enable_deepspeed,
+                                             enable_zero=enable_zero,
+                                             ds_config=ds_config,
+                                             mii_config=mii_config,
+                                             deployment_tag=self.deployment_tag,
+                                             deployments=deployments,
+                                             deployment_type=deployment_type,
+                                             model_path=model_path,
+                                             version=version)
+        """
+        if not deployments:  #Empty deployment
+            return None
+
+        deps = {
+            getattr(deployment,
+                    mii.constants.DEPLOYMENT_NAME_KEY): deployment
+            for deployment in deployments
+        }
+        lb_config, self.port_map = allocate_processes(deps, self.port_map, self.mii_configs)
+        lb_enabled = True if len(self.deployments) else False
+        if self.lb_config is not None:
+            self.lb_config.replica_configs.extend(lb_config.replica_configs)
+        else:
+            self.lb_config = lb_config
+        for deployment in deployments:
+            self.deployments[getattr(deployment,
+                                     mii.constants.DEPLOYMENT_NAME_KEY)] = deployment
+        if self.model_path is None and self.deployment_type == DeploymentType.LOCAL:
+            self.model_path = mii.constants.MII_MODEL_PATH_DEFAULT
+        """create_score_file(deployment_tag=self.deployment_tag,
+                          deployment_type=deployment_type,
+                          deployments=deps,
+                          model_path=self.model_path,
+                          port_map=self.port_map,
+                          lb_config=lb_config,
+                          deployed=lb_enabled)
+
+        if deployment_type == DeploymentType.LOCAL:
+            mii.utils.import_score_file(self.deployment_tag).init()
+        """
+        if not self.mii_configs:
+            self.mii_configs = mii.configs.MIIConfigs(**{})
+        mii.MIIServer(self.deployment_tag,
+                      deps.values(),
+                      self.model_path,
+                      lb_config=lb_config,
+                      lb_enabled=lb_enabled,
+                      mii_configs=self.mii_configs)
+
+        if self.lb_stub is None:
+            self.port_number = self.mii_configs.port_number
+            self.channel = create_channel(self.host, self.port_number)
+            self.lb_stub = modelresponse_pb2_grpc.DeploymentManagementStub(self.channel)
+            if not self.mr_stub:
+                self.mr_stub = modelresponse_pb2_grpc.ModelResponseStub(self.channel)
+        for replica in lb_config.replica_configs:
+            request_proto = modelresponse_pb2.AddDeployRequest(
+                task=replica.task,
+                deployment_name=replica.deployment_name,
+                hostname=replica.hostname,
+                tensor_parallel_ports=replica.tensor_parallel_ports,
+                torch_dist_port=replica.torch_dist_port,
+                gpu_indices=replica.gpu_indices)
+
+            self.asyncio_loop.run_until_complete(self.add_models_async(request_proto))
+
+    async def delete_model_async(self, proto_request):
+        await getattr(self.lb_stub, "DeleteDeployment")(proto_request)
+
+    def delete_model(self, deployment_name):
+        if deployment_name in self.deployments:
+            request_proto = modelresponse_pb2.DeleteDeployRequest(
+                deployment_name=deployment_name)
+            self.asyncio_loop.run_until_complete(self.delete_model_async(request_proto))
+            del self.deployments[deployment_name]
+            return None
+        assert False, f"Deployment: {deployment_name} not found"
 
 
 class MIITensorParallelClient():
@@ -157,7 +322,7 @@ class MIITensorParallelClient():
 
 class MIINonPersistentClient():
     def __init__(self, task, deployment_name):
-        self.task = task
+        self.task = get_task(task)
         self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
@@ -188,7 +353,9 @@ class MIINonPersistentClient():
         del mii.non_persistent_models[self.deployment_name]
 
 
-def terminate_restful_gateway(deployment_name):
-    _, mii_configs = _get_deployment_info(deployment_name)
-    if mii_configs.enable_restful_api:
-        requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")
+def terminate_restful_gateway(deployment_tag):
+    deployments, _, _, _, _, mii_configs = _get_deployment_configs(deployment_tag)
+    for deployment in deployments.values():
+        #mii_configs = getattr(deployment, mii.constants.MII_CONFIGS_KEY)
+        if deployment.enable_restful_api:
+            requests.get(f"http://localhost:{mii_configs.restful_api_port}/terminate")

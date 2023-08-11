@@ -5,23 +5,13 @@
 import os
 import argparse
 import mii
-import base64
-import json
 
-from mii import MIIConfig, LoadBalancerConfig
-
+from mii import MIIConfig, LoadBalancerConfig, DeploymentConfig
+from mii.utils import get_task_name
 from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 from mii.grpc_related.restful_gateway import RestfulGatewayThread
-
-
-def decode_config_from_str(config_str):
-    # str -> bytes
-    b64_bytes = config_str.encode()
-    # decode b64 bytes -> json bytes
-    config_bytes = base64.urlsafe_b64decode(b64_bytes)
-    # convert json bytes -> str -> dict
-    return json.loads(config_bytes.decode())
+from .utils import decode_config_from_str
 
 
 def main():
@@ -55,6 +45,7 @@ def main():
                         "--restful-gateway",
                         action='store_true',
                         help="launch restful api gateway")
+    parser.add_argument("-f", "--deployment", type=str, help="base64 encoded deployment")
 
     args = parser.parse_args()
 
@@ -63,6 +54,9 @@ def main():
     # convert dict -> mii config
     mii_config = MIIConfig(**config_dict)
 
+    deployment_dict = decode_config_from_str(args.deployment)
+    deployment_dict['task'] = get_task_name(mii.constants.Tasks(deployment_dict['task']))
+    deployment = DeploymentConfig(**deployment_dict)
     if args.restful_gateway:
         print(f"Starting RESTful API gateway on port: {mii_config.restful_api_port}")
         gateway_thread = RestfulGatewayThread(args.deployment_name,
@@ -87,7 +81,7 @@ def main():
                                          ds_zero=args.ds_zero,
                                          ds_config_path=args.ds_config,
                                          provider=provider,
-                                         mii_config=mii_config)
+                                         mii_config=deployment)
 
         print(f"Starting server on port: {port}")
         serve_inference(inference_pipeline, port)

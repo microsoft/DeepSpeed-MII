@@ -8,7 +8,7 @@ import os
 import json
 import torch
 import mii
-from mii.config import LoadBalancerConfig, ReplicaConfig
+from mii.config import LoadBalancerConfig, ReplicaConfig, MIIConfig
 import time
 
 model = None
@@ -16,24 +16,20 @@ model = None
 
 def init():
     model_path = mii.utils.full_model_path(configs[mii.constants.MODEL_PATH_KEY])
-
-    deployment_name = configs[mii.constants.DEPLOYMENT_NAME_KEY]
-    model_name = configs[mii.constants.MODEL_NAME_KEY]
-    task_name = configs[mii.constants.TASK_NAME_KEY]
-
-    assert model_name is not None, "The model name should be set before calling init"
-    assert task_name is not None, "The task name should be set before calling init"
-
-    mii.MIIServer(deployment_name,
-                  task_name,
-                  model_name,
+    mii_configs = configs[mii.constants.MII_CONFIGS_KEY]
+    deployment_tag = configs[mii.constants.DEPLOYMENT_TAG_KEY]
+    deployments = []
+    lb_enabled = configs[mii.constants.DEPLOYED_KEY]
+    for deployment in configs[mii.constants.DEPLOYMENTS_KEY].values():
+        deployments.append(mii.DeploymentConfig(**deployment))
+    mii_configs = MIIConfig(**mii_configs)
+    mii.MIIServer(deployment_tag,
+                  deployments,
                   model_path,
-                  ds_optimize=configs[mii.constants.ENABLE_DEEPSPEED_KEY],
-                  ds_zero=configs[mii.constants.ENABLE_DEEPSPEED_ZERO_KEY],
-                  ds_config=configs[mii.constants.DEEPSPEED_CONFIG_KEY],
-                  mii_configs=configs[mii.constants.MII_CONFIGS_KEY],
                   lb_config=configs.get(mii.constants.LOAD_BALANCER_CONFIG_KEY,
-                                        None))
+                                        None),
+                  lb_enabled=lb_enabled,
+                  mii_configs=mii_configs)
 
     global model
     model = None
