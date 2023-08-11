@@ -47,9 +47,11 @@ def support_legacy_api(
 
 
 def deploy(
-    deployment_name: str,
-    deployment_configs: List[dict],
+    deployment_name: str = None,
+    deployment_config: dict = None,
     mii_config: dict = None,
+    deployment_configs: list[dict] = None,
+    deployment_tag: str = None,
     *args,
     **kwargs,
 ):
@@ -60,21 +62,29 @@ def deploy(
         assert (
             not deployment_config
         ), "We do not support mixture of legacy and new API options, use latest API."
+        assert deployment_name, "deployment_name required for singular deployment"
         kwargs["mii_config"] = mii_config
         deployment_config, mii_config = support_legacy_api(*args, **kwargs)
 
         deployment_config["deployment_name"] = deployment_name
         mii_config["deployment_tag"] = deployment_name
-        mii_config["deployment_configs"] = {deployment_name: DeploymentConfig(**deployment_config)}
+        mii_config["deployment_configs"] = {
+            deployment_name: DeploymentConfig(**deployment_config)
+        }
     else:
+        assert all((deployment_tag, deployment_configs)), "To deploy multiple models you must use deployment_tag and deployment_configs"
+        deployment_dict = {}
         for deployment_config in deployment_configs:
-            deployment_config = DeploymentConfig(**deployment_config)
-        mii_config["deployment_configs"] = {dep.deployment_name: dep for dep in deployment_configs}
-        mii_config["deployment_tag"] = kwargs["deployment_tag"]
-    
+            deployment_dict[deployment_config.get('deployment_name')] = DeploymentConfig(
+                **deployment_config)
+        #print(deployment_dict)
+        mii_config["deployment_configs"] = deployment_dict
+        mii_config["deployment_tag"] = deployment_tag
+
+    print(mii_config.keys())
     mii_config = mii.config.MIIConfig(**mii_config)
 
-    for deployment_config in mii_config.deployment_configs:
+    for deployment_config in mii_config.deployment_configs.values():
         if deployment_config.enable_deepspeed:
             logger.info(
                 f"************* MII is using DeepSpeed Optimizations to accelerate your model *************"

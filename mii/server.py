@@ -27,12 +27,11 @@ class MIIServer:
     def __init__(self, mii_config):
 
         #self.task = mii_config.deployment_config.task
-        
 
         #self.num_gpus = get_num_gpus(mii_config)
         #assert self.num_gpus > 0, "GPU count must be greater than 0"
-        
-        for deployment_config in mii_config.deployment_configs:
+
+        for deployment_config in mii_config.deployment_configs.values():
             assert get_num_gpus(deployment_config) > 0, f"GPU count for {deployment.deployment_name} must be greater than 0"
         """
         if mii_configs.hostfile is None:
@@ -91,8 +90,10 @@ class MIIServer:
                                ds_launch_str="",
                                server_args=[]):
         launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
+        print(deployment_config)
         b64_config_str = config_to_b64_str(deployment_config)
         server_args.append(f"--deployment-config {b64_config_str}")
+
         server_args_str = " ".join(server_args)
         cmd = f"{ds_launch_str} {launch_str} {server_args_str}".strip().split(" ")
 
@@ -125,13 +126,13 @@ class MIIServer:
         ]
 
         host_gpus = defaultdict(list)
-        for deployment in mii_config.deployment_configs:
+        for deployment in mii_config.deployment_configs.values():
             for repl_config in deployment.replica_configs:
                 host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
         # Start replica instances
-        for deployment_config in mii_config.deployment_configs:
-            for repl_config in mii_config.deployment_config.replica_configs:
+        for deployment_config in mii_config.deployment_configs.values():
+            for repl_config in deployment_config.replica_configs:
                 hostfile = tempfile.NamedTemporaryFile(delete=False)
                 hostfile.write(
                     f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
@@ -159,7 +160,7 @@ class MIIServer:
         if mii_config.enable_restful_api:
             processes.append(
                 self._launch_server_process(
-                    mii_config.deployment_config,
+                    next(iter(mii_config.deployment_configs.values())),
                     "restful api gateway",
                     server_args=server_args + ["--restful-gateway"],
                 ))

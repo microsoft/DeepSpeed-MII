@@ -6,7 +6,7 @@ import torch
 import os
 import string
 from typing import List, Optional, Dict, Any
-from pydantic import validator, root_validator
+from pydantic import validator, root_validator, BaseModel
 import mii
 from mii.constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
 
@@ -175,16 +175,20 @@ class DeploymentConfig(DeepSpeedConfigModel):
         ), "DeepSpeed and ZeRO cannot both be enabled, select only one"
         return values
 
+
+"""
     @root_validator
     def index_map_valid(cls, values):
         if values.get("GPU_index_map"):
-            for host in gpu_index_map:
+            for host in values.get("GPU_index_map"):
                 assert host in resource_pool, f"Host: {host} was not found"
                 assert resource_pool[host] >= tensor_parallel, f"Host {host} has {resource_pool[host]} slot(s), but {tensor_parallel} slot(s) are required"
         return values
+"""
+
 
 class MIIConfig(DeepSpeedConfigModel):
-    deployment_configs: List[DeploymentConfig]
+    deployment_configs: dict[str, DeploymentConfig] = None
     deployment_type: DeploymentType = DeploymentType.LOCAL
     deployment_tag: str = None
     hf_auth_token: Optional[str] = None
@@ -194,12 +198,14 @@ class MIIConfig(DeepSpeedConfigModel):
     hostfile: str = DLTS_HOSTFILE
     version: int = 1
     port_map: dict = {}
+
     @root_validator(skip_on_failure=True)
     def propagate_hf_auth(cls, values):
         # This validator is for when we support multiple models in a deployment
         hf_auth_token = values.get("hf_auth_token")
         deployment_config_list = values.get("deployment_configs")
-        for deployment_config in deployment_config_list:
+        print(deployment_config_list)
+        for deployment_config in deployment_config_list.values():
             if not deployment_config.hf_auth_token:
                 deployment_config.hf_auth_token = hf_auth_token
         return values
@@ -214,13 +220,13 @@ class MIIConfig(DeepSpeedConfigModel):
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
         return values
 
-    @root_validator(skip_on_failure=True)
+    @root_validator()
     def generate_replica_configs(cls, values):
         port_map = values.get("port_map")
         hostfile = values.get("hostfile")
         port_number = values.get("port_number")
         port_offset = 1
-        for deployment_config in values.get("deployment_configs"):
+        for deployment_config in values.get("deployment_configs").values():
 
             replica_configs = deployment_config.replica_configs
             replica_num = deployment_config.replica_num
@@ -235,6 +241,7 @@ class MIIConfig(DeepSpeedConfigModel):
             replica_pool, GPU_index_map = _allocate_processes(hostfile, tensor_parallel, replica_num, GPU_index_map)
             deployment_config.GPU_index_map = GPU_index_map
             replica_configs = []
+            print(replica_pool)
             for i, (hostname, gpu_indices) in enumerate(replica_pool):
                 # Reserver port for a LB proxy when replication is enabled
                 if hostname not in port_map:
@@ -242,7 +249,9 @@ class MIIConfig(DeepSpeedConfigModel):
                 base_port = port_number + i * tensor_parallel + port_offset
                 if base_port in port_map[hostname]:
                     base_port = max(port_map[hostname]) + 1
-                tensor_parallel_ports = list(range(base_port, base_port + tensor_parallel))
+                tensor_parallel_ports = list(
+                    range(base_port,
+                          base_port + tensor_parallel))
                 for i in range(base_port, base_port + tensor_parallel):
                     port_map[hostname].add(i)
                 replica_torch_dist_port = torch_dist_port + (100 * i)
@@ -266,11 +275,14 @@ def _allocate_processes(hostfile_path, tensor_parallel, replica_num, GPU_index_m
 
     replica_pool = []
 
-    if gpu_index_map is not None:
-        for host in gpu_index_map:
-            replica_pool.append((host, gpu_index_map[host]))
-        return replica_pool
-    
+    if GPU_index_map is not None:
+        for host in GPU_index_map:
+            assert host in resource_pool, f"Host: {host} was not found"
+            assert resource_pool[host] >= tensor_parallel, f"Host {host} has {resource_pool[host]} slot(s), but {tensor_parallel} slot(s) are required"
+        for host in GPU_index_map:
+            replica_pool.append((host, GPU_index_map[host]))
+        return replica_pool, GPU_index_map
+
     allocated_num = 0
     for host, slots in resource_pool.items():
         available_on_host = slots
@@ -301,4 +313,4 @@ def _allocate_processes(hostfile_path, tensor_parallel, replica_num, GPU_index_m
             f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
         )
 
-    return replica_pool
+    return replica_pool, GPU_index_map

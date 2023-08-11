@@ -171,10 +171,8 @@ class ParallelStubInvoker:
             self.asyncio_loop).result()
 
 
-
-
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
-     def __init__(self, mii_config):
+    def __init__(self, mii_config):
         super().__init__()
         self.asyncio_loop = asyncio.get_event_loop()
 
@@ -186,7 +184,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             self.stubs[deployment.deployment_name] = []
             self.counter[deployment.deployment_name] = AtomicCounter()
             self.tasks[deployment.deployment_name] = repl.task
-        
+
         for deployment in mii_config.deployment_configs:
             deployment_name = deployment.deployment_name
             for repl in deployment.replica_configs:
@@ -256,6 +254,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             invoke_intercept_method,
             request_deserializer=next_handler.request_deserializer,
             response_serializer=next_handler.response_serializer)
+
 
 def _do_serve(service_impl, port, interceptors=[]):
     stop_event = service_impl.get_stop_event()

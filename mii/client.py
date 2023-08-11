@@ -35,9 +35,7 @@ def mii_query_handle(deployment_name):
         return MIINonPersistentClient(task, deployment_name)
 
     mii_config = _get_mii_config(deployment_name)
-    return MIIClient(mii_config.deployment_config.task,
-                     "localhost",
-                     mii_config.port_number)
+    return MIIClient(mii_config, "localhost", mii_config.port_number)
 
 
 def create_channel(host, port):
@@ -61,13 +59,13 @@ class MIIClient:
         channel = create_channel(host, port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
         self.mii_config = mii_config
-    
-      def _get_deployment_task(self, deployment_name=None):
+
+    def _get_deployment_task(self, deployment_name=None):
         task = None
         if deployment_name is None:  #mii.terminate() or single model
             if deployment_name is None:
                 assert len(self.deployments) == 1, "Must pass deployment_name to query when using multiple deployments"
-            deployment = self.mii_config.deployment_configs[0] 
+            deployment = self.mii_config.deployment_configs[0]
             deployment_name = getattr(deployment, deployment_name)
             task = getattr(deployment, task)
         else:

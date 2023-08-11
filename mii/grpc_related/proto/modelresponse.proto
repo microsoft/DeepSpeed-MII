@@ -65,7 +65,7 @@ message SingleStringReply {
   string response = 1;
   float time_taken = 2;
   float model_time_taken = 3;
-}  
+}
 
 message MultiStringReply {
   repeated string response = 1;

@@ -10,6 +10,7 @@ import time
 import torch
 
 import mii
+from mii.config import DeploymentConfig
 
 model = None
 

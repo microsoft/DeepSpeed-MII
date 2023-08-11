@@ -23,6 +23,7 @@ def b64_encoded_config(config_str):
     # return mii.DeploymentConfig object
     return DeploymentConfig(**config_dict)
 
+
 def b64_encoded_config(config_str):
     # str -> bytes
     b64_bytes = config_str.encode()
@@ -32,6 +33,7 @@ def b64_encoded_config(config_str):
     config_dict = json.loads(config_bytes.decode())
     # return mii.MIIConfig object
     return MIIConfig(**config_dict)
+
 
 def main():
     parser = argparse.ArgumentParser()
