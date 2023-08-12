@@ -24,7 +24,7 @@ def b64_encoded_config(config_str):
     return DeploymentConfig(**config_dict)
 
 
-def b64_encoded_config(config_str):
+def b64_encoded_config_MII(config_str): #TODO: Remove Duplicated Funciton
     # str -> bytes
     b64_bytes = config_str.encode()
     # decode b64 bytes -> json bytes
@@ -44,7 +44,7 @@ def main():
     )
     parser.add_argument(
         "--mii-config",
-        type=b64_encoded_config,
+        type=b64_encoded_config_MII,
         help="base64 encoded mii config",
     )
     parser.add_argument(
