@@ -10,70 +10,15 @@ import torch
 import mii
 from huggingface_hub import HfApi
 
-from mii.constants import (CONVERSATIONAL_NAME,
-                           FILL_MASK_NAME,
-                           MII_CACHE_PATH,
-                           MII_CACHE_PATH_DEFAULT,
-                           TEXT_GENERATION_NAME,
-                           TEXT_CLASSIFICATION_NAME,
-                           QUESTION_ANSWERING_NAME,
-                           TOKEN_CLASSIFICATION_NAME,
-                           SUPPORTED_MODEL_TYPES,
-                           ModelProvider,
-                           REQUIRED_KEYS_PER_TASK,
-                           TEXT2IMG_NAME)
+from mii.constants import (
+    MII_CACHE_PATH,
+    MII_CACHE_PATH_DEFAULT,
+    ModelProvider,
+    SUPPORTED_MODEL_TYPES,
+    REQUIRED_KEYS_PER_TASK,
+)
 
-from mii.constants import Tasks
-
-
-def get_task_name(task):
-    if task == Tasks.QUESTION_ANSWERING:
-        return QUESTION_ANSWERING_NAME
-
-    if task == Tasks.TEXT_GENERATION:
-        return TEXT_GENERATION_NAME
-
-    if task == Tasks.TEXT_CLASSIFICATION:
-        return TEXT_CLASSIFICATION_NAME
-
-    if task == Tasks.FILL_MASK:
-        return FILL_MASK_NAME
-
-    if task == Tasks.TOKEN_CLASSIFICATION:
-        return TOKEN_CLASSIFICATION_NAME
-
-    if task == Tasks.CONVERSATIONAL:
-        return CONVERSATIONAL_NAME
-
-    if task == Tasks.TEXT2IMG:
-        return TEXT2IMG_NAME
-
-    raise ValueError(f"Unknown Task {task}")
-
-
-def get_task(task_name):
-    if task_name == QUESTION_ANSWERING_NAME:
-        return Tasks.QUESTION_ANSWERING
-
-    if task_name == TEXT_GENERATION_NAME:
-        return Tasks.TEXT_GENERATION
-
-    if task_name == TEXT_CLASSIFICATION_NAME:
-        return Tasks.TEXT_CLASSIFICATION
-
-    if task_name == FILL_MASK_NAME:
-        return Tasks.FILL_MASK
-
-    if task_name == TOKEN_CLASSIFICATION_NAME:
-        return Tasks.TOKEN_CLASSIFICATION
-
-    if task_name == CONVERSATIONAL_NAME:
-        return Tasks.CONVERSATIONAL
-
-    if task_name == TEXT2IMG_NAME:
-        return Tasks.TEXT2IMG
-
-    assert False, f"Unknown Task {task_name}"
+from mii.config import TaskType
 
 
 def _get_hf_models_by_type(model_type, task=None):
@@ -81,7 +26,7 @@ def _get_hf_models_by_type(model_type, task=None):
     models = api.list_models(filter=model_type)
     models = ([m.modelId for m in models]
               if task is None else [m.modelId for m in models if m.pipeline_tag == task])
-    if task == TEXT_GENERATION_NAME:
+    if task == TaskType.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         models.append("microsoft/bloom-deepspeed-inference-fp16")
         models.append("microsoft/bloom-deepspeed-inference-int8")
@@ -92,16 +37,15 @@ def _get_hf_models_by_type(model_type, task=None):
 # TODO read this from a file containing list of files supported for each task
 def _get_supported_models_name(task):
     supported_models = []
-    task_name = get_task_name(task)
 
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
-            models = _get_hf_models_by_type(model_type, task_name)
+            models = _get_hf_models_by_type(model_type, task)
         elif provider == ModelProvider.ELEUTHER_AI:
-            if task_name == TEXT_GENERATION_NAME:
+            if task == TaskType.TEXT_GENERATION:
                 models = [model_type]
         elif provider == ModelProvider.DIFFUSERS:
-            models = _get_hf_models_by_type(model_type, task_name)
+            models = _get_hf_models_by_type(model_type, task)
         supported_models.extend(models)
     if not supported_models:
         raise ValueError(f"Task {task} not supported")
@@ -115,27 +59,8 @@ def check_if_task_and_model_is_supported(task, model_name):
 
 
 def check_if_task_and_model_is_valid(task, model_name):
-    task_name = get_task_name(task)
-    valid_task_models = _get_hf_models_by_type(None, task_name)
-    assert (
-        model_name in valid_task_models
-    ), f"{task_name} only supports {valid_task_models}"
-
-
-def full_model_path(model_path):
-    aml_model_dir = os.environ.get('AZUREML_MODEL_DIR', None)
-    if aml_model_dir:
-        # (potentially) append relative model_path w. aml path
-        assert os.path.isabs(aml_model_dir), f"AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path"
-        if model_path:
-            assert not os.path.isabs(model_path), f"model_path={model_path} must be relative to append w. AML path"
-            return os.path.join(aml_model_dir, model_path)
-        else:
-            return aml_model_dir
-    elif model_path:
-        return model_path
-    else:
-        return mii.constants.MII_MODEL_PATH_DEFAULT
+    valid_task_models = _get_hf_models_by_type(None, task)
+    assert model_name in valid_task_models, f"{task} only supports {valid_task_models}"
 
 
 def is_aml():
@@ -198,21 +123,22 @@ def extract_query_dict(task, request_dict):
     return query_dict
 
 
-def get_num_gpus(mii_configs):
-    num_gpus = mii_configs.tensor_parallel
+def get_num_gpus(deployment_config):
+    num_gpus = deployment_config.tensor_parallel
 
-    assert torch.cuda.device_count(
-    ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+    assert (
+        torch.cuda.device_count() >= num_gpus
+    ), f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
     return num_gpus
 
 
-def get_provider_name(model_name, task):
+def get_provider(model_name, task):
     if model_name == "gpt-neox":
-        provider = mii.constants.MODEL_PROVIDER_NAME_EA
-    elif task == mii.Tasks.TEXT2IMG:
-        provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
+        provider = ModelProvider.ELEUTHER_AI
+    elif task == TaskType.TEXT2IMG:
+        provider = ModelProvider.DIFFUSERS
     else:
-        provider = mii.constants.MODEL_PROVIDER_NAME_HF
+        provider = ModelProvider.HUGGING_FACE
     return provider
 
 

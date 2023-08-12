@@ -9,12 +9,7 @@ import mii
 from types import SimpleNamespace
 
 
-# Add pytest.skip here for configs that we do not want to test
-def validate_config(config):
-    pass
-
-
-@pytest.fixture(scope="function", params=['fp16'])
+@pytest.fixture(scope="function", params=["fp16"])
 def dtype(request):
     return request.param
 
@@ -54,30 +49,6 @@ def restful_api_port(request):
     return request.param
 
 
-@pytest.fixture(scope="function")
-def mii_config(
-    tmpdir: str,
-    dtype: str,
-    tensor_parallel: int,
-    port_number: int,
-    meta_tensor: bool,
-    load_with_sys_mem: bool,
-    replica_num: int,
-    enable_restful_api: bool,
-    restful_api_port: int,
-):
-    return {
-        'dtype': dtype,
-        'tensor_parallel': tensor_parallel,
-        'port_number': port_number,
-        'meta_tensor': meta_tensor,
-        'load_with_sys_mem': load_with_sys_mem,
-        'replica_num': replica_num,
-        'enable_restful_api': enable_restful_api,
-        'restful_api_port': restful_api_port,
-    }
-
-
 @pytest.fixture(scope="function", params=["text-generation"])
 def task_name(request):
     return request.param
@@ -86,6 +57,11 @@ def task_name(request):
 @pytest.fixture(scope="function", params=["bigscience/bloom-560m"])
 def model_name(request):
     return request.param
+
+
+@pytest.fixture(scope="function")
+def deployment_name(model_name):
+    return model_name + "-deployment"
 
 
 @pytest.fixture(scope="function", params=[mii.DeploymentType.LOCAL])
@@ -109,25 +85,48 @@ def ds_config(request):
 
 
 @pytest.fixture(scope="function")
-def deployment_config(task_name: str,
-                      model_name: str,
-                      deployment_type: str,
-                      mii_config: dict,
-                      enable_deepspeed: bool,
-                      enable_zero: bool,
-                      ds_config: dict):
-    config = SimpleNamespace(task=task_name,
-                             model=model_name,
-                             deployment_type=deployment_type,
-                             deployment_name=model_name + "-deployment",
-                             model_path=os.getenv("TRANSFORMERS_CACHE",
-                                                  None),
-                             mii_config=mii_config,
-                             enable_deepspeed=enable_deepspeed,
-                             enable_zero=enable_zero,
-                             ds_config=ds_config)
-    validate_config(config)
-    return config
+def deployment_config(
+    task_name: str,
+    model_name: str,
+    dtype: str,
+    tensor_parallel: int,
+    meta_tensor: bool,
+    load_with_sys_mem: bool,
+    replica_num: int,
+    enable_deepspeed: bool,
+    enable_zero: bool,
+    ds_config: dict,
+):
+    config = SimpleNamespace(
+        task=task_name,
+        model=model_name,
+        dtype=dtype,
+        tensor_parallel=tensor_parallel,
+        model_path=os.getenv("TRANSFORMERS_CACHE",
+                             ""),
+        meta_tensor=meta_tensor,
+        replica_num=replica_num,
+        enable_deepspeed=enable_deepspeed,
+        enable_zero=enable_zero,
+        ds_config=ds_config,
+    )
+    return config.__dict__
+
+
+@pytest.fixture(scope="function")
+def mii_config(
+    deployment_type: str,
+    port_number: int,
+    enable_restful_api: bool,
+    restful_api_port: int,
+):
+    config = SimpleNamespace(
+        deployment_type=deployment_type,
+        port_number=port_number,
+        enable_restful_api=enable_restful_api,
+        restful_api_port=restful_api_port,
+    )
+    return config.__dict__
 
 
 @pytest.fixture(scope="function", params=[None])
@@ -136,15 +135,23 @@ def expected_failure(request):
 
 
 @pytest.fixture(scope="function")
-def deployment(deployment_config, expected_failure):
+def deployment(deployment_name, mii_config, deployment_config, expected_failure):
     if expected_failure is not None:
         with pytest.raises(expected_failure) as excinfo:
-            mii.deploy(**deployment_config.__dict__)
+            mii.deploy(
+                deployment_name=deployment_name,
+                mii_config=mii_config,
+                deployment_config=deployment_config,
+            )
         yield excinfo
     else:
-        mii.deploy(**deployment_config.__dict__)
-        yield deployment_config
-        mii.terminate(deployment_config.deployment_name)
+        mii.deploy(
+            deployment_name=deployment_name,
+            mii_config=mii_config,
+            deployment_config=deployment_config,
+        )
+        yield deployment_name
+        mii.terminate(deployment_name)
 
 
 @pytest.fixture(scope="function", params=[{"query": "DeepSpeed is the greatest"}])
