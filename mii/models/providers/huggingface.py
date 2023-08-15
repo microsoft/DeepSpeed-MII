@@ -28,6 +28,7 @@ class MetaTensorPipeline(object):
     """
     Class for loading HuggingFace models using meta tensors
     """
+
     def __init__(self, model, tokenizer, checkpoint_dict):
         self.model = model
         self.tokenizer = tokenizer

@@ -165,6 +165,7 @@ dtype_proto_field = {
 
 
 def kwarg_dict_to_proto(kwarg_dict):
+
     def get_proto_value(value):
         proto_value = mii.grpc_related.proto.modelresponse_pb2.Value()
         setattr(proto_value, dtype_proto_field[type(value)], value)
