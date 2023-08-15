@@ -29,6 +29,7 @@ def config_to_b64_str(config):
 
 class MIIServer():
     '''Initialize the model, setup the server for the model under model_path'''
+
     def __init__(self,
                  deployment_name,
                  task_name,

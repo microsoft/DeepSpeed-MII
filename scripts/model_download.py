@@ -21,6 +21,7 @@ def dir_path(path_str):
 
 
 class HFModelNotFoundError(Exception):
+
     def __init__(self, model_str):
         super().__init__(f"HuggingFace model not found: '{model_str}'")
 

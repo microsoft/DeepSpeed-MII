@@ -8,6 +8,7 @@ from mii.constants import Tasks
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
 from mii.models.utils import ImageResponse
+import uuid
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
@@ -42,6 +43,7 @@ def proto_request_to_list(self, request):
 
 
 class TaskMethods(ABC):
+
     @property
     @abstractmethod
     def method(self):
@@ -123,6 +125,7 @@ class TextGenerationMethods(TaskMethods):
 
 
 class TextClassificationMethods(TaskMethods):
+
     @property
     def method(self):
         return "ClassificationReply"
@@ -133,6 +136,7 @@ class TextClassificationMethods(TaskMethods):
 
 
 class QuestionAnsweringMethods(TaskMethods):
+
     @property
     def method(self):
         return "QuestionAndAnswerReply"
@@ -154,6 +158,7 @@ class QuestionAnsweringMethods(TaskMethods):
 
 
 class FillMaskMethods(TaskMethods):
+
     @property
     def method(self):
         return "FillMaskReply"
@@ -164,6 +169,7 @@ class FillMaskMethods(TaskMethods):
 
 
 class TokenClassificationMethods(TaskMethods):
+
     @property
     def method(self):
         return "TokenClassificationReply"
@@ -174,6 +180,7 @@ class TokenClassificationMethods(TaskMethods):
 
 
 class ConversationalMethods(TaskMethods):
+
     @property
     def method(self):
         return "ConversationalReply"
@@ -189,20 +196,19 @@ class ConversationalMethods(TaskMethods):
 
         else:
             text = getattr(request, 'text')
-            conversation_id = getattr(request, 'conversation_id')
+            conversation_id = uuid.UUID(getattr(request, 'conversation_id'))
             past_user_inputs = getattr(request, 'past_user_inputs')
             generated_responses = getattr(request, 'generated_responses')
 
         conv = Conversation(text=text,
                             conversation_id=conversation_id,
                             past_user_inputs=past_user_inputs,
-                            generated_responses=generated_responses,
-                            **kwargs)
+                            generated_responses=generated_responses)
         return conv
 
     def pack_response_to_proto(self, conv, time_taken, model_time_taken):
         return modelresponse_pb2.ConversationReply(
-            conversation_id=conv.uuid,
+            conversation_id=str(conv.uuid),
             past_user_inputs=conv.past_user_inputs,
             generated_responses=conv.generated_responses,
             time_taken=time_taken,
@@ -210,15 +216,14 @@ class ConversationalMethods(TaskMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        conv = self.create_conversation(request, **kwargs)
+        conv = self.create_conversation(request)
         args = (conv, )
-        kwargs = {}
         return args, kwargs
 
     def pack_request_to_proto(self, request_dict, **query_kwargs):
         return modelresponse_pb2.ConversationRequest(
             text=request_dict['text'],
-            conversation_id=request_dict['conversation_id']
+            conversation_id=str(request_dict['conversation_id'])
             if 'conversation_id' in request_dict else None,
             past_user_inputs=request_dict['past_user_inputs'],
             generated_responses=request_dict['generated_responses'],
@@ -226,6 +231,7 @@ class ConversationalMethods(TaskMethods):
 
 
 class Text2ImgMethods(TaskMethods):
+
     @property
     def method(self):
         return "Txt2ImgReply"

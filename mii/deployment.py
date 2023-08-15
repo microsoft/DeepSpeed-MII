@@ -196,7 +196,7 @@ def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
     allocated_num = 0
     for host, slots in resource_pool.items():
         available_on_host = slots
-        while True:#available_on_host >= tensor_parallel:
+        while True:  #available_on_host >= tensor_parallel:
             if allocated_num >= num_replicas:
                 break
             # TODO: Skip for AML / move to deployment time
