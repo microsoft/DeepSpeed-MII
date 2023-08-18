@@ -187,9 +187,6 @@ def hf_provider(model_path, model_name, task_name, mii_config):
         return load_with_meta_tensor(model_path, model_name, task_name, mii_config)
     else:
         device = get_device(load_with_sys_mem=mii_config.load_with_sys_mem)
-        import os
-        print("ENVIRON", os.environ)
-        print("ARGS", model_path, model_name)
         inference_pipeline = pipeline(
             task_name,
             model=model_name if not is_aml() else model_path,

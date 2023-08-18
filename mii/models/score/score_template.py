@@ -24,6 +24,13 @@ def init():
     assert model_name is not None, "The model name should be set before calling init"
     assert task_name is not None, "The task name should be set before calling init"
 
+    # For AML deployments, we stand up multiple nginx server workers, one for
+    # each replica. This is so that we can properly run multiple requests in
+    # parallel on the different replicas. However, each worker will run this
+    # generated score.py and try to stand up an entire MII deployment
+    # (load-balancer, replicas, etc.). We want only one worker to spawn the
+    # load-balancer and replicas. We take advantage of the nginx worker PIDs
+    # being consecutive to achieve that here.
     start_server = True
     if mii.utils.is_aml() and (
             int(os.getpid()) % configs.get("mii_configs").get("replica_num") != 0):

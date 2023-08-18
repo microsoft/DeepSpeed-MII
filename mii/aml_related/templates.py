@@ -164,8 +164,8 @@ ENV PATH="/opt/miniconda/envs/amlenv/bin:$AML_APP_ROOT:$PATH" \
 
 RUN /opt/miniconda/envs/amlenv/bin/pip install -r "$BUILD_DIR/requirements.txt" --extra-index-url https://download.pytorch.org/whl/cu113 && \
     /opt/miniconda/envs/amlenv/bin/pip install azureml-inference-server-http && \
-    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed.git@mrwyattii/fix-multi-node-checks && \
-    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git@mrwyattii/update-AML-deployment && \
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed.git && \
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/huggingface/transformers.git
 
 
