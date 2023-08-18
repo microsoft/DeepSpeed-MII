@@ -8,12 +8,12 @@ import requests
 import mii
 from mii.utils import get_task
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.constants import GRPC_MAX_MSG_SIZE, Tasks
+from mii.constants import GRPC_MAX_MSG_SIZE, Tasks, DeploymentType
 from mii.method_table import GRPC_METHOD_TABLE
 
 
 def _get_deployment_info(deployment_name):
-    configs = mii.utils.import_score_file(deployment_name).configs
+    configs = mii.utils.import_score_file(deployment_name, DeploymentType.LOCAL).configs
     task = configs[mii.constants.TASK_NAME_KEY]
     mii_configs_dict = configs[mii.constants.MII_CONFIGS_KEY]
     mii_configs = mii.config.MIIConfig(**mii_configs_dict)
