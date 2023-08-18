@@ -138,7 +138,7 @@ def deploy(task,
 
 
 def _deploy_local(deployment_name, model_path):
-    mii.utils.import_score_file(deployment_name).init()
+    mii.utils.import_score_file(deployment_name, DeploymentType.LOCAL).init()
 
 
 def _deploy_aml(deployment_name, instance_type, version):
