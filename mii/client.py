@@ -55,7 +55,6 @@ class MIIClient():
     """
     Client to send queries to a single endpoint.
     """
-
     def __init__(self, task_name, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
@@ -106,7 +105,6 @@ class MIITensorParallelClient():
     Client to send queries to multiple endpoints in parallel.
     This is used to call multiple servers deployed for tensor parallelism.
     """
-
     def __init__(self, task_name, host, ports):
         self.task = get_task(task_name)
         self.clients = [MIIClient(task_name, host, port) for port in ports]
@@ -158,7 +156,6 @@ class MIITensorParallelClient():
 
 
 class MIINonPersistentClient():
-
     def __init__(self, task, deployment_name):
         self.task = task
         self.deployment_name = deployment_name

@@ -43,7 +43,6 @@ def proto_request_to_list(self, request):
 
 
 class TaskMethods(ABC):
-
     @property
     @abstractmethod
     def method(self):
@@ -125,7 +124,6 @@ class TextGenerationMethods(TaskMethods):
 
 
 class TextClassificationMethods(TaskMethods):
-
     @property
     def method(self):
         return "ClassificationReply"
@@ -136,7 +134,6 @@ class TextClassificationMethods(TaskMethods):
 
 
 class QuestionAnsweringMethods(TaskMethods):
-
     @property
     def method(self):
         return "QuestionAndAnswerReply"
@@ -158,7 +155,6 @@ class QuestionAnsweringMethods(TaskMethods):
 
 
 class FillMaskMethods(TaskMethods):
-
     @property
     def method(self):
         return "FillMaskReply"
@@ -169,7 +165,6 @@ class FillMaskMethods(TaskMethods):
 
 
 class TokenClassificationMethods(TaskMethods):
-
     @property
     def method(self):
         return "TokenClassificationReply"
@@ -180,7 +175,6 @@ class TokenClassificationMethods(TaskMethods):
 
 
 class ConversationalMethods(TaskMethods):
-
     @property
     def method(self):
         return "ConversationalReply"
@@ -231,7 +225,6 @@ class ConversationalMethods(TaskMethods):
 
 
 class Text2ImgMethods(TaskMethods):
-
     @property
     def method(self):
         return "Txt2ImgReply"

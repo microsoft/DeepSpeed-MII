@@ -15,7 +15,6 @@ log_levels = {
 
 
 class LoggerFactory:
-
     @staticmethod
     def create_logger(name=None, level=logging.INFO):
         """create a logger

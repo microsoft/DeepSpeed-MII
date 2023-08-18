@@ -25,8 +25,8 @@ def init():
     assert task_name is not None, "The task name should be set before calling init"
 
     start_server = True
-    if mii.utils.is_aml() and (int(os.getpid()) %
-                               configs.get("mii_configs").get("replica_num") != 0):
+    if mii.utils.is_aml() and (
+            int(os.getpid()) % configs.get("mii_configs").get("replica_num") != 0):
         start_server = False
 
     if start_server:

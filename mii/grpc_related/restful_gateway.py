@@ -22,7 +22,6 @@ def createRestfulGatewayApp(deployment_name, task, mii_config, server_thread):
     client = mii.MIIClient(task, "localhost", mii_config.port_number)
 
     class RestfulGatewayService(Resource):
-
         def __init__(self):
             super().__init__()
 
@@ -48,7 +47,6 @@ def createRestfulGatewayApp(deployment_name, task, mii_config, server_thread):
 
 
 class RestfulGatewayThread(threading.Thread):
-
     def __init__(self, deployment_name, task, mii_config):
         threading.Thread.__init__(self)
         self.mii_config = mii_config

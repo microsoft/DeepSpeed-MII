@@ -12,7 +12,6 @@ import mii.grpc_related.proto.modelresponse_pb2 as modelresponse__pb2
 
 class ModelResponseStub(object):
     """Missing associated documentation comment in .proto file."""
-
     def __init__(self, channel):
         """Constructor.
 
@@ -74,7 +73,6 @@ class ModelResponseStub(object):
 
 class ModelResponseServicer(object):
     """Missing associated documentation comment in .proto file."""
-
     def Terminate(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -210,7 +208,6 @@ def add_ModelResponseServicer_to_server(servicer, server):
 # This class is part of an EXPERIMENTAL API.
 class ModelResponse(object):
     """Missing associated documentation comment in .proto file."""
-
     @staticmethod
     def Terminate(request,
                   target,
