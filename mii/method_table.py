@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+import uuid
+
 from abc import ABC, abstractmethod
 from transformers import Conversation
 from mii.constants import Tasks
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
 from mii.models.utils import ImageResponse
-import uuid
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
@@ -184,15 +185,18 @@ class ConversationalMethods(TaskMethods):
             assert 'text' in request and 'past_user_inputs' in request and 'generated_responses' in request, "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
             text = request['text']
             conversation_id = request[
-                'conversation_id'] if 'conversation_id' in request else None
+                'conversation_id'] if 'conversation_id' in request else ""
             past_user_inputs = request['past_user_inputs']
             generated_responses = request['generated_responses']
 
         else:
             text = getattr(request, 'text')
-            conversation_id = uuid.UUID(getattr(request, 'conversation_id'))
+            conversation_id = getattr(request, 'conversation_id')
             past_user_inputs = getattr(request, 'past_user_inputs')
             generated_responses = getattr(request, 'generated_responses')
+
+        # Create UUID from conversation ID
+        conversation_id = uuid.uuid5(uuid.NAMESPACE_DNS, conversation_id)
 
         conv = Conversation(text=text,
                             conversation_id=conversation_id,
@@ -218,7 +222,7 @@ class ConversationalMethods(TaskMethods):
         return modelresponse_pb2.ConversationRequest(
             text=request_dict['text'],
             conversation_id=str(request_dict['conversation_id'])
-            if 'conversation_id' in request_dict else None,
+            if 'conversation_id' in request_dict else "",
             past_user_inputs=request_dict['past_user_inputs'],
             generated_responses=request_dict['generated_responses'],
             query_kwargs=kwarg_dict_to_proto(query_kwargs))
