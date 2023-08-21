@@ -196,7 +196,7 @@ class ConversationalMethods(TaskMethods):
             generated_responses = getattr(request, 'generated_responses')
 
         # Create UUID from conversation ID
-        conversation_id = uuid.uuid5(uuid.NAMESPACE_DNS, conversation_id)
+        conversation_id = uuid.uuid5(uuid.NAMESPACE_DNS, str(conversation_id))
 
         conv = Conversation(text=text,
                             conversation_id=conversation_id,
