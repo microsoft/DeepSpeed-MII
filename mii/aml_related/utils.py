@@ -27,6 +27,10 @@ def get_acr_name():
         )
         print("\t- Are logged in to an active account on Azure-CLI ($az login)")
         print("\t- Have Azure-CLI ML plugin installed ($az extension add --name ml)")
+        print("\t- You have the default subscription, resource group, and workspace set")
+        print("\t\t- az account set --subscription YOUR_SUBSCRIPTION")
+        print("\t\t- az config set defaults.group=YOUR_GROUP")
+        print("\t\t- az config set defaults.workspace=YOUR_WORKSPACE")
         print("\n", "-" * 30, "\n")
         raise (e)
 
@@ -57,8 +61,13 @@ def write_out_yaml(output_file, yaml_data):
         yaml.dump(yaml.safe_load(yaml_data), f)
 
 
-def generate_aml_scripts(acr_name, deployment_name, model_name, version):
-    version = str(version)
+def generate_aml_scripts(acr_name,
+                         deployment_name,
+                         model_name,
+                         task_name,
+                         replica_num,
+                         instance_type,
+                         version):
     output_dir = aml_output_path(deployment_name)
     code_path = os.path.join(output_dir, "code")
     model_path = os.path.join(output_dir, "model")
@@ -71,7 +80,10 @@ def generate_aml_scripts(acr_name, deployment_name, model_name, version):
         "<acr-name>": acr_name,
         "<deployment-name>": deployment_name,
         "<model-name>": model_name,
-        "<version>": version,
+        "<task-name>": task_name,
+        "<replica-num>": str(replica_num),
+        "<instance-type>": instance_type,
+        "<version>": str(version),
         "<code-path>": code_path,
         "<model-path>": model_path,
         "<endpoint-name>": endpoint_name,

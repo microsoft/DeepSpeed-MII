@@ -2,14 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import sys
 import os
-import logging
 import importlib
 import torch
 import mii
 from huggingface_hub import HfApi
 
+from mii.models.score.generate import generated_score_path
 from mii.constants import (CONVERSATIONAL_NAME,
                            FILL_MASK_NAME,
                            MII_CACHE_PATH,
@@ -149,12 +148,9 @@ def mii_cache_path():
     return cache_path
 
 
-def import_score_file(deployment_name):
-    spec = importlib.util.spec_from_file_location(
-        "score",
-        os.path.join(mii_cache_path(),
-                     deployment_name,
-                     "score.py"))
+def import_score_file(deployment_name, deployment_type):
+    score_path = generated_score_path(deployment_name, deployment_type)
+    spec = importlib.util.spec_from_file_location("score", score_path)
     score = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(score)
     return score
@@ -214,43 +210,3 @@ def get_provider_name(model_name, task):
     else:
         provider = mii.constants.MODEL_PROVIDER_NAME_HF
     return provider
-
-
-log_levels = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "critical": logging.CRITICAL,
-}
-
-
-class LoggerFactory:
-    @staticmethod
-    def create_logger(name=None, level=logging.INFO):
-        """create a logger
-        Args:
-            name (str): name of the logger
-            level: level of logger
-        Raises:
-            ValueError is name is None
-        """
-
-        if name is None:
-            raise ValueError("name for logger cannot be None")
-
-        formatter = logging.Formatter(
-            "[%(asctime)s] [%(levelname)s] "
-            "[%(filename)s:%(lineno)d:%(funcName)s] %(message)s")
-
-        logger_ = logging.getLogger(name)
-        logger_.setLevel(level)
-        logger_.propagate = False
-        ch = logging.StreamHandler(stream=sys.stdout)
-        ch.setLevel(level)
-        ch.setFormatter(formatter)
-        logger_.addHandler(ch)
-        return logger_
-
-
-logger = LoggerFactory.create_logger(name="MII", level=logging.INFO)
