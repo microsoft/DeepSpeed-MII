@@ -9,10 +9,10 @@ import subprocess
 import sys
 import tempfile
 import time
-import torch
 from pathlib import Path
 from collections import defaultdict
 from deepspeed.launcher.runner import fetch_hostfile
+from deepspeed.accelerator import get_accelerator
 
 import mii
 from mii.utils import get_num_gpus, get_provider_name
@@ -42,7 +42,6 @@ class MIIServer():
                  mii_configs={},
                  lb_config=None):
         mii_configs = mii.config.MIIConfig(**mii_configs)
-        lb_config = self._create_lb_config(mii_config=mii_configs)
 
         self.task = mii.utils.get_task(task_name)
 
@@ -51,12 +50,14 @@ class MIIServer():
 
         self.port_number = mii_configs.port_number
 
-        if mii_configs.hostfile is None:
-            hostfile = tempfile.NamedTemporaryFile(delete=False)
-            num_gpu = torch.cuda.device_count()
-            with open(hostfile, "w") as f:
-                f.write(f"localhost slots={num_gpu}")
-            mii.configs.hostfile = hostfile
+        if not os.path.isfile(mii_configs.hostfile):
+            logger.info(f"Hostfile {mii_configs.hostfile} not found, creating hostfile.")
+            num_gpu = get_accelerator().device_count()
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+                temp_file.write(f"localhost slots={num_gpu}")
+            mii_configs.hostfile = temp_file.name
+
+        lb_config = self._create_lb_config(mii_config=mii_configs)
 
         processes = self._initialize_service(deployment_name,
                                              model_name,
