@@ -7,13 +7,11 @@ import string
 import os
 import mii
 
-from deepspeed.launcher.runner import fetch_hostfile
-
 from .constants import DeploymentType, MII_MODEL_PATH_DEFAULT, MODEL_PROVIDER_MAP
-from .utils import logger, get_task_name, get_provider_name
+from .logging import logger
+from .utils import get_task_name, get_provider_name
 from .models.score import create_score_file
 from .models import load_models
-from .config import ReplicaConfig, LoadBalancerConfig
 
 
 def deploy(task,
@@ -25,6 +23,7 @@ def deploy(task,
            enable_zero=False,
            ds_config=None,
            mii_config={},
+           instance_type="Standard_NC12s_v3",
            version=1):
     """Deploy a task using specified model. For usage examples see:
 
@@ -82,6 +81,7 @@ def deploy(task,
                             string.digits + '-')
         assert set(deployment_name) <= allowed_chars, "AML deployment names can only contain a-z, A-Z, 0-9, and '-'"
 
+    task_name = task
     task = mii.utils.get_task(task)
 
     if not mii_config.skip_model_check:
@@ -104,27 +104,6 @@ def deploy(task,
     elif model_path is None and deployment_type == DeploymentType.AML:
         model_path = "model"
 
-    # add fields for replica deployment
-    replica_pool = _allocate_processes(mii_config.hostfile,
-                                       mii_config.tensor_parallel,
-                                       mii_config.replica_num)
-    replica_configs = []
-    for i, (hostname, gpu_indices) in enumerate(replica_pool):
-        # Reserver port for a LB proxy when replication is enabled
-        port_offset = 1
-        base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
-        tensor_parallel_ports = list(
-            range(base_port,
-                  base_port + mii_config.tensor_parallel))
-        torch_dist_port = mii_config.torch_dist_port + i
-        replica_configs.append(
-            ReplicaConfig(hostname=hostname,
-                          tensor_parallel_ports=tensor_parallel_ports,
-                          torch_dist_port=torch_dist_port,
-                          gpu_indices=gpu_indices))
-    lb_config = LoadBalancerConfig(port=mii_config.port_number,
-                                   replica_configs=replica_configs)
-
     if deployment_type != DeploymentType.NON_PERSISTENT:
         create_score_file(deployment_name=deployment_name,
                           deployment_type=deployment_type,
@@ -134,11 +113,12 @@ def deploy(task,
                           ds_zero=enable_zero,
                           ds_config=ds_config,
                           mii_config=mii_config,
-                          model_path=model_path,
-                          lb_config=lb_config)
+                          model_path=model_path)
 
     if deployment_type == DeploymentType.AML:
-        _deploy_aml(deployment_name=deployment_name, model_name=model, version=version)
+        _deploy_aml(deployment_name=deployment_name,
+                    instance_type=instance_type,
+                    version=version)
     elif deployment_type == DeploymentType.LOCAL:
         return _deploy_local(deployment_name, model_path=model_path)
     elif deployment_type == DeploymentType.NON_PERSISTENT:
@@ -158,52 +138,23 @@ def deploy(task,
 
 
 def _deploy_local(deployment_name, model_path):
-    mii.utils.import_score_file(deployment_name).init()
+    mii.utils.import_score_file(deployment_name, DeploymentType.LOCAL).init()
 
 
-def _deploy_aml(deployment_name, model_name, version):
+def _deploy_aml(deployment_name, instance_type, version):
     acr_name = mii.aml_related.utils.get_acr_name()
+    configs = mii.utils.import_score_file(deployment_name, DeploymentType.AML).configs
+    model_name = configs.get("model_name")
+    task_name = configs.get("task_name")
+    replica_num = configs.get("mii_configs").get("replica_num")
     mii.aml_related.utils.generate_aml_scripts(acr_name=acr_name,
                                                deployment_name=deployment_name,
                                                model_name=model_name,
+                                               task_name=task_name,
+                                               replica_num=replica_num,
+                                               instance_type=instance_type,
                                                version=version)
     print(
         f"AML deployment assets at {mii.aml_related.utils.aml_output_path(deployment_name)}"
     )
     print("Please run 'deploy.sh' to bring your deployment online")
-
-
-def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
-    resource_pool = fetch_hostfile(hostfile_path)
-    assert resource_pool is not None and len(
-        resource_pool) > 0, f'No hosts found in {hostfile_path}'
-
-    replica_pool = []
-    allocated_num = 0
-    for host, slots in resource_pool.items():
-        available_on_host = slots
-        while available_on_host >= tensor_parallel:
-            if allocated_num >= num_replicas:
-                break
-            if slots < tensor_parallel:
-                raise ValueError(
-                    f'Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required'
-                )
-
-            allocated_num_on_host = slots - available_on_host
-            replica_pool.append(
-                (host,
-                 [
-                     i for i in range(allocated_num_on_host,
-                                      allocated_num_on_host + tensor_parallel)
-                 ]))
-            allocated_num += 1
-
-            available_on_host -= tensor_parallel
-
-    if allocated_num < num_replicas:
-        raise ValueError(
-            f'No sufficient GPUs for {num_replicas} replica(s), only {allocated_num} replica(s) can be deployed'
-        )
-
-    return replica_pool

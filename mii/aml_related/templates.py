@@ -16,11 +16,13 @@ environment: azureml:<environment-name>:<version>
 environment_variables:
   AML_APP_ROOT: /var/azureml-model/code
   WORKER_TIMEOUT: 2400
+  WORKER_COUNT: <replica-num>
   AZUREML_LOG_LEVEL: DEBUG
   LOG_IO: 1
-instance_type: Standard_ND96amsr_A100_v4
+instance_type: <instance-type>
 request_settings:
   request_timeout_ms: 90000
+  max_concurrent_requests_per_instance: <replica-num>
 liveness_probe:
   initial_delay: 300
   timeout: 1
@@ -69,32 +71,30 @@ model_path = "<model-path>"
 tmp_download_path = "./tmp/"
 snapshot_rel_path = "*/snapshots/*/*"
 model = "<model-name>"
+task = "<task-name>"
 
 # Must set cache location before loading transformers
-os.environ["TRANSFORMERS_CACHE"] = model_path
+os.environ["TRANSFORMERS_CACHE"] = tmp_download_path
 
-from transformers import AutoConfig, AutoTokenizer, AutoModel
+from transformers import pipeline
 from huggingface_hub import snapshot_download
-
-# Download config and tokenizer
-_ = AutoConfig.from_pretrained(model)
-_ = AutoTokenizer.from_pretrained(model)
 
 # Download model
 try:
-    _ = AutoModel.from_pretrained(model)
+    _ = pipeline(task=task, model=model)
 except OSError:
     # Sometimes the model cannot be downloaded and we need to grab the snapshot
     snapshot_download(model, cache_dir=tmp_download_path)
 
-    # We need to resolve symlinks and move files to model_path dir
-    for f_path in glob.glob(os.path.join(tmp_download_path, snapshot_rel_path)):
-        f_name = os.path.basename(f_path)
-        real_file = os.path.realpath(f_path)
-        new_file = os.path.join(model_path, f_name)
-        os.rename(real_file, new_file)
+# We need to resolve symlinks and move files to model_path dir
+os.mkdir(model_path)
+for f_path in glob.glob(os.path.join(tmp_download_path, snapshot_rel_path)):
+    f_name = os.path.basename(f_path)
+    real_file = os.path.realpath(f_path)
+    new_file = os.path.join(model_path, f_name)
+    os.rename(real_file, new_file)
 
-    shutil.rmtree(tmp_download_path)
+shutil.rmtree(tmp_download_path)
 """
 
 deploy = \
@@ -107,7 +107,7 @@ az ml online-deployment create -n "<deployment-name>" -f deployment.yml
 """
 
 dockerfile = \
-"""FROM nvidia/cuda:11.3.1-devel-ubuntu18.04
+        """FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
 ENV AML_APP_ROOT=/var/azureml-model/code \
     BUILD_DIR=/tmp/build \
@@ -124,7 +124,7 @@ COPY . $BUILD_DIR
 
 RUN mkdir -p $BUILD_DIR && \
     apt-get update && \
-    apt-get install -y --no-install-recommends nginx-light wget sudo runit rsyslog libcurl3 unzip git-all && \
+    apt-get install -y --no-install-recommends nginx-light wget sudo runit rsyslog libcurl4 unzip git-all && \
     apt-get autoremove -y && \
     apt-get clean -y && \
     rm -rf /usr/share/man/* /var/lib/apt/lists/* && \
@@ -154,7 +154,7 @@ RUN cd ~ && \
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     chmod +x Miniconda3-latest-Linux-x86_64.sh && \
     bash ./Miniconda3-latest-Linux-x86_64.sh -bf -p /opt/miniconda && \
-    conda create -n amlenv python=3.8 -y
+    conda create -n amlenv python=3.10 -y
 
 ENV PATH="/opt/miniconda/envs/amlenv/bin:$AML_APP_ROOT:$PATH" \
     CUDA_HOME=/usr/local/cuda \
@@ -164,9 +164,9 @@ ENV PATH="/opt/miniconda/envs/amlenv/bin:$AML_APP_ROOT:$PATH" \
 
 RUN /opt/miniconda/envs/amlenv/bin/pip install -r "$BUILD_DIR/requirements.txt" --extra-index-url https://download.pytorch.org/whl/cu113 && \
     /opt/miniconda/envs/amlenv/bin/pip install azureml-inference-server-http && \
-    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/deepspeed.git && \
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed.git && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git && \
-    /opt/miniconda/envs/amlenv/bin/pip install transformers==4.21.2
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/huggingface/transformers.git
 
 
 EXPOSE 5001
@@ -390,9 +390,9 @@ killall -SIGHUP runsvdir
 """
 
 requirements = \
-"""torch==1.12.0
+"""torch>=2.0.0
 grpcio
 grpcio-tools
-pydantic
+pydantic<2.0.0
 asyncio
 """

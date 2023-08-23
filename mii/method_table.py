@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+import uuid
+
 from abc import ABC, abstractmethod
 from transformers import Conversation
 from mii.constants import Tasks
@@ -183,7 +185,7 @@ class ConversationalMethods(TaskMethods):
             assert 'text' in request and 'past_user_inputs' in request and 'generated_responses' in request, "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
             text = request['text']
             conversation_id = request[
-                'conversation_id'] if 'conversation_id' in request else None
+                'conversation_id'] if 'conversation_id' in request else ""
             past_user_inputs = request['past_user_inputs']
             generated_responses = request['generated_responses']
 
@@ -193,16 +195,18 @@ class ConversationalMethods(TaskMethods):
             past_user_inputs = getattr(request, 'past_user_inputs')
             generated_responses = getattr(request, 'generated_responses')
 
+        # Create UUID from conversation ID
+        conversation_id = uuid.uuid5(uuid.NAMESPACE_DNS, str(conversation_id))
+
         conv = Conversation(text=text,
                             conversation_id=conversation_id,
                             past_user_inputs=past_user_inputs,
-                            generated_responses=generated_responses,
-                            **kwargs)
+                            generated_responses=generated_responses)
         return conv
 
     def pack_response_to_proto(self, conv, time_taken, model_time_taken):
         return modelresponse_pb2.ConversationReply(
-            conversation_id=conv.uuid,
+            conversation_id=str(conv.uuid),
             past_user_inputs=conv.past_user_inputs,
             generated_responses=conv.generated_responses,
             time_taken=time_taken,
@@ -210,16 +214,15 @@ class ConversationalMethods(TaskMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        conv = self.create_conversation(request, **kwargs)
+        conv = self.create_conversation(request)
         args = (conv, )
-        kwargs = {}
         return args, kwargs
 
     def pack_request_to_proto(self, request_dict, **query_kwargs):
         return modelresponse_pb2.ConversationRequest(
             text=request_dict['text'],
-            conversation_id=request_dict['conversation_id']
-            if 'conversation_id' in request_dict else None,
+            conversation_id=str(request_dict['conversation_id'])
+            if 'conversation_id' in request_dict else "",
             past_user_inputs=request_dict['past_user_inputs'],
             generated_responses=request_dict['generated_responses'],
             query_kwargs=kwarg_dict_to_proto(query_kwargs))
