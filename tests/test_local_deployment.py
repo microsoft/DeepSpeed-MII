@@ -86,3 +86,25 @@ def test_multi_GPU(deployment, query):
     generator = mii.mii_query_handle(deployment.deployment_name)
     result = generator.query(query)
     assert result
+
+
+@pytest.mark.parametrize(
+    "task_name, model_name, query",
+    [
+        (
+            "text-generation",
+            "bigscience/bloom-560m",
+            {
+                "query": ["DeepSpeed is the greatest",
+                          'Seattle is']
+            },
+        ),
+    ],
+)
+def test_session(deployment, query):
+    generator = mii.mii_query_handle(deployment.deployment_name)
+    session_name = "test_session"
+    generator.create_session(session_name)
+    result = generator.query(query)
+    generator.destroy_session(session_name)
+    assert result
