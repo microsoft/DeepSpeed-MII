@@ -1,10 +1,11 @@
-'''
-Copyright 2022 The Microsoft DeepSpeed Team
-'''
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 import os
 import mii
 import pprint
-from mii.utils import logger
+from mii.logging import logger
 from mii.constants import DeploymentType
 
 
@@ -18,6 +19,7 @@ def create_score_file(deployment_name,
                       mii_config,
                       model_path):
     config_dict = {}
+    config_dict[mii.constants.DEPLOYMENT_NAME_KEY] = deployment_name
     config_dict[mii.constants.TASK_NAME_KEY] = mii.utils.get_task_name(task)
     config_dict[mii.constants.MODEL_NAME_KEY] = model_name
     config_dict[mii.constants.ENABLE_DEEPSPEED_KEY] = ds_optimize

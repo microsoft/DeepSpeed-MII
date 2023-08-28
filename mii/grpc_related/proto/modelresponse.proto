@@ -19,9 +19,14 @@ option java_package = "io.grpc.examples.helloworld";
 option java_outer_classname = "HelloWorldProto";
 option objc_class_prefix = "HLW";*/
 
+import "google/protobuf/empty.proto";
+
 package modelresponse;
 
 service ModelResponse {
+  rpc Terminate (google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc CreateSession (SessionID) returns (google.protobuf.Empty) {}
+  rpc DestroySession (SessionID) returns (google.protobuf.Empty) {}
   rpc GeneratorReply (MultiStringRequest) returns (MultiStringReply) {}
   rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
   rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
@@ -38,6 +43,10 @@ message Value {
         float fvalue = 3;
         bool bvalue = 4;
     }
+}
+
+message SessionID {
+  string session_id = 1;
 }
 
 message SingleStringRequest {
@@ -70,14 +79,14 @@ message QARequest {
 
 message ConversationRequest {
   string text = 1;
-  optional int64 conversation_id = 2;
+  string conversation_id = 2;
   repeated string past_user_inputs = 3;
   repeated string generated_responses = 4;
   map<string,Value> query_kwargs = 5;
 }
 
 message ConversationReply {
-  int64 conversation_id = 1;
+  string conversation_id = 1;
   repeated string past_user_inputs = 2;
   repeated string generated_responses = 3;
   float time_taken = 4;
