@@ -41,6 +41,7 @@ class DtypeEnum(Enum):
 class MIIConfig(BaseModel):
     tensor_parallel: int = 1
     port_number: int = None
+    _DEFAULT_PORT = 50050
     dtype: DtypeEnum = torch.float32
     meta_tensor: bool = False
     load_with_sys_mem: bool = False
