@@ -1,7 +1,11 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 import mii
 
 # gpt2
-name = "microsoft/DialoGPT-medium"
+name = "microsoft/DialoGPT-large"
 
 print(f"Querying {name}...")
 
