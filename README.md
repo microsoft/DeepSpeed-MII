@@ -1,6 +1,6 @@
 <!-- [![Build Status](https://github.com/microsoft/deepspeed-mii/workflows/Build/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions) -->
 [![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
-[![License MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Microsoft/DeepSpeed-MII/blob/master/LICENSE)
+[![License Apache 2.0](https://badgen.net/badge/license/apache2.0/blue)](https://github.com/Microsoft/DeepSpeed/blob/master/LICENSE)
 [![PyPI version](https://badge.fury.io/py/deepspeed-mii.svg)](https://pypi.org/project/deepspeed-mii/)
 <!-- [![Documentation Status](https://readthedocs.org/projects/deepspeed/badge/?version=latest)](https://deepspeed.readthedocs.io/en/latest/?badge=latest) -->
 
@@ -55,22 +55,23 @@ Under-the-hood MII is powered by [DeepSpeed-Inference](https://arxiv.org/abs/220
 
 # Supported Models and Tasks
 
-MII currently supports over 30,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
+MII currently supports over 50,000 models across a range of tasks such as text-generation, question-answering, text-classification. The models accelerated by MII are available through multiple open-sourced model repositories such as Hugging Face, FairSeq, EluetherAI, etc. We support dense models based on Bert, Roberta or GPT architectures ranging from few hundred million parameters to tens of billions of parameters in size. We continue to expand the list with support for massive hundred billion plus parameter dense and sparse models coming soon.
 
 MII model support will continue to grow over time, check back for updates! Currently we support the following Hugging Face Transformers model families:
 
 model family | size range | ~model count
 ------ | ------ | ------
-[bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 198
-[stable-diffusion](https://huggingface.co/models?other=stable-diffusion) | 1.1B | 330
-[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 170
-[gpt\_neox](https://huggingface.co/models?other=gpt_neox) | 1.3B - 20B | 37
-[gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 140
-[gpt\_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 300
-[gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 7,888
-[xlm-roberta](https://huggingface.co/models?other=xlm-roberta) | 0.1B - 0.3B | 1,850
-[roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 5,190
-[bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 13,940
+[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 1,500
+[bloom](https://huggingface.co/models?other=bloom) | 0.3B - 176B | 480
+[stable-diffusion](https://huggingface.co/models?other=stable-diffusion) | 1.1B | 3,700
+[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 460
+[gpt\_neox](https://huggingface.co/models?other=gpt_neox) | 1.3B - 20B | 850
+[gptj](https://huggingface.co/models?other=gptj) | 1.4B - 6B | 420
+[gpt\_neo](https://huggingface.co/models?other=gpt_neo) | 0.1B - 2.7B | 700
+[gpt2](https://huggingface.co/models?other=gpt2) | 0.3B - 1.5B | 11,900
+[xlm-roberta](https://huggingface.co/models?other=xlm-roberta) | 0.1B - 0.3B | 4,100
+[roberta](https://huggingface.co/models?other=roberta) | 0.1B - 0.3B | 8,700
+[bert](https://huggingface.co/models?other=bert) | 0.1B - 0.3B | 23,600
 
 <!--
 SD param count:
@@ -133,6 +134,91 @@ import mii
 mii.terminate("bloom560m_deployment")
 ```
 
+**Load balancing over multiple replicas**
+
+You can launch a load balancer and multiple replica of MII servers.
+When you specify a value for `replica_num`, `mii.deploy()` launches the load balancer server and `replica_num` number of replicas.
+Note that each replica consists of `tensor_parallel` server processes that are deployed on the same server.
+
+```python
+mii_configs = {
+...
+    "tensor_parallel": tensor_parallel,
+    "replica_num": replica_num,
+    "hostfile": hostfile
+}
+mii.deploy(...
+           mii_config=mii_configs,
+           ...)
+```
+
+The client sends requests to the load balancer, which forwards them to the replicas, instead of sending requests to individual MII servers.
+Currently, the load balancer implements a simple round-robin algorithm.
+The load balancer acts as a simple proxy when `replica_num` is set to `1`.
+
+`hostfile` is the path to hostfile used by DeepSpeed's launcher.
+When hostfile is not specified, DeepSpeed-MII uses the default path `/job/hostfile`, which is defined for DeepSpeed.
+See the [DeepSpeed's document](https://www.deepspeed.ai/getting-started/#resource-configuration-multi-node) for the details.
+
+**RESTful API support**
+
+MII can enable users to call the inference service through RESTful APIs.
+By setting `enable_restful_api` to `True`, `mii.deploy()` launches a gateway that accepts RESTful API.
+The gateway can receive requests at `http://[HOST]:[PORT_FOR_RESTFUL_API]/mii/[DEPLOYMENT_NAME]`.
+
+```python
+mii_configs = {
+...
+    "enable_restful_api": True,
+    "restful_api_port": PORT_FOR_RESTFUL_API,
+...
+}
+mii.deploy(...
+    deployment_name=DEPLOYMENT_NAME,
+    mii_config=mii_configs)
+```
+
+**Non-persistent Deployment**
+
+You can enable a non-persistent deployment which allows you to make queries without standing up a server. The non-persistent deployment acts as a simplified interface to DeepSpeed-inference for use cases that do not require creating a persistent model server process. Changing the `deployment_type` to `NON_PERSISTENT` in `mii.deploy(...)` will activate this option.
+
+```python
+...
+mii.deploy(deployment_name = DEPLOYMENT_NAME,
+	   deployment_type=mii.constants.DeploymentType.NON_PERSISTENT
+	   ...
+	   )
+
+generator = mii.mii_query_handle(DEPLOYMENT_NAME)
+result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=True, max_new_tokens=30})
+
+```
+
+You can find a complete example [here]("https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/non_persistent")
+
+Any HTTP client can be used to call the APIs. An example of using curl is:
+```bash
+# Assume deployment_name and restful_api_port are set to bloom560m_deployment and 28080 respectively:
+$ curl --header "Content-Type: application/json" --request POST  -d '{"request": {"query": ["Seattle is", "Bellevue is", "Redmond is"]}, "kwargs": {"do_sample": false, "max_new_tokens": 100}}' http://localhost:28080/mii/bloom560m_deployment
+```
+
+The code below is an example using Python.
+
+```python
+import requests
+import json
+
+# text_generation
+url = 'http://localhost:28080/mii/bloom560m_deployment'
+params = {"request": {"query": ["Seattle is", "Bellevue is", "Redmond is"]},
+          "kwargs": {"do_sample": False, "max_new_tokens": 100}}
+
+json_params = json.dumps(params)
+response = requests.post(url, data=json_params, headers={
+                         "Content-Type": "application/json"})
+print(response.json())
+```
+
 ## Deploying with MII-Azure
 
 MII supports deployment on Azure via AML Inference. To enable this, MII generates AML deployment assets for a given model that can be deployed using the Azure-CLI, as shown in the code below. Furthermore, deploying on Azure, allows MII to leverage DeepSpeed-Azure as its optimization backend, which offers better latency and cost reduction than DeepSpeed-Public.
@@ -153,7 +239,8 @@ To use MII on AML resources, you must have the Azure-CLI installed with an activ
 1. Install Azure-CLI. Follow the official [installation instructions](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli#install).
 2. Run `az login` and follow the instructions to login to your Azure account. This account should be linked to the resources you plan to deploy on.
 3. Set the default subscription with `az account set --subscription <YOUR-SUBSCRIPTION-ID>`. You can find your subscription ID in the "overview" tab on your resource group page from the Azure web portal.
-4. Install the AML plugin for Azure-CLI with `az extension add --name ml`
+4. Set the default resource group and workspace name with `az config defaults.group <YOUR-RESOURCE-GROUP> defaults.workspace <YOUR-WORKSPACE>`
+5. Install the AML plugin for Azure-CLI with `az extension add --name ml`
 
 **Deployment**
 ```python

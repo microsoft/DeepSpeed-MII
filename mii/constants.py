@@ -1,3 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 import enum
 
 
@@ -5,6 +9,7 @@ import enum
 class DeploymentType(enum.Enum):
     LOCAL = 1
     AML = 2
+    NON_PERSISTENT = 3
 
 
 MII_CONFIGS_KEY = 'mii_configs'
@@ -32,19 +37,16 @@ TEXT2IMG_NAME = "text-to-image"
 class ModelProvider(enum.Enum):
     HUGGING_FACE = 1
     ELEUTHER_AI = 2
-    HUGGING_FACE_LLM = 3
-    DIFFUSERS = 4
+    DIFFUSERS = 3
 
 
 MODEL_PROVIDER_NAME_HF = "hugging-face"
 MODEL_PROVIDER_NAME_EA = "eleuther-ai"
-MODEL_PROVIDER_NAME_HF_LLM = "hugging-face-llm"
 MODEL_PROVIDER_NAME_DIFFUSERS = "diffusers"
 
 MODEL_PROVIDER_MAP = {
     MODEL_PROVIDER_NAME_HF: ModelProvider.HUGGING_FACE,
     MODEL_PROVIDER_NAME_EA: ModelProvider.ELEUTHER_AI,
-    MODEL_PROVIDER_NAME_HF_LLM: ModelProvider.HUGGING_FACE_LLM,
     MODEL_PROVIDER_NAME_DIFFUSERS: ModelProvider.DIFFUSERS
 }
 
@@ -56,9 +58,10 @@ SUPPORTED_MODEL_TYPES = {
     'gpt_neo': ModelProvider.HUGGING_FACE,
     'gptj': ModelProvider.HUGGING_FACE,
     'opt': ModelProvider.HUGGING_FACE,
+    'bloom': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
-    'bloom': ModelProvider.HUGGING_FACE_LLM,
-    'stable-diffusion': ModelProvider.DIFFUSERS
+    'stable-diffusion': ModelProvider.DIFFUSERS,
+    'llama': ModelProvider.HUGGING_FACE
 }
 
 SUPPORTED_TASKS = [
@@ -88,7 +91,9 @@ REQUIRED_KEYS_PER_TASK = {
 
 MODEL_NAME_KEY = 'model_name'
 TASK_NAME_KEY = 'task_name'
+DEPLOYMENT_NAME_KEY = 'deployment_name'
 MODEL_PATH_KEY = 'model_path'
+LOAD_BALANCER_CONFIG_KEY = 'load_balancer_config'
 
 ENABLE_DEEPSPEED_KEY = 'ds_optimize'
 ENABLE_DEEPSPEED_ZERO_KEY = 'ds_zero'
@@ -109,3 +114,14 @@ MII_DEBUG_BRANCH_DEFAULT = "main"
 MII_MODEL_PATH_DEFAULT = "/tmp/mii_models"
 
 GRPC_MAX_MSG_SIZE = 2**27  # ~100MB
+
+TERMINATE_METHOD = "Terminate"
+CREATE_SESSION_METHOD = "CreateSession"
+DESTROY_SESSION_METHOD = "DestroySession"
+
+LB_MAX_WORKER_THREADS = 32
+
+SERVER_SHUTDOWN_TIMEOUT = 10
+
+RESTFUL_GATEWAY_SHUTDOWN_TIMEOUT = 1
+RESTFUL_API_PATH = "mii"

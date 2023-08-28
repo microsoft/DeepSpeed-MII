@@ -1,6 +1,7 @@
-'''
-Copyright 2022 The Microsoft DeepSpeed Team
-'''
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 import os
 import mii
 import json
@@ -34,7 +35,8 @@ def load_models(task_name,
         "checkpoint": None,
         "config": None,
         "training_mp_size": 1,
-        "replace_with_kernel_inject": mii_config.replace_with_kernel_inject
+        "replace_with_kernel_inject": mii_config.replace_with_kernel_inject,
+        "max_tokens": mii_config.max_tokens
     }
 
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
@@ -43,6 +45,13 @@ def load_models(task_name,
             assert mii_config.dtype == torch.half or mii_config.dtype == torch.int8, "Bloom models only support fp16/int8"
             assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
         inference_pipeline = hf_provider(model_path, model_name, task_name, mii_config)
+        if mii_config.meta_tensor:
+            inf_config["checkpoint"] = inference_pipeline.checkpoint_dict
+            if mii_config.dtype == torch.int8:
+                # Support for older DeepSpeed versions
+                if "enable_qkv_quantization" in inspect.signature(
+                        deepspeed.init_inference).parameters:
+                    inf_config["enable_qkv_quantization"] = True
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         from mii.models.providers.eleutherai import eleutherai_provider
         assert mii_config.dtype == torch.half, "gpt-neox only support fp16"
@@ -55,16 +64,6 @@ def load_models(task_name,
                                                  mii_config)
         inf_config["training_mp_size"] = 2
         inf_config["config"] = inference_pipeline.neox_args
-    elif provider == mii.constants.ModelProvider.HUGGING_FACE_LLM:
-        from mii.models.providers.llm import load_hf_llm
-        assert mii_config.dtype == torch.half or mii_config.dtype == torch.int8, "Bloom models only support fp16/int8"
-        assert mii_config.enable_cuda_graph == False, "Bloom models do no support Cuda Graphs"
-        inference_pipeline = load_hf_llm(model_path, model_name, task_name, mii_config)
-        inf_config["checkpoint"] = inference_pipeline.checkpoint_dict
-        if mii_config.dtype == torch.int8:
-            if "enable_qkv_quantization" in inspect.signature(
-                    deepspeed.init_inference).parameters:
-                inf_config["enable_qkv_quantization"] = True
     elif provider == mii.constants.ModelProvider.DIFFUSERS:
         from mii.models.providers.diffusers import diffusers_provider
         inference_pipeline = diffusers_provider(model_path,
@@ -90,6 +89,7 @@ def load_models(task_name,
             inference_pipeline.model = engine
 
     elif ds_zero:
+        assert not mii_config.meta_tensor, "ZeRO-Inference does not support meta tensors"
         ds_config = DeepSpeedConfig(ds_config_path)
         #TODO: don't read ds-config from disk, we should pass this around as a dict instead
         ds_config_dict = json.load(open(ds_config_path, 'r'))

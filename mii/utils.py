@@ -1,14 +1,14 @@
-"""
-Copyright 2022 The Microsoft DeepSpeed Team
-"""
-import sys
-import os
-import logging
-import importlib
-import mii
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
 
+# DeepSpeed Team
+import os
+import importlib
+import torch
+import mii
 from huggingface_hub import HfApi
 
+from mii.models.score.generate import generated_score_path
 from mii.constants import (CONVERSATIONAL_NAME,
                            FILL_MASK_NAME,
                            MII_CACHE_PATH,
@@ -96,8 +96,6 @@ def _get_supported_models_name(task):
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
             models = _get_hf_models_by_type(model_type, task_name)
-        elif provider == ModelProvider.HUGGING_FACE_LLM:
-            models = _get_hf_models_by_type(model_type, task_name)
         elif provider == ModelProvider.ELEUTHER_AI:
             if task_name == TEXT_GENERATION_NAME:
                 models = [model_type]
@@ -120,7 +118,7 @@ def check_if_task_and_model_is_valid(task, model_name):
     valid_task_models = _get_hf_models_by_type(None, task_name)
     assert (
         model_name in valid_task_models
-        ), f"{task_name} only supports {valid_task_models}"
+    ), f"{task_name} only supports {valid_task_models}"
 
 
 def full_model_path(model_path):
@@ -150,12 +148,9 @@ def mii_cache_path():
     return cache_path
 
 
-def import_score_file(deployment_name):
-    spec = importlib.util.spec_from_file_location(
-        "score",
-        os.path.join(mii_cache_path(),
-                     deployment_name,
-                     "score.py"))
+def import_score_file(deployment_name, deployment_type):
+    score_path = generated_score_path(deployment_name, deployment_type)
+    spec = importlib.util.spec_from_file_location("score", score_path)
     score = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(score)
     return score
@@ -178,6 +173,16 @@ def kwarg_dict_to_proto(kwarg_dict):
     return {k: get_proto_value(v) for k, v in kwarg_dict.items()}
 
 
+def unpack_proto_query_kwargs(query_kwargs):
+    query_kwargs = {
+        k: getattr(v,
+                   v.WhichOneof("oneof_values"))
+        for k,
+        v in query_kwargs.items()
+    }
+    return query_kwargs
+
+
 def extract_query_dict(task, request_dict):
     required_keys = REQUIRED_KEYS_PER_TASK[task]
     query_dict = {}
@@ -189,41 +194,19 @@ def extract_query_dict(task, request_dict):
     return query_dict
 
 
-log_levels = {
-    "debug": logging.DEBUG,
-    "info": logging.INFO,
-    "warning": logging.WARNING,
-    "error": logging.ERROR,
-    "critical": logging.CRITICAL,
-}
+def get_num_gpus(mii_configs):
+    num_gpus = mii_configs.tensor_parallel
+
+    assert torch.cuda.device_count(
+    ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+    return num_gpus
 
 
-class LoggerFactory:
-    @staticmethod
-    def create_logger(name=None, level=logging.INFO):
-        """create a logger
-        Args:
-            name (str): name of the logger
-            level: level of logger
-        Raises:
-            ValueError is name is None
-        """
-
-        if name is None:
-            raise ValueError("name for logger cannot be None")
-
-        formatter = logging.Formatter(
-            "[%(asctime)s] [%(levelname)s] "
-            "[%(filename)s:%(lineno)d:%(funcName)s] %(message)s")
-
-        logger_ = logging.getLogger(name)
-        logger_.setLevel(level)
-        logger_.propagate = False
-        ch = logging.StreamHandler(stream=sys.stdout)
-        ch.setLevel(level)
-        ch.setFormatter(formatter)
-        logger_.addHandler(ch)
-        return logger_
-
-
-logger = LoggerFactory.create_logger(name="MII", level=logging.INFO)
+def get_provider_name(model_name, task):
+    if model_name == "gpt-neox":
+        provider = mii.constants.MODEL_PROVIDER_NAME_EA
+    elif task == mii.Tasks.TEXT2IMG:
+        provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
+    else:
+        provider = mii.constants.MODEL_PROVIDER_NAME_HF
+    return provider
