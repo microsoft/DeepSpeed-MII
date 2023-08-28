@@ -98,12 +98,6 @@ class MIIConfig(BaseModel):
 
         return port_number
 
-    @validator('dtype')
-    def dtype_valid(cls, value):
-        # parse dtype value to determine torch dtype
-        MIIConfig._torch_dtype(value)
-        return value.lower()
-
     @validator("deploy_rank")
     def deploy_valid(cls, field_value, values):
         if "tensor_parallel" not in values:
