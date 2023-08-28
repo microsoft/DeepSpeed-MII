@@ -60,44 +60,26 @@ class MIIConfig(BaseModel):
     hostfile: str = DLTS_HOSTFILE
     trust_remote_code: bool = False
       
-    def __is_port_in_use(port_number: int) -> bool:
-        """
-        Checks if a port_number is in use
-
-        Args:
-            port_number (int): port_number to check
-
-        Returns:
-            bool: True if port_number is in use else False
-        """
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            return s.connect_ex(('localhost', port_number)) == 0
-
     @validator('port_number')
-    def assign_port(port_number: int = None) -> int:
-        """
-        Starts a socket connection to grab a free port (Involves a race
-            condition but will do for now)
-        Args:
-            port_number (int): Port to start the socket connection (default: None)
-        Returns:
-            int: Free port number
-        """
-        DEFAULT_PORT = 50050
-        # if port is None set the default 50050 and default port is not in use return it
-        if port_number is None:
-            port_number = DEFAULT_PORT
+    def assign_port(cls, field_value, values):
+        def is_port_in_use(port_number: int) -> bool:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                return s.connect_ex(('localhost', port_number)) == 0
 
-        # if the defined port is in use find a free port
-        if MIIConfig.__is_port_in_use(port_number):
-            tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            tcp.bind(("", 0))
-            _, port_number = tcp.getsockname()
-            tcp.close()
+        # If the user sets a port, make sure we use that port
+        if field_value is not None:
+            assert not is_port_in_use(field_value), f"Port number {field_value} already in use."
+        # Otherwise try the default value
+        else:
+            field_value = cls._DEFAULT_PORT
+            # If the default is in use, select a random port
+            if is_port_in_use(field_value):
+                tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                tcp.bind(("", 0))
+                field_value = tcp.getsockname()[1]
+                tcp.close()
 
-        MIIConfig.port_number = port_number
-
-        return port_number
+        return field_value
 
     @validator("deploy_rank")
     def deploy_valid(cls, field_value, values):
