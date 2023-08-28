@@ -59,7 +59,7 @@ class MIIConfig(BaseModel):
     replica_num: int = 1
     hostfile: str = DLTS_HOSTFILE
     trust_remote_code: bool = False
-      
+
     @validator('port_number')
     def assign_port(cls, field_value, values):
         def is_port_in_use(port_number: int) -> bool:
