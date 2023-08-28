@@ -54,6 +54,7 @@ SUPPORTED_MODEL_TYPES = {
     'roberta': ModelProvider.HUGGING_FACE,
     'xlm-roberta': ModelProvider.HUGGING_FACE,
     'gpt2': ModelProvider.HUGGING_FACE,
+    'distilbert': ModelProvider.HUGGING_FACE,
     'bert': ModelProvider.HUGGING_FACE,
     'gpt_neo': ModelProvider.HUGGING_FACE,
     'gptj': ModelProvider.HUGGING_FACE,
