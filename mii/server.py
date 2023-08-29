@@ -8,13 +8,11 @@ import subprocess
 import sys
 import tempfile
 import time
-from pathlib import Path
 from collections import defaultdict
 from deepspeed.launcher.runner import fetch_hostfile
 from deepspeed.accelerator import get_accelerator
 
-import mii
-from mii.utils import get_num_gpus, get_provider_name
+from mii.utils import get_num_gpus
 from mii.logging import logger
 from mii.config import ReplicaConfig, LoadBalancerConfig
 

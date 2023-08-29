@@ -199,7 +199,8 @@ def hf_provider(deployment_config):
         device = get_device(load_with_sys_mem=deployment_config.load_with_sys_mem)
         inference_pipeline = pipeline(
             deployment_config.task,
-            model=deployment_config.model,
+            model=deployment_config.model
+            if not is_aml() else deployment_config.model_path,
             device=device,
             framework="pt",
             token=deployment_config.hf_auth_token,

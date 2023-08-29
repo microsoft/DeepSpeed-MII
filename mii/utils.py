@@ -8,6 +8,7 @@ import torch
 import mii
 from huggingface_hub import HfApi
 
+from mii.models.score.generate import generated_score_path
 from mii.constants import (
     MII_CACHE_PATH,
     MII_CACHE_PATH_DEFAULT,

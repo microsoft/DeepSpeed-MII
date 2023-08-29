@@ -19,7 +19,6 @@ def init():
     mii_config = mii.MIIConfig(**mii_config)
     mii.MIIServer(mii_config)
 
-
     # For AML deployments, we stand up multiple nginx server workers, one for
     # each replica. This is so that we can properly run multiple requests in
     # parallel on the different replicas. However, each worker will run this
@@ -28,8 +27,7 @@ def init():
     # load-balancer and replicas. We take advantage of the nginx worker PIDs
     # being consecutive to achieve that here.
     start_server = True
-    if mii.utils.is_aml() and (
-            int(os.getpid()) % mii_config.replica_num != 0):
+    if mii.utils.is_aml() and (int(os.getpid()) % mii_config.replica_num != 0):
         start_server = False
 
     if start_server:
