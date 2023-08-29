@@ -70,8 +70,6 @@ def load_models(task_name,
                                                 model_name,
                                                 task_name,
                                                 mii_config)
-        inf_config["replace_with_kernel_inject"] = False  #not supported yet
-        inf_config["enable_cuda_graph"] = True
     else:
         raise ValueError(f"Unknown model provider {provider}")
 

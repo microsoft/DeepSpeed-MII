@@ -14,6 +14,10 @@ if not args.query:
     mii_configs = {
         "tensor_parallel":
         1,
+        "enable_cuda_graph":
+        True,
+        "replace_with_kernel_inject":
+        True,
         "dtype":
         "fp16",
         "hf_auth_token":
@@ -31,10 +35,15 @@ if not args.query:
     )
 else:
     generator = mii.mii_query_handle("sd_deploy")
+    import time
+    start = time.time()
     result = generator.query({
         'query':
         ["a panda in space with a rainbow",
          "a soda can on top a snowy mountain"]
     })
+    end = time.time()
     for idx, img in enumerate(result.images):
         img.save(f"test-{idx}.png")
+
+    print(end - start)
