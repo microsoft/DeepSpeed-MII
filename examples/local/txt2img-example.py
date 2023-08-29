@@ -35,15 +35,10 @@ if not args.query:
     )
 else:
     generator = mii.mii_query_handle("sd_deploy")
-    import time
-    start = time.time()
     result = generator.query({
         'query':
         ["a panda in space with a rainbow",
          "a soda can on top a snowy mountain"]
     })
-    end = time.time()
     for idx, img in enumerate(result.images):
         img.save(f"test-{idx}.png")
-
-    print(end - start)
