@@ -213,7 +213,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             replica_index = call_count % len(self.stubs)
 
             if method_name == CREATE_SESSION_METHOD:
-                if request_proto.session_id in self.sessions:
+                if request_proto.session_id in self.replica_sessions:
                     raise ValueError(
                         f"session {request_proto.session_id} already exists")
                 self.replica_sessions[request_proto.session_id] = replica_index

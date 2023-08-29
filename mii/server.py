@@ -8,9 +8,15 @@ import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 from collections import defaultdict
+from deepspeed.launcher.runner import fetch_hostfile
+from deepspeed.accelerator import get_accelerator
 
-from mii.utils import get_num_gpus, logger
+import mii
+from mii.utils import get_num_gpus, get_provider_name
+from mii.logging import logger
+from mii.config import ReplicaConfig, LoadBalancerConfig
 
 
 def config_to_b64_str(config):
@@ -29,18 +35,46 @@ class MIIServer:
         self.task = mii_config.deployment_config.task
         self.num_gpus = get_num_gpus(mii_config)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
-        """
-        if mii_configs.hostfile is None:
-            hostfile = tempfile.NamedTemporaryFile(delete=False)
-            num_gpu = torch.cuda.device_count()
-            with open(hostfile, "w") as f:
-                f.write(f"localhost slots={num_gpu}")
-            mii_config.hostfile = hostfile
-        """
+
+        self.port_number = mii_config.port_number
+
+        if not os.path.isfile(mii_config.hostfile):
+            logger.info(f"Hostfile {mii_config.hostfile} not found, creating hostfile.")
+            num_gpu = get_accelerator().device_count()
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+                temp_file.write(f"localhost slots={num_gpu}")
+            mii_config.hostfile = temp_file.name
+
+        lb_config = self._create_lb_config(mii_config=mii_config)
 
         processes = self._initialize_service(mii_config)
         self._wait_until_server_is_live(processes,
                                         mii_config.deployment_config.replica_configs)
+
+    def _create_lb_config(self, mii_config):
+        # add fields for replica deployment
+        replica_pool = _allocate_processes(mii_config.hostfile,
+                                           mii_config.tensor_parallel,
+                                           mii_config.replica_num)
+        replica_configs = []
+        for i, (hostname, gpu_indices) in enumerate(replica_pool):
+            # Reserver port for a LB proxy when replication is enabled
+            port_offset = 1
+            base_port = mii_config.port_number + i * mii_config.tensor_parallel + port_offset
+            tensor_parallel_ports = list(
+                range(base_port,
+                      base_port + mii_config.tensor_parallel))
+            torch_dist_port = mii_config.torch_dist_port + i
+            replica_configs.append(
+                ReplicaConfig(hostname=hostname,
+                              tensor_parallel_ports=tensor_parallel_ports,
+                              torch_dist_port=torch_dist_port,
+                              gpu_indices=gpu_indices))
+
+        lb_config = LoadBalancerConfig(port=mii_config.port_number,
+                                       replica_configs=replica_configs)
+
+        return lb_config
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):
@@ -108,7 +142,7 @@ class MIIServer:
         # assign different ports to replicas because they could be on the same host
         worker_str += f"--master_port {replica_config.torch_dist_port}"
 
-        ds_launch_str = f"deepspeed {worker_str} --no_local_rank --no_python"
+        ds_launch_str = f"deepspeed {worker_str} --master_addr localhost --no_ssh_check --no_local_rank --no_python"
 
         return ds_launch_str
 
@@ -158,3 +192,39 @@ class MIIServer:
                 ))
 
         return processes
+
+
+def _allocate_processes(hostfile_path, tensor_parallel, num_replicas):
+    resource_pool = fetch_hostfile(hostfile_path)
+    assert resource_pool is not None and len(
+        resource_pool) > 0, f'No hosts found in {hostfile_path}'
+
+    replica_pool = []
+    allocated_num = 0
+    for host, slots in resource_pool.items():
+        available_on_host = slots
+        while available_on_host >= tensor_parallel:
+            if allocated_num >= num_replicas:
+                break
+            if slots < tensor_parallel:
+                raise ValueError(
+                    f'Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required'
+                )
+
+            allocated_num_on_host = slots - available_on_host
+            replica_pool.append(
+                (host,
+                 [
+                     i for i in range(allocated_num_on_host,
+                                      allocated_num_on_host + tensor_parallel)
+                 ]))
+            allocated_num += 1
+
+            available_on_host -= tensor_parallel
+
+    if allocated_num < num_replicas:
+        raise ValueError(
+            f'No sufficient GPUs for {num_replicas} replica(s), only {allocated_num} replica(s) can be deployed'
+        )
+
+    return replica_pool

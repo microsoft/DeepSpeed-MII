@@ -14,7 +14,7 @@ from transformers.utils.hub import EntryNotFoundError
 from transformers.modeling_utils import get_checkpoint_shard_files
 from transformers.utils import WEIGHTS_NAME, WEIGHTS_INDEX_NAME
 
-from mii.utils import mii_cache_path
+from mii.utils import mii_cache_path, is_aml
 
 try:
     from transformers.utils import cached_path, hf_bucket_url
@@ -202,7 +202,7 @@ def hf_provider(deployment_config):
             model=deployment_config.model,
             device=device,
             framework="pt",
-            use_auth_token=deployment_config.hf_auth_token,
+            token=deployment_config.hf_auth_token,
             torch_dtype=deployment_config.dtype,
             trust_remote_code=deployment_config.trust_remote_code,
         )

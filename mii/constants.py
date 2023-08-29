@@ -28,17 +28,18 @@ class ModelProvider(str, Enum):
 
 
 SUPPORTED_MODEL_TYPES = {
-    "roberta": ModelProvider.HUGGING_FACE,
-    "xlm-roberta": ModelProvider.HUGGING_FACE,
-    "gpt2": ModelProvider.HUGGING_FACE,
-    "bert": ModelProvider.HUGGING_FACE,
-    "gpt_neo": ModelProvider.HUGGING_FACE,
-    "gptj": ModelProvider.HUGGING_FACE,
-    "opt": ModelProvider.HUGGING_FACE,
-    "bloom": ModelProvider.HUGGING_FACE,
-    "gpt-neox": ModelProvider.ELEUTHER_AI,
-    "stable-diffusion": ModelProvider.DIFFUSERS,
-    "llama": ModelProvider.HUGGING_FACE,
+    'roberta': ModelProvider.HUGGING_FACE,
+    'xlm-roberta': ModelProvider.HUGGING_FACE,
+    'gpt2': ModelProvider.HUGGING_FACE,
+    'distilbert': ModelProvider.HUGGING_FACE,
+    'bert': ModelProvider.HUGGING_FACE,
+    'gpt_neo': ModelProvider.HUGGING_FACE,
+    'gptj': ModelProvider.HUGGING_FACE,
+    'opt': ModelProvider.HUGGING_FACE,
+    'bloom': ModelProvider.HUGGING_FACE,
+    'gpt-neox': ModelProvider.ELEUTHER_AI,
+    'stable-diffusion': ModelProvider.DIFFUSERS,
+    'llama': ModelProvider.HUGGING_FACE
 }
 
 REQUIRED_KEYS_PER_TASK = {

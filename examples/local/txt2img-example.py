@@ -23,7 +23,7 @@ if not args.query:
         50050
     }
     mii.deploy(task='text-to-image',
-               model="CompVis/stable-diffusion-v1-4",
+               model="runwayml/stable-diffusion-v1-5",
                deployment_name="sd_deploy",
                mii_config=mii_configs)
     print(

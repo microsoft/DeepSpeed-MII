@@ -5,7 +5,7 @@
 import os
 import mii
 import pprint
-from mii.utils import logger
+from mii.logging import logger
 from mii.constants import DeploymentType
 
 
