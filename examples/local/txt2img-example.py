@@ -14,6 +14,10 @@ if not args.query:
     mii_configs = {
         "tensor_parallel":
         1,
+        "enable_cuda_graph":
+        True,
+        "replace_with_kernel_inject":
+        True,
         "dtype":
         "fp16",
         "hf_auth_token":
