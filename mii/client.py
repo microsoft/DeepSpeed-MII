@@ -6,14 +6,15 @@ import asyncio
 import grpc
 import requests
 import mii
-from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.constants import GRPC_MAX_MSG_SIZE, TaskType
-from mii.method_table import GRPC_METHOD_TABLE
-from mii.config import MIIConfig
+from .grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
+from .constants import GRPC_MAX_MSG_SIZE, TaskType, DeploymentType
+from .method_table import GRPC_METHOD_TABLE
+from .config import MIIConfig
+from .utils import import_score_file
 
 
 def _get_mii_config(deployment_name):
-    mii_config = mii.utils.import_score_file(deployment_name).mii_config
+    mii_config = import_score_file(deployment_name, DeploymentType.LOCAL).mii_config
     return MIIConfig(**mii_config)
 
 

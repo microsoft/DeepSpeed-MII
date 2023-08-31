@@ -8,7 +8,7 @@ import string
 from typing import List, Optional, Dict, Any
 from pydantic import validator, root_validator
 import mii
-from mii.constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
+from .constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 from deepspeed.inference.config import DtypeEnum
@@ -24,7 +24,6 @@ class ReplicaConfig(DeepSpeedConfigModel):
 
 class DeploymentConfig(DeepSpeedConfigModel):
     # Deployment configs
-    deployment_name: str
     load_with_sys_mem: bool = False
     meta_tensor: bool = False
     hf_auth_token: Optional[str] = None
@@ -54,6 +53,10 @@ class DeploymentConfig(DeepSpeedConfigModel):
 
     class Config:
         json_encoders = {torch.dtype: lambda x: str(x)}
+
+    @property
+    def provider(self):
+        return mii.utils.get_provider(self.model, self.task)
 
     @validator("checkpoint_dict")
     def checkpoint_dict_valid(cls, field_value, values):
@@ -176,8 +179,9 @@ class DeploymentConfig(DeepSpeedConfigModel):
 
 
 class MIIConfig(DeepSpeedConfigModel):
-    deployment_config: DeploymentConfig
+    deployment_name: str
     deployment_type: DeploymentType = DeploymentType.LOCAL
+    deployment_config: DeploymentConfig
     hf_auth_token: Optional[str] = None
     port_number: int = 50050
     enable_restful_api: bool = False
@@ -200,23 +204,16 @@ class MIIConfig(DeepSpeedConfigModel):
             allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
                                 string.digits + "-")
             assert (
-                set(values.get("deployment_config").deployment_name) <= allowed_chars
+                set(values.get("deployment_name")) <= allowed_chars
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
         return values
 
-    @root_validator(skip_on_failure=True)
-    def generate_replica_configs(cls, values):
-        replica_configs = values.get("deployment_config").replica_configs
-        replica_num = values.get("deployment_config").replica_num
-        if replica_configs:
-            assert len(replica_configs) == replica_num
-            return values
-
-        hostfile = values.get("hostfile")
-        port_number = values.get("port_number")
-        torch_dist_port = values.get("deployment_config").torch_dist_port
-        tensor_parallel = values.get("deployment_config").tensor_parallel
-        replica_num = values.get("deployment_config").replica_num
+    def generate_replica_configs(self):
+        hostfile = self.hostfile
+        port_number = self.port_number
+        torch_dist_port = self.deployment_config.torch_dist_port
+        tensor_parallel = self.deployment_config.tensor_parallel
+        replica_num = self.deployment_config.replica_num
         replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
@@ -233,8 +230,7 @@ class MIIConfig(DeepSpeedConfigModel):
                     gpu_indices=gpu_indices,
                 ))
 
-        values.get("deployment_config").replica_configs = replica_configs
-        return values
+        self.deployment_config.replica_configs = replica_configs
 
 
 def _allocate_processes(hostfile_path, tensor_parallel, replica_num):

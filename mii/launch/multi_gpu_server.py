@@ -26,6 +26,7 @@ def b64_encoded_config(config_str):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--deployment-name", type=str, help="Name of deployment")
     parser.add_argument(
         "--deployment-config",
         type=b64_encoded_config,
@@ -66,7 +67,8 @@ def main():
         assert args.restful_gateway_port, "--restful-gateway-port must be provided."
         print(f"Starting RESTful API gateway on port: {args.restful_gateway_port}")
         gateway_thread = RestfulGatewayThread(
-            args.deployment_config,
+            deployment_name=args.deployment_name,
+            task=args.deployment_config.task,
             lb_port=args.load_balancer_port,
             rest_port=args.restful_gateway_port,
         )
@@ -84,6 +86,7 @@ def main():
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
         port = args.server_port + local_rank
 
+        print("LAUNCHING PIPELINE")
         inference_pipeline = load_models(args.deployment_config)
 
         print(f"Starting server on port: {port}")

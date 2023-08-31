@@ -25,14 +25,15 @@ def create_score_file(mii_config):
     source_with_config = f"{score_src}\n"
     source_with_config += f"mii_config = {pprint.pformat(config_dict, indent=4)}"
 
-    with open(generated_score_path(mii_config), "w") as fd:
+    with open(
+            generated_score_path(mii_config.deployment_name,
+                                 mii_config.deployment_type),
+            "w") as fd:
         fd.write(source_with_config)
         fd.write("\n")
 
 
-def generated_score_path(mii_config):
-    deployment_type = mii_config.deployment_type
-    deployment_name = mii_config.deployment_config.deployment_name
+def generated_score_path(deployment_name, deployment_type):
     if deployment_type == DeploymentType.LOCAL:
         score_path = os.path.join(mii.utils.mii_cache_path(), deployment_name)
     elif deployment_type == DeploymentType.AML:

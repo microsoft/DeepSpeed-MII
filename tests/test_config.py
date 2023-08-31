@@ -12,7 +12,7 @@ import mii
 @pytest.mark.parametrize("port_number", [12345])
 @pytest.mark.parametrize("tensor_parallel", [4])
 def test_base_configs(deployment_name, mii_config, deployment_config):
-    deployment_config["deployment_name"] = deployment_name
+    mii_config["deployment_name"] = deployment_name
     mii_config["deployment_config"] = deployment_config
     mii_config = mii.config.MIIConfig(**mii_config)
 
@@ -24,6 +24,6 @@ def test_base_configs(deployment_name, mii_config, deployment_config):
 @pytest.mark.parametrize("tensor_parallel", [3.5])
 def test_base_configs_literalfail(deployment_name, mii_config, deployment_config):
     with pytest.raises(pydantic.ValidationError):
-        deployment_config["deployment_name"] = deployment_name
+        mii_config["deployment_name"] = deployment_name
         mii_config["deployment_config"] = deployment_config
         mii_config = mii.config.MIIConfig(**mii_config)

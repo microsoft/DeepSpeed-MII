@@ -104,7 +104,7 @@ def test_multi_GPU(deployment, query):
     ],
 )
 def test_session(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     session_name = "test_session"
     generator.create_session(session_name)
     result = generator.query(query)

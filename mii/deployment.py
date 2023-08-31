@@ -5,7 +5,7 @@
 import os
 import mii
 
-from .utils import logger
+from .logging import logger
 from .models.score import create_score_file
 from .models import load_models
 from .config import MIIConfig, DeploymentType
@@ -35,11 +35,15 @@ def support_legacy_api(
         "enable_zero": enable_zero,
         "ds_config": ds_config,
     }
+    #TODO do this in a single for loop
     for key, val in mii_config.items():
-        if not hasattr(MIIConfig, key):
+        if not key in MIIConfig.__dict__["__fields__"]:
             deployment_config[key] = val
-
-    mii_config = {k: v for k, v in mii_config.items() if hasattr(MIIConfig, k)}
+    mii_config = {
+        k: v
+        for k,
+        v in mii_config.items() if k in MIIConfig.__dict__["__fields__"]
+    }
     mii_config["version"] = version
     mii_config["deployment_type"] = deployment_type
 
@@ -48,7 +52,7 @@ def support_legacy_api(
 
 def deploy(
     deployment_name: str,
-    deployment_config: dict,
+    deployment_config: dict = None,
     mii_config: dict = None,
     *args,
     **kwargs,
@@ -63,7 +67,7 @@ def deploy(
         kwargs["mii_config"] = mii_config
         deployment_config, mii_config = support_legacy_api(*args, **kwargs)
 
-    deployment_config["deployment_name"] = deployment_name
+    mii_config["deployment_name"] = deployment_name
     mii_config["deployment_config"] = deployment_config
     mii_config = mii.config.MIIConfig(**mii_config)
 
@@ -88,14 +92,14 @@ def deploy(
 
 
 def _deploy_local(mii_config):
-    mii.utils.import_score_file(mii_config.deployment_config.deployment_name).init()
+    mii.utils.import_score_file(mii_config.deployment_name, DeploymentType.LOCAL).init()
 
 
 def _deploy_aml(mii_config):
     acr_name = mii.aml_related.utils.get_acr_name()
     mii.aml_related.utils.generate_aml_scripts(
         acr_name=acr_name,
-        deployment_name=mii_config.deployment_config.deployment_name,
+        deployment_name=mii_config.deployment_name,
         model_name=mii_config.deployment_config.model,
         version=mii_config.version,
     )
@@ -110,7 +114,7 @@ def _deploy_nonpersistent(mii_config):
         int(os.getenv("WORLD_SIZE", "1"))
         == mii_config.deployment_config.tensor_parallel
     ), "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
-    deployment_name = mii_config.deployment_config.deployment_name
+    deployment_name = mii_config.deployment_name
     mii.non_persistent_models[deployment_name] = (
         load_models(mii_config.deployment_config),
         mii_config.deployment_config.task,

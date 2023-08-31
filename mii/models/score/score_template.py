@@ -17,7 +17,6 @@ model = None
 def init():
     global mii_config
     mii_config = mii.MIIConfig(**mii_config)
-    mii.MIIServer(mii_config)
 
     # For AML deployments, we stand up multiple nginx server workers, one for
     # each replica. This is so that we can properly run multiple requests in

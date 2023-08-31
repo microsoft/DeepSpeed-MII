@@ -9,7 +9,6 @@ import inspect
 import deepspeed
 from deepspeed.runtime.config import DeepSpeedConfig
 from deepspeed.runtime.zero.config import ZeroStageEnum
-from mii.utils import get_provider
 
 
 def load_models(deployment_config):
@@ -31,7 +30,7 @@ def load_models(deployment_config):
         "max_tokens": deployment_config.max_tokens,
     }
 
-    provider = get_provider(deployment_config.model, deployment_config.task)
+    provider = deployment_config.provider
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
         from mii.models.providers.huggingface import hf_provider
 
