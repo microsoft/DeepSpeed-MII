@@ -60,9 +60,7 @@ def load_models(deployment_config):
         """
     elif provider == mii.constants.ModelProvider.DIFFUSERS:
         from mii.models.providers.diffusers import diffusers_provider
-
         inference_pipeline = diffusers_provider(deployment_config)
-        inf_config["enable_cuda_graph"] = True
     else:
         raise ValueError(f"Unknown model provider {provider}")
     """
