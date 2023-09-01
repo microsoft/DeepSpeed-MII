@@ -21,7 +21,7 @@ def b64_encoded_config(config_str):
     # convert json bytes -> str -> dict
     config_dict = json.loads(config_bytes.decode())
     # return mii.DeploymentConfig object
-    return DeploymentConfig(**config_dict)
+    return DeploymentConfig.construct(**config_dict)
 
 
 def main():
