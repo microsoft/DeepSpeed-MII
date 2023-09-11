@@ -195,5 +195,6 @@ def hf_provider(model_path, model_name, task_name, mii_config):
             token=mii_config.hf_auth_token,
             torch_dtype=mii_config.dtype,
             trust_remote_code=mii_config.trust_remote_code,
+            model_kwargs={"local_files_only":mii_config.local_files_only},
         )
         return inference_pipeline

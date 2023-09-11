@@ -57,6 +57,7 @@ class MIIConfig(BaseModel):
     replica_num: int = 1
     hostfile: str = DLTS_HOSTFILE
     trust_remote_code: bool = False
+    local_files_only: bool = False
 
     @validator("deploy_rank")
     def deploy_valid(cls, field_value, values):
