@@ -9,7 +9,7 @@ from .deployment import deploy
 from .terminate import terminate
 from .constants import DeploymentType, Tasks
 from .aml_related.utils import aml_output_path
-
+from .utils import get_supported_models
 from .config import MIIConfig, LoadBalancerConfig
 from .grpc_related.proto import modelresponse_pb2_grpc
 
