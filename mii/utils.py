@@ -23,7 +23,9 @@ from mii.constants import (CONVERSATIONAL_NAME,
                            SUPPORTED_MODEL_TYPES,
                            ModelProvider,
                            REQUIRED_KEYS_PER_TASK,
-                           TEXT2IMG_NAME)
+                           TEXT2IMG_NAME,
+                           MII_HF_CACHE_EXPIRATION,
+                           MII_HF_CACHE_EXPIRATION_DEFAULT)
 
 from mii.constants import Tasks
 
@@ -79,19 +81,20 @@ def get_task(task_name):
 
 
 def _get_hf_models_by_type(model_type=None, task=None):
-    CACHE_FILE_PATH = os.path.join(mii_cache_path(), "HF_model_cache.pkl")
-    CACHE_EXPIRATION_SECONDS = 60 * 60  # 1 hour
+    cache_file_path = os.path.join(mii_cache_path(), "HF_model_cache.pkl")
+    cache_expiration_seconds = os.getenv(MII_HF_CACHE_EXPIRATION,
+                                         MII_HF_CACHE_EXPIRATION_DEFAULT)
 
     # Load or initialize the cache
     model_data = {"cache_time": 0, "model_list": []}
-    if os.path.isfile(CACHE_FILE_PATH):
-        with open(CACHE_FILE_PATH, 'rb') as f:
+    if os.path.isfile(cache_file_path):
+        with open(cache_file_path, 'rb') as f:
             model_data = pickle.load(f)
 
     current_time = time.time()
 
     # Update the cache if it has expired
-    if (model_data["cache_time"] + CACHE_EXPIRATION_SECONDS) < current_time:
+    if (model_data["cache_time"] + cache_expiration_seconds) < current_time:
         api = HfApi()
         model_data["model_list"] = [
             SimpleNamespace(modelId=m.modelId,
@@ -101,7 +104,7 @@ def _get_hf_models_by_type(model_type=None, task=None):
         model_data["cache_time"] = current_time
 
         # Save the updated cache
-        with open(CACHE_FILE_PATH, 'wb') as f:
+        with open(cache_file_path, 'wb') as f:
             pickle.dump(model_data, f)
 
     # Filter the model list
@@ -114,7 +117,6 @@ def _get_hf_models_by_type(model_type=None, task=None):
     # Extract model IDs
     model_ids = [m.modelId for m in models]
 
-    # Add additional models for TaskType.TEXT_GENERATION
     if task == TEXT_GENERATION_NAME:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         model_ids.extend([
@@ -126,7 +128,6 @@ def _get_hf_models_by_type(model_type=None, task=None):
     return model_ids
 
 
-# TODO read this from a file containing list of files supported for each task
 def get_supported_models(task):
     supported_models = []
     task_name = get_task_name(task)
@@ -148,7 +149,9 @@ def get_supported_models(task):
 
 def check_if_task_and_model_is_supported(task, model_name):
     supported_models = get_supported_models(task)
-    assert model_name in supported_models, f"{task} is not supported by {model_name}. This task is supported by {len(supported_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
+    assert (
+        model_name in supported_models
+    ), f"{task} is not supported by {model_name}. This task is supported by {len(supported_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
 
 
 def check_if_task_and_model_is_valid(task, model_name):
