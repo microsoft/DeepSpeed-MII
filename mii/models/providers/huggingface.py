@@ -197,6 +197,7 @@ def hf_provider(deployment_config):
         return load_with_meta_tensor(deployment_config)
     else:
         device = get_device(load_with_sys_mem=deployment_config.load_with_sys_mem)
+        print(deployment_config)
         inference_pipeline = pipeline(
             deployment_config.task,
             model=deployment_config.model

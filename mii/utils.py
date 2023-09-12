@@ -20,17 +20,20 @@ from mii.constants import (
 from mii.config import TaskType
 
 
-def _get_hf_models_by_type(model_type, task=None):
+def _get_hf_models_by_type(model_type=None, task=None):
     api = HfApi()
-    models = api.list_models(filter=model_type)
-    models = ([m.modelId for m in models]
-              if task is None else [m.modelId for m in models if m.pipeline_tag == task])
+    models = api.list_models()
+    if model_type is not None:
+        models = [m for m in models if model_type in m.tags]
+    if task is not None:
+        models = [m for m in models if m.pipeline_tag == task]
+    model_ids = [m.modelId for m in models]
     if task == TaskType.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
-        models.append("microsoft/bloom-deepspeed-inference-fp16")
-        models.append("microsoft/bloom-deepspeed-inference-int8")
-        models.append("EleutherAI/gpt-neox-20b")
-    return models
+        model_ids.append("microsoft/bloom-deepspeed-inference-fp16")
+        model_ids.append("microsoft/bloom-deepspeed-inference-int8")
+        model_ids.append("EleutherAI/gpt-neox-20b")
+    return model_ids
 
 
 # TODO read this from a file containing list of files supported for each task

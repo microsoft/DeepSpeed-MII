@@ -69,7 +69,11 @@ def deploy(
 
     mii_config["deployment_name"] = deployment_name
     mii_config["deployment_config"] = deployment_config
+    import time
+    start = time.time()
     mii_config = mii.config.MIIConfig(**mii_config)
+    print(time.time() - start)
+    exit()
 
     if mii_config.deployment_config.enable_deepspeed:
         logger.info(
