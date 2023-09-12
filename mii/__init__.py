@@ -9,8 +9,8 @@ from .deployment import deploy
 from .terminate import terminate
 from .constants import DeploymentType, TaskType
 from .aml_related.utils import aml_output_path
-
 from .config import MIIConfig, DeploymentConfig
+from .utils import get_supported_models
 from .grpc_related.proto import modelresponse_pb2_grpc
 
 __version__ = "0.0.0"

@@ -3,9 +3,12 @@
 
 # DeepSpeed Team
 import os
+import pickle
+import time
 import importlib
 import torch
 import mii
+from types import SimpleNamespace
 from huggingface_hub import HfApi
 
 from mii.models.score.generate import generated_score_path
@@ -15,29 +18,112 @@ from mii.constants import (
     ModelProvider,
     SUPPORTED_MODEL_TYPES,
     REQUIRED_KEYS_PER_TASK,
+    MII_HF_CACHE_EXPIRATION,
+    MII_HF_CACHE_EXPIRATION_DEFAULT,
 )
 
 from mii.config import TaskType
 
 
+def get_task_name(task):
+    if task == Tasks.QUESTION_ANSWERING:
+        return QUESTION_ANSWERING_NAME
+
+    if task == Tasks.TEXT_GENERATION:
+        return TEXT_GENERATION_NAME
+
+    if task == Tasks.TEXT_CLASSIFICATION:
+        return TEXT_CLASSIFICATION_NAME
+
+    if task == Tasks.FILL_MASK:
+        return FILL_MASK_NAME
+
+    if task == Tasks.TOKEN_CLASSIFICATION:
+        return TOKEN_CLASSIFICATION_NAME
+
+    if task == Tasks.CONVERSATIONAL:
+        return CONVERSATIONAL_NAME
+
+    if task == Tasks.TEXT2IMG:
+        return TEXT2IMG_NAME
+
+    raise ValueError(f"Unknown Task {task}")
+
+
+def get_task(task_name):
+    if task_name == QUESTION_ANSWERING_NAME:
+        return Tasks.QUESTION_ANSWERING
+
+    if task_name == TEXT_GENERATION_NAME:
+        return Tasks.TEXT_GENERATION
+
+    if task_name == TEXT_CLASSIFICATION_NAME:
+        return Tasks.TEXT_CLASSIFICATION
+
+    if task_name == FILL_MASK_NAME:
+        return Tasks.FILL_MASK
+
+    if task_name == TOKEN_CLASSIFICATION_NAME:
+        return Tasks.TOKEN_CLASSIFICATION
+
+    if task_name == CONVERSATIONAL_NAME:
+        return Tasks.CONVERSATIONAL
+
+    if task_name == TEXT2IMG_NAME:
+        return Tasks.TEXT2IMG
+
+    assert False, f"Unknown Task {task_name}"
+
+
 def _get_hf_models_by_type(model_type=None, task=None):
-    api = HfApi()
-    models = api.list_models()
+    cache_file_path = os.path.join(mii_cache_path(), "HF_model_cache.pkl")
+    cache_expiration_seconds = os.getenv(MII_HF_CACHE_EXPIRATION,
+                                         MII_HF_CACHE_EXPIRATION_DEFAULT)
+
+    # Load or initialize the cache
+    model_data = {"cache_time": 0, "model_list": []}
+    if os.path.isfile(cache_file_path):
+        with open(cache_file_path, 'rb') as f:
+            model_data = pickle.load(f)
+
+    current_time = time.time()
+
+    # Update the cache if it has expired
+    if (model_data["cache_time"] + cache_expiration_seconds) < current_time:
+        api = HfApi()
+        model_data["model_list"] = [
+            SimpleNamespace(modelId=m.modelId,
+                            pipeline_tag=m.pipeline_tag,
+                            tags=m.tags) for m in api.list_models()
+        ]
+        model_data["cache_time"] = current_time
+
+        # Save the updated cache
+        with open(cache_file_path, 'wb') as f:
+            pickle.dump(model_data, f)
+
+    # Filter the model list
+    models = model_data["model_list"]
     if model_type is not None:
         models = [m for m in models if model_type in m.tags]
     if task is not None:
         models = [m for m in models if m.pipeline_tag == task]
+
+    # Extract model IDs
     model_ids = [m.modelId for m in models]
-    if task == TaskType.TEXT_GENERATION:
+
+    if task == TEXT_GENERATION_NAME:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
-        model_ids.append("microsoft/bloom-deepspeed-inference-fp16")
-        model_ids.append("microsoft/bloom-deepspeed-inference-int8")
-        model_ids.append("EleutherAI/gpt-neox-20b")
+        model_ids.extend([
+            "microsoft/bloom-deepspeed-inference-fp16",
+            "microsoft/bloom-deepspeed-inference-int8",
+            "EleutherAI/gpt-neox-20b"
+        ])
+
     return model_ids
 
 
-# TODO read this from a file containing list of files supported for each task
-def _get_supported_models_name(task):
+def get_supported_models(task):
     supported_models = []
 
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
@@ -56,13 +142,34 @@ def _get_supported_models_name(task):
 
 
 def check_if_task_and_model_is_supported(task, model_name):
-    supported_models = _get_supported_models_name(task)
-    assert model_name in supported_models, f"{task} only supports {supported_models}"
+    supported_models = get_supported_models(task)
+    assert (
+        model_name in supported_models
+    ), f"{task} is not supported by {model_name}. This task is supported by {len(supported_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
 
 
 def check_if_task_and_model_is_valid(task, model_name):
-    valid_task_models = _get_hf_models_by_type(None, task)
-    assert model_name in valid_task_models, f"{task} only supports {valid_task_models}"
+    task_name = get_task_name(task)
+    valid_task_models = _get_hf_models_by_type(None, task_name)
+    assert (
+        model_name in valid_task_models
+    ), f"{task_name} is not supported by {model_name}. This task is supported by {len(valid_task_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
+
+
+def full_model_path(model_path):
+    aml_model_dir = os.environ.get('AZUREML_MODEL_DIR', None)
+    if aml_model_dir:
+        # (potentially) append relative model_path w. aml path
+        assert os.path.isabs(aml_model_dir), f"AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path"
+        if model_path:
+            assert not os.path.isabs(model_path), f"model_path={model_path} must be relative to append w. AML path"
+            return os.path.join(aml_model_dir, model_path)
+        else:
+            return aml_model_dir
+    elif model_path:
+        return model_path
+    else:
+        return mii.constants.MII_MODEL_PATH_DEFAULT
 
 
 def is_aml():
