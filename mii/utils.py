@@ -25,56 +25,6 @@ from mii.constants import (
 from mii.config import TaskType
 
 
-def get_task_name(task):
-    if task == Tasks.QUESTION_ANSWERING:
-        return QUESTION_ANSWERING_NAME
-
-    if task == Tasks.TEXT_GENERATION:
-        return TEXT_GENERATION_NAME
-
-    if task == Tasks.TEXT_CLASSIFICATION:
-        return TEXT_CLASSIFICATION_NAME
-
-    if task == Tasks.FILL_MASK:
-        return FILL_MASK_NAME
-
-    if task == Tasks.TOKEN_CLASSIFICATION:
-        return TOKEN_CLASSIFICATION_NAME
-
-    if task == Tasks.CONVERSATIONAL:
-        return CONVERSATIONAL_NAME
-
-    if task == Tasks.TEXT2IMG:
-        return TEXT2IMG_NAME
-
-    raise ValueError(f"Unknown Task {task}")
-
-
-def get_task(task_name):
-    if task_name == QUESTION_ANSWERING_NAME:
-        return Tasks.QUESTION_ANSWERING
-
-    if task_name == TEXT_GENERATION_NAME:
-        return Tasks.TEXT_GENERATION
-
-    if task_name == TEXT_CLASSIFICATION_NAME:
-        return Tasks.TEXT_CLASSIFICATION
-
-    if task_name == FILL_MASK_NAME:
-        return Tasks.FILL_MASK
-
-    if task_name == TOKEN_CLASSIFICATION_NAME:
-        return Tasks.TOKEN_CLASSIFICATION
-
-    if task_name == CONVERSATIONAL_NAME:
-        return Tasks.CONVERSATIONAL
-
-    if task_name == TEXT2IMG_NAME:
-        return Tasks.TEXT2IMG
-
-    assert False, f"Unknown Task {task_name}"
-
-
 def _get_hf_models_by_type(model_type=None, task=None):
     cache_file_path = os.path.join(mii_cache_path(), "HF_model_cache.pkl")
     cache_expiration_seconds = os.getenv(MII_HF_CACHE_EXPIRATION,
@@ -112,7 +62,7 @@ def _get_hf_models_by_type(model_type=None, task=None):
     # Extract model IDs
     model_ids = [m.modelId for m in models]
 
-    if task == TEXT_GENERATION_NAME:
+    if task == TaskType.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         model_ids.extend([
             "microsoft/bloom-deepspeed-inference-fp16",
@@ -149,11 +99,10 @@ def check_if_task_and_model_is_supported(task, model_name):
 
 
 def check_if_task_and_model_is_valid(task, model_name):
-    task_name = get_task_name(task)
-    valid_task_models = _get_hf_models_by_type(None, task_name)
+    valid_task_models = _get_hf_models_by_type(None, task)
     assert (
         model_name in valid_task_models
-    ), f"{task_name} is not supported by {model_name}. This task is supported by {len(valid_task_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
+    ), f"{task} is not supported by {model_name}. This task is supported by {len(valid_task_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
 
 
 def full_model_path(model_path):
