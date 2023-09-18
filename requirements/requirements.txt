@@ -3,7 +3,7 @@ deepspeed>=0.7.6
 Flask-RESTful
 grpcio
 grpcio-tools
-pydantic
+pydantic>=2.0.0
 torch
 transformers
 Werkzeug

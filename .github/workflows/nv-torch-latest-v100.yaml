@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install git+https://github.com/microsoft/DeepSpeed.git
+          pip install git+https://github.com/microsoft/DeepSpeed.git@loadams/try-bump-pydantic
           pip install git+https://github.com/huggingface/transformers.git
           pip install -U accelerate
           ds_report
