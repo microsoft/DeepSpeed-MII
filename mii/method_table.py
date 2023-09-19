@@ -184,7 +184,7 @@ class ConversationalMethods(TaskMethods):
     def method(self):
         return "ConversationalReply"
 
-    def create_conversation(self, request, **kwargs):
+    def create_conversation(self, request):
         if isinstance(request, dict):
             assert 'text' in request and 'past_user_inputs' in request and 'generated_responses' in request, "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
             text = request['text']

@@ -36,8 +36,8 @@ def mii_query_handle(deployment_name):
         return MIINonPersistentClient(task, deployment_name)
 
     mii_config = _get_mii_config(deployment_name)
-    return MIIClient(mii_config.deployment_config.task,
-                     "localhost",
+    return MIIClient(mii_config.model_config.task,
+                     "localhost", # TODO: This can probably be removed
                      mii_config.port_number)
 
 
@@ -106,61 +106,6 @@ class MIIClient:
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
 
-class MIITensorParallelClient:
-    """
-    Client to send queries to multiple endpoints in parallel.
-    This is used to call multiple servers deployed for tensor parallelism.
-    """
-    def __init__(self, task, host, ports):
-        self.task = task
-        self.clients = [MIIClient(task, host, port) for port in ports]
-        self.asyncio_loop = asyncio.get_event_loop()
-
-    # runs task in parallel and return the result from the first task
-    async def _query_in_tensor_parallel(self, request_string, query_kwargs):
-        responses = []
-        for client in self.clients:
-            responses.append(
-                self.asyncio_loop.create_task(
-                    client._request_async_response(request_string,
-                                                   **query_kwargs)))
-
-        await responses[0]
-        return responses[0]
-
-    def query(self, request_dict, **query_kwargs):
-        """Query a local deployment:
-
-            mii/examples/local/gpt2-query-example.py
-            mii/examples/local/roberta-qa-query-example.py
-
-        Arguments:
-            request_dict: A task specific request dictionary consisting of the inputs to the models
-            query_kwargs: additional query parameters for the model
-
-        Returns:
-            response: Response of the model
-        """
-        response = self.asyncio_loop.run_until_complete(
-            self._query_in_tensor_parallel(request_dict,
-                                           query_kwargs))
-        ret = response.result()
-        return ret
-
-    def terminate(self):
-        """Terminates the deployment"""
-        for client in self.clients:
-            client.terminate()
-
-    def create_session(self, session_id):
-        for client in self.clients:
-            client.create_session(session_id)
-
-    def destroy_session(self, session_id):
-        for client in self.clients:
-            client.destroy_session(session_id)
-
-
 class MIINonPersistentClient:
     def __init__(self, task, deployment_name):
         self.task = task
@@ -173,6 +118,8 @@ class MIINonPersistentClient:
         task_methods = GRPC_METHOD_TABLE[self.task]
         inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
 
+        # TODO: refactor so this code is shared between non-persistent and
+        # persistent deployments in method_table.py
         if self.task == TaskType.QUESTION_ANSWERING:
             if "question" not in request_dict or "context" not in request_dict:
                 raise Exception(
@@ -181,9 +128,9 @@ class MIINonPersistentClient:
             kwargs = query_kwargs
 
         elif self.task == TaskType.CONVERSATIONAL:
-            conv = task_methods.create_conversation(request_dict, **query_kwargs)
+            conv = task_methods.create_conversation(request_dict)
             args = (conv, )
-            kwargs = {}
+            kwargs = query_kwargs
 
         else:
             args = (request_dict["query"], )

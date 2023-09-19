@@ -22,35 +22,136 @@ class ReplicaConfig(DeepSpeedConfigModel):
     gpu_indices: List[int] = []
 
 
-class DeploymentConfig(DeepSpeedConfigModel):
-    # Deployment configs
-    load_with_sys_mem: bool = False
-    meta_tensor: bool = False
-    hf_auth_token: Optional[str] = None
-    deploy_rank: Optional[List[int]] = None
-    torch_dist_port: int = 29500
-    replica_num: int = 1
-    replica_configs: List[ReplicaConfig] = []
-    profile_model_time: bool = False
-    skip_model_check: bool = False
-    trust_remote_code: bool = False
-
-    # Model configs
+class ModelConfig(DeepSpeedConfigModel):
     model: str
+    """
+    Name of a supported model for the task. Models in MII are sourced from
+    multiple open-source projects such as Huggingface Transformer, FairSeq,
+    EluetherAI etc. For the list of supported models for each task, please see
+    here [TODO].
+    """
+
     task: TaskType
+    """
+    Name of the machine learning task to be deployed.Currently MII supports the
+    following list of tasks ``['text-generation', 'text-classification',
+    'question-answering', 'fill-mask', 'token-classification',
+    'conversational', 'text-to-image']``
+    """
+
     dtype: DtypeEnum = DtypeEnum.fp32
+    """
+    Desired model data type, will convert model to this type.  Supported target
+    types: `torch.half`, `torch.float`, `torch.int8` (for BLOOM models)
+    """
+
     model_path: str = ""
-    checkpoint_dict: Optional[Dict[str, Any]] = None
-    max_tokens: int = 1024
+    """
+    In LOCAL deployments this is the local path where model checkpoints are
+    available. In AML deployments this is an optional relative path with
+    AZURE_MODEL_DIR for the deployment.
+    """
 
-    # Performance configs
+    load_with_sys_mem: bool = False
+    """
+    Loads the model onto system memory instead of GPU memory. This can help
+    avoid OOM errors when sharding a model across several GPUs because MII will
+    try to load a full copy of each model onto each GPU initially.
+    """
+
+    meta_tensor: bool = False
+    """
+    Loads the initial HuggingFace model using Meta Tensors that use no memory.
+    Can dramatically improve load time and reduce memory requirements on
+    supported models. Supported for GPT-J, GPT-NeoX, OPT, and BLOOM when kernel
+    injection is enabled. Supported for all models when kernel injection is
+    disabled.
+    """
+
+    hf_auth_token: Optional[str] = None
+    """
+    HuggingFace authentication token for accessing models.
+    """
+
+    deploy_rank: Optional[List[int]] = None
+    """
+    GPU indices a model is deployed on. Note that CUDA_VISIBLE_DEVICES does not
+    work with DeepSpeed-MII.
+    """
+
+    torch_dist_port: int = 29500
+    """
+    Torch distributed port.
+    """
+
+    replica_num: int = 1
+    """
+    Number of model replicas. Enables easy data parallelism.
+    """
+
+    replica_configs: List[ReplicaConfig] = []
+    """
+    Configuration details for each replica. This will be automatically
+    generated, but you can provide a set of custom configs.
+    """
+
+    profile_model_time: bool = False
+    """
+    Enable profiling of model times (i.e., without communication overhead).
+    """
+
+    skip_model_check: bool = False
+    """
+    Skip validation that a model supports a given task.
+    """
+
+    trust_remote_code: bool = False
+    """
+    Option for loading models with the HuggingFace `transformers.pipeline`.
+    """
+
+    # TODO: Replace with DeepSpeedInferenceConfig
     enable_deepspeed: bool = True
-    enable_zero: bool = False
-    ds_config: Dict[str, Any] = {}
-    tensor_parallel: int = 1
-    enable_cuda_graph: bool = False
-    replace_with_kernel_inject: bool = True
+    """
+    Enable DeepSpeed-Inference.
+    """
 
+    enable_zero: bool = False
+    """
+    Enable Zero-Inference.
+    """
+
+    ds_config: Dict[str, Any] = {}
+    """
+    DeepSpeed config to use when Zero-Inference is enabled.
+    """
+
+    tensor_parallel: int = 1
+    """
+    Tensor parallelism to use for a model (i.e., how many GPUs to shard a model across).
+    """
+
+    enable_cuda_graph: bool = False
+    """
+    Enables CUDA Graph captures with DeepSpeed-Inference.
+    """
+
+    replace_with_kernel_inject: bool = True
+    """
+    Enable custom kernel injection with DeepSpeed-Inference.
+    """
+
+    checkpoint_dict: Optional[Dict[str, Any]] = None
+    """
+    DeepSpeed model checkpoint dict.
+    """
+
+    max_tokens: int = 1024
+    """
+    This argument shows the maximum number of tokens DeepSpeed-Inference can
+    work with, including the input and output tokens. Please consider
+    increasing it to the required token-length required for your use-case.
+    """
     class Config:
         json_encoders = {torch.dtype: lambda x: str(x)}
 
@@ -180,22 +281,67 @@ class DeploymentConfig(DeepSpeedConfigModel):
 
 class MIIConfig(DeepSpeedConfigModel):
     deployment_name: str
-    deployment_type: DeploymentType = DeploymentType.LOCAL
-    deployment_config: DeploymentConfig
-    hf_auth_token: Optional[str] = None
-    port_number: int = 50050
-    enable_restful_api: bool = False
-    restful_api_port: int = 51080
-    hostfile: str = DLTS_HOSTFILE
-    version: int = 1
+    """
+    Name of the deployment. Used as an identifier for obtaining a inference
+    server client and posting queries.
+    """
 
+    deployment_type: DeploymentType = DeploymentType.LOCAL
+    """
+    One of the `enum mii.DeploymentTypes: [LOCAL]`.
+    * `LOCAL` uses a grpc server to create a local deployment.
+    * `NON_PERSISTENT` creates a local deployment that will end when the process exits.
+    * `AML` will generate the assets necessary to deploy on AML resources.
+    """
+
+    model_config: ModelConfig
+    """
+    Configuration for the deployed model(s).
+    """
+
+    hf_auth_token: Optional[str] = None
+    """
+    HuggingFace authentication token for accessing models. Will be propagated
+    to all ModelConfig if none are provided there.
+    """
+
+    port_number: int = 50050
+    """
+    Port number to use for the load balancer process.
+    """
+
+    enable_restful_api: bool = False
+    """
+    Enables a RESTful API that can be queries with via http POST method.
+    """
+
+    restful_api_port: int = 51080
+    """
+    Port number to use for the RESTful API.
+    """
+
+    hostfile: str = DLTS_HOSTFILE
+    """
+    DeepSpeed hostfile. Will be autogenerated if None is provided.
+    """
+
+    # TODO: Place AML-related configs in subconfig
+    version: int = 1
+    """
+    Version number to pass to AML deployments.
+    """
+
+    instance_type: str = "Standard_NC12s_v3"
+    """
+    AML instance type to use when create AML deployment assets.
+    """
     @root_validator(skip_on_failure=True)
     def propagate_hf_auth(cls, values):
         # This validator is for when we support multiple models in a deployment
         hf_auth_token = values.get("hf_auth_token")
-        deployment_config = values.get("deployment_config")
-        if not deployment_config.hf_auth_token:
-            deployment_config.hf_auth_token = hf_auth_token
+        model_config = values.get("model_config")
+        if not model_config.hf_auth_token:
+            model_config.hf_auth_token = hf_auth_token
         return values
 
     @root_validator(skip_on_failure=True)
@@ -209,11 +355,12 @@ class MIIConfig(DeepSpeedConfigModel):
         return values
 
     def generate_replica_configs(self):
+        #TODO: refactor this function
         hostfile = self.hostfile
         port_number = self.port_number
-        torch_dist_port = self.deployment_config.torch_dist_port
-        tensor_parallel = self.deployment_config.tensor_parallel
-        replica_num = self.deployment_config.replica_num
+        torch_dist_port = self.model_config.torch_dist_port
+        tensor_parallel = self.model_config.tensor_parallel
+        replica_num = self.model_config.replica_num
         replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
@@ -230,7 +377,7 @@ class MIIConfig(DeepSpeedConfigModel):
                     gpu_indices=gpu_indices,
                 ))
 
-        self.deployment_config.replica_configs = replica_configs
+        self.model_config.replica_configs = replica_configs
 
 
 def _allocate_processes(hostfile_path, tensor_parallel, replica_num):

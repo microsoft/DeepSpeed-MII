@@ -28,7 +28,7 @@ class MIIServer:
     """Initialize the model, setup the server for the model under model_path"""
     def __init__(self, mii_config):
 
-        self.task = mii_config.deployment_config.task
+        self.task = mii_config.model_config.task
         self.num_gpus = get_num_gpus(mii_config)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
 
@@ -45,7 +45,7 @@ class MIIServer:
 
         processes = self._initialize_service(mii_config)
         self._wait_until_server_is_live(processes,
-                                        mii_config.deployment_config.replica_configs)
+                                        mii_config.model_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):
@@ -86,18 +86,18 @@ class MIIServer:
         return is_alive
 
     def _launch_server_process(self,
-                               deployment_config,
+                               model_config,
                                msg_server_type,
                                ds_launch_str="",
                                server_args=[]):
         launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
-        b64_config_str = config_to_b64_str(deployment_config)
+        b64_config_str = config_to_b64_str(model_config)
         server_args.append(f"--deployment-config {b64_config_str}")
         server_args_str = " ".join(server_args)
         cmd = f"{ds_launch_str} {launch_str} {server_args_str}".strip().split(" ")
 
         mii_env = os.environ.copy()
-        mii_env["TRANSFORMERS_CACHE"] = deployment_config.model_path
+        mii_env["TRANSFORMERS_CACHE"] = model_config.model_path
         logger.info(f"{msg_server_type} server launch: {cmd}")
         return subprocess.Popen(cmd, env=mii_env)
 
@@ -126,11 +126,11 @@ class MIIServer:
         ]
 
         host_gpus = defaultdict(list)
-        for repl_config in mii_config.deployment_config.replica_configs:
+        for repl_config in mii_config.model_config.replica_configs:
             host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
         # Start replica instances
-        for repl_config in mii_config.deployment_config.replica_configs:
+        for repl_config in mii_config.model_config.replica_configs:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             hostfile.write(
                 f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
@@ -138,7 +138,7 @@ class MIIServer:
             ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name)
             processes.append(
                 self._launch_server_process(
-                    mii_config.deployment_config,
+                    mii_config.model_config,
                     "MII server",
                     ds_launch_str=ds_launch_str,
                     server_args=server_args +
@@ -151,7 +151,7 @@ class MIIServer:
             # expected to assign one GPU to one process.
         processes.append(
             self._launch_server_process(
-                mii_config.deployment_config,
+                mii_config.model_config,
                 "load balancer",
                 server_args=server_args + ["--load-balancer"],
             ))
@@ -159,7 +159,7 @@ class MIIServer:
         if mii_config.enable_restful_api:
             processes.append(
                 self._launch_server_process(
-                    mii_config.deployment_config,
+                    mii_config.model_config,
                     "restful api gateway",
                     server_args=server_args + ["--restful-gateway"],
                 ))

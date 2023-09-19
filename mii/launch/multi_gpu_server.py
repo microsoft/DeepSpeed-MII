@@ -68,7 +68,7 @@ def main():
         print(f"Starting RESTful API gateway on port: {args.restful_gateway_port}")
         gateway_thread = RestfulGatewayThread(
             deployment_name=args.deployment_name,
-            task=args.deployment_config.task,
+            task=args.model_config.task,
             lb_port=args.load_balancer_port,
             rest_port=args.restful_gateway_port,
         )
@@ -79,7 +79,7 @@ def main():
     elif args.load_balancer:
         assert args.load_balancer_port, "--load-balancer-port must be provided."
         print(f"Starting load balancer on port: {args.load_balancer_port}")
-        serve_load_balancing(args.deployment_config, args.load_balancer_port)
+        serve_load_balancing(args.model_config, args.load_balancer_port)
 
     else:
         assert args.server_port, "--server-port must be provided."
@@ -87,7 +87,7 @@ def main():
         port = args.server_port + local_rank
 
         print("LAUNCHING PIPELINE")
-        inference_pipeline = load_models(args.deployment_config)
+        inference_pipeline = load_models(args.model_config)
 
         print(f"Starting server on port: {port}")
         serve_inference(inference_pipeline, port)

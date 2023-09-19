@@ -162,29 +162,27 @@ def create_checkpoint_dict(model_name, model_path, checkpoint_dict):
         return data
 
 
-def load_with_meta_tensor(deployment_config):
+def load_with_meta_tensor(model_config):
     deepspeed.init_distributed("nccl")
 
     cache_path = mii_cache_path()
 
     tokenizer = _attempt_load(
         AutoTokenizer.from_pretrained,
-        deployment_config.model,
+        model_config.model,
         cache_path,
         kwargs={"padding_side": "left"},
     )
     tokenizer.pad_token = tokenizer.eos_token
 
-    config = _attempt_load(AutoConfig.from_pretrained,
-                           deployment_config.model,
-                           cache_path)
+    config = _attempt_load(AutoConfig.from_pretrained, model_config.model, cache_path)
 
     with OnDevice(dtype=torch.float16, device="meta", enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
-    checkpoint_dict = create_checkpoint_dict(deployment_config.model,
-                                             deployment_config.model_path,
-                                             deployment_config.checkpoint_dict)
+    checkpoint_dict = create_checkpoint_dict(model_config.model,
+                                             model_config.model_path,
+                                             model_config.checkpoint_dict)
     torch.distributed.barrier()
     inference_pipeline = MetaTensorPipeline(model=model,
                                             tokenizer=tokenizer,
@@ -192,20 +190,19 @@ def load_with_meta_tensor(deployment_config):
     return inference_pipeline
 
 
-def hf_provider(deployment_config):
-    if deployment_config.meta_tensor:
-        return load_with_meta_tensor(deployment_config)
+def hf_provider(model_config):
+    if model_config.meta_tensor:
+        return load_with_meta_tensor(model_config)
     else:
-        device = get_device(load_with_sys_mem=deployment_config.load_with_sys_mem)
-        print(deployment_config)
+        device = get_device(load_with_sys_mem=model_config.load_with_sys_mem)
+        print(model_config)
         inference_pipeline = pipeline(
-            deployment_config.task,
-            model=deployment_config.model
-            if not is_aml() else deployment_config.model_path,
+            model_config.task,
+            model=model_config.model if not is_aml() else model_config.model_path,
             device=device,
             framework="pt",
-            token=deployment_config.hf_auth_token,
-            torch_dtype=deployment_config.dtype,
-            trust_remote_code=deployment_config.trust_remote_code,
+            token=model_config.hf_auth_token,
+            torch_dtype=model_config.dtype,
+            trust_remote_code=model_config.trust_remote_code,
         )
         return inference_pipeline
