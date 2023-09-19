@@ -6,7 +6,7 @@ import torch
 import os
 import string
 from typing import List, Optional, Dict, Any
-from pydantic import validator, root_validator
+from pydantic import validator, root_validator, Field
 import mii
 from .constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
 
@@ -68,11 +68,6 @@ class ModelConfig(DeepSpeedConfigModel):
     disabled.
     """
 
-    hf_auth_token: Optional[str] = None
-    """
-    HuggingFace authentication token for accessing models.
-    """
-
     deploy_rank: Optional[List[int]] = None
     """
     GPU indices a model is deployed on. Note that CUDA_VISIBLE_DEVICES does not
@@ -105,9 +100,30 @@ class ModelConfig(DeepSpeedConfigModel):
     Skip validation that a model supports a given task.
     """
 
-    trust_remote_code: bool = False
+    hf_auth_token: Optional[str] = Field(
+        None,
+        deprecated=True,
+        deprecated_msg=
+        "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation.",
+    )
     """
-    Option for loading models with the HuggingFace `transformers.pipeline`.
+    HuggingFace authentication token for accessing models. Will be propagated
+    to all ModelConfig if none are provided there.
+    """
+
+    trust_remote_code: bool = Field(
+        False,
+        deprecated=True,
+        deprecated_msg=
+        "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation.",
+    )
+    """
+    HuggingFace `tranformer.pipeline` option for `trust_remote_code`.
+    """
+
+    pipeline_kwargs: Dict[Any] = {}
+    """
+    kwargs to be passed to HuggingFace's `transformer.pipeline`.
     """
 
     # TODO: Replace with DeepSpeedInferenceConfig
@@ -194,9 +210,9 @@ class ModelConfig(DeepSpeedConfigModel):
                 torch.int8,
                 torch.float16,
             ], "Bloom models only support fp16/int8."
-            assert (not values.get(
+            assert not values.get(
                 "enable_cuda_graph"
-            )), "Bloom models do not support CUDA Graph."
+            ), "Bloom models do not support CUDA Graph."
         return values
 
     @root_validator
@@ -299,12 +315,6 @@ class MIIConfig(DeepSpeedConfigModel):
     Configuration for the deployed model(s).
     """
 
-    hf_auth_token: Optional[str] = None
-    """
-    HuggingFace authentication token for accessing models. Will be propagated
-    to all ModelConfig if none are provided there.
-    """
-
     port_number: int = 50050
     """
     Port number to use for the load balancer process.
@@ -336,15 +346,6 @@ class MIIConfig(DeepSpeedConfigModel):
     AML instance type to use when create AML deployment assets.
     """
     @root_validator(skip_on_failure=True)
-    def propagate_hf_auth(cls, values):
-        # This validator is for when we support multiple models in a deployment
-        hf_auth_token = values.get("hf_auth_token")
-        model_config = values.get("model_config")
-        if not model_config.hf_auth_token:
-            model_config.hf_auth_token = hf_auth_token
-        return values
-
-    @root_validator(skip_on_failure=True)
     def AML_name_valid(cls, values):
         if values.get("deployment_type") == DeploymentType.AML:
             allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
@@ -355,7 +356,7 @@ class MIIConfig(DeepSpeedConfigModel):
         return values
 
     def generate_replica_configs(self):
-        #TODO: refactor this function
+        # TODO: refactor this function
         hostfile = self.hostfile
         port_number = self.port_number
         torch_dist_port = self.model_config.torch_dist_port
