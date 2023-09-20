@@ -121,7 +121,7 @@ class ModelConfig(DeepSpeedConfigModel):
     HuggingFace `tranformer.pipeline` option for `trust_remote_code`.
     """
 
-    pipeline_kwargs: Dict[Any] = {}
+    pipeline_kwargs: Dict[str, Any] = {}
     """
     kwargs to be passed to HuggingFace's `transformer.pipeline`.
     """
