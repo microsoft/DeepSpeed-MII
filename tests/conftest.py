@@ -85,7 +85,7 @@ def ds_config(request):
 
 
 @pytest.fixture(scope="function")
-def deployment_config(
+def model_config(
     task_name: str,
     model_name: str,
     dtype: str,
@@ -135,20 +135,20 @@ def expected_failure(request):
 
 
 @pytest.fixture(scope="function")
-def deployment(deployment_name, mii_config, deployment_config, expected_failure):
+def deployment(deployment_name, mii_config, model_config, expected_failure):
     if expected_failure is not None:
         with pytest.raises(expected_failure) as excinfo:
             mii.deploy(
                 deployment_name=deployment_name,
                 mii_config=mii_config,
-                deployment_config=deployment_config,
+                model_config=model_config,
             )
         yield excinfo
     else:
         mii.deploy(
             deployment_name=deployment_name,
             mii_config=mii_config,
-            deployment_config=deployment_config,
+            model_config=model_config,
         )
         yield deployment_name
         mii.terminate(deployment_name)
