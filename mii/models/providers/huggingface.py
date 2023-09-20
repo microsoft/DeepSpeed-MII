@@ -201,8 +201,7 @@ def hf_provider(model_config):
             model=model_config.model if not is_aml() else model_config.model_path,
             device=device,
             framework="pt",
-            token=model_config.hf_auth_token,
             torch_dtype=model_config.dtype,
-            trust_remote_code=model_config.trust_remote_code,
+            **model_config.pipeline_kwargs,
         )
         return inference_pipeline

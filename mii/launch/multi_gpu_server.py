@@ -7,7 +7,7 @@ import argparse
 import base64
 import json
 
-from mii.config import DeploymentConfig
+from mii.config import ModelConfig
 from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 from mii.grpc_related.restful_gateway import RestfulGatewayThread
@@ -20,8 +20,8 @@ def b64_encoded_config(config_str):
     config_bytes = base64.urlsafe_b64decode(b64_bytes)
     # convert json bytes -> str -> dict
     config_dict = json.loads(config_bytes.decode())
-    # return mii.DeploymentConfig object
-    return DeploymentConfig(**config_dict)
+    # return mii.ModelConfig object
+    return ModelConfig(**config_dict)
 
 
 def main():
