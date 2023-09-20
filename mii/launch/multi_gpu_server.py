@@ -28,9 +28,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--deployment-name", type=str, help="Name of deployment")
     parser.add_argument(
-        "--deployment-config",
+        "--model-config",
         type=b64_encoded_config,
-        help="base64 encoded deployment config",
+        help="base64 encoded model config",
     )
     parser.add_argument(
         "--server-port",
