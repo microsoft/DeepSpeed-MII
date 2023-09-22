@@ -13,10 +13,18 @@ import sys
 import threading
 import time
 
-from mii.constants import GRPC_MAX_MSG_SIZE, CREATE_SESSION_METHOD, DESTROY_SESSION_METHOD, TERMINATE_METHOD, LB_MAX_WORKER_THREADS, SERVER_SHUTDOWN_TIMEOUT, Tasks
+from mii.constants import (
+    GRPC_MAX_MSG_SIZE,
+    CREATE_SESSION_METHOD,
+    DESTROY_SESSION_METHOD,
+    TERMINATE_METHOD,
+    LB_MAX_WORKER_THREADS,
+    SERVER_SHUTDOWN_TIMEOUT,
+    TaskType,
+)
 from mii.method_table import GRPC_METHOD_TABLE
 from mii.client import create_channel
-from mii.utils import get_task, unpack_proto_query_kwargs
+from mii.utils import unpack_proto_query_kwargs
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -62,12 +70,12 @@ class ModelResponse(ServiceBase):
         return model_time
 
     def CreateSession(self, request, context):
-        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods = GRPC_METHOD_TABLE[TaskType.TEXT_GENERATION]
         task_methods.create_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def DestroySession(self, request, context):
-        task_methods = GRPC_METHOD_TABLE[Tasks.TEXT_GENERATION]
+        task_methods = GRPC_METHOD_TABLE[TaskType.TEXT_GENERATION]
         task_methods.destroy_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
@@ -87,10 +95,10 @@ class ModelResponse(ServiceBase):
             response = task_methods.run_inference(self.inference_pipeline, args, kwargs)
         end = time.time()
 
-        model_time = self._get_model_time(self.inference_pipeline.model,
-                                          sum_times=True) if hasattr(
-                                              self.inference_pipeline,
-                                              "model") else -1
+        model_time = (self._get_model_time(self.inference_pipeline.model,
+                                           sum_times=True) if hasattr(
+                                               self.inference_pipeline,
+                                               "model") else -1)
 
         return task_methods.pack_response_to_proto(response, end - start, model_time)
 
@@ -164,17 +172,17 @@ class ParallelStubInvoker:
 
 
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
-    def __init__(self, task_name, replica_configs):
+    def __init__(self, model_config):
         super().__init__()
         self.asyncio_loop = asyncio.get_event_loop()
 
         self.stubs = [
             ParallelStubInvoker(replica.hostname,
                                 replica.tensor_parallel_ports)
-            for replica in replica_configs
+            for replica in model_config.replica_configs
         ]
         self.counter = AtomicCounter()
-        self.task = get_task(task_name)
+        self.task = model_config.task
         self.replica_sessions = {}
 
         # Start the asyncio loop in a separate thread
@@ -230,19 +238,24 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         return grpc.unary_unary_rpc_method_handler(
             invoke_intercept_method,
             request_deserializer=next_handler.request_deserializer,
-            response_serializer=next_handler.response_serializer)
+            response_serializer=next_handler.response_serializer,
+        )
 
 
 def _do_serve(service_impl, port, interceptors=[]):
     stop_event = service_impl.get_stop_event()
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=LB_MAX_WORKER_THREADS),
-                         interceptors=interceptors,
-                         options=[('grpc.max_send_message_length',
-                                   GRPC_MAX_MSG_SIZE),
-                                  ('grpc.max_receive_message_length',
-                                   GRPC_MAX_MSG_SIZE)])
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=LB_MAX_WORKER_THREADS),
+        interceptors=interceptors,
+        options=[
+            ("grpc.max_send_message_length",
+             GRPC_MAX_MSG_SIZE),
+            ("grpc.max_receive_message_length",
+             GRPC_MAX_MSG_SIZE),
+        ],
+    )
     modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)
-    server.add_insecure_port(f'[::]:{port}')
+    server.add_insecure_port(f"[::]:{port}")
     print(f"About to start server")
     server.start()
     print(f"Started")
@@ -254,14 +267,11 @@ def serve_inference(inference_pipeline, port):
     _do_serve(ModelResponse(inference_pipeline), port)
 
 
-def serve_load_balancing(task_name, lb_config):
-    _do_serve(ServiceBase(),
-              lb_config.port,
-              [LoadBalancingInterceptor(task_name,
-                                        lb_config.replica_configs)])
+def serve_load_balancing(model_config, lb_port):
+    _do_serve(ServiceBase(), lb_port, [LoadBalancingInterceptor(model_config)])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig()
     print(sys.argv[1])
     serve_inference(None, sys.argv[1])

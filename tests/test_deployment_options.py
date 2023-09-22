@@ -6,6 +6,7 @@
 import pytest
 import json
 import requests
+import pydantic
 import mii
 
 
@@ -13,18 +14,18 @@ import mii
 @pytest.mark.parametrize("meta_tensor", [True])
 @pytest.mark.parametrize("tensor_parallel", [2])
 def test_meta_tensor(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result
 
 
 @pytest.mark.parametrize("enable_restful_api", [True])
 def test_restful_api(deployment, query, restful_api_port):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     for _ in range(2):
         result = generator.query(query)
 
-    url = f'http://localhost:{restful_api_port}/mii/{deployment.deployment_name}'
+    url = f"http://localhost:{restful_api_port}/mii/{deployment}"
     params = {"request": query}
     json_params = json.dumps(params)
     result = requests.post(url,
@@ -36,14 +37,14 @@ def test_restful_api(deployment, query, restful_api_port):
 
 @pytest.mark.parametrize("load_with_sys_mem", [True])
 def test_load_to_sys_mem(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result
 
 
 @pytest.mark.parametrize("replica_num", [2])
 def test_replicas(deployment, query, replica_num):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     # Replicas are given queries in round-robin, so test each model is responding
     for _ in range(replica_num):
         result = generator.query(query)
@@ -53,69 +54,62 @@ def test_replicas(deployment, query, replica_num):
 @pytest.mark.deepspeed
 @pytest.mark.parametrize("enable_deepspeed", [False])
 @pytest.mark.parametrize("enable_zero", [True])
-@pytest.mark.parametrize("ds_config",
-                         [
-                             {
-                                 "fp16": {
-                                     "enabled": True
-                                 },
-                                 "bf16": {
-                                     "enabled": False
-                                 },
-                                 "zero_optimization": {
-                                     "stage": 3,
-                                     "offload_param": {
-                                         "device": "cpu",
-                                     },
-                                 },
-                                 "train_micro_batch_size_per_gpu": 1,
-                             },
-                         ])
+@pytest.mark.parametrize(
+    "ds_config",
+    [
+        {
+            "fp16": {
+                "enabled": True
+            },
+            "bf16": {
+                "enabled": False
+            },
+            "zero_optimization": {
+                "stage": 3,
+                "offload_param": {
+                    "device": "cpu",
+                },
+            },
+            "train_micro_batch_size_per_gpu": 1,
+        },
+    ],
+)
 def test_zero_config(deployment, query):
-    generator = mii.mii_query_handle(deployment.deployment_name)
+    generator = mii.mii_query_handle(deployment)
     result = generator.query(query)
     assert result
 
 
 @pytest.mark.deepspeed
-@pytest.mark.parametrize("expected_failure", [AssertionError])
-@pytest.mark.parametrize("enable_deepspeed, enable_zero, dtype",
-                         [(True,
-                           True,
-                           'fp32'),
-                          (False,
-                           True,
-                           'fp16')])
-@pytest.mark.parametrize("ds_config",
-                         [
-                             {
-                                 "fp16": {
-                                     "enabled": False
-                                 },
-                                 "bf16": {
-                                     "enabled": False
-                                 },
-                                 "zero_optimization": {
-                                     "stage": 3,
-                                     "offload_param": {
-                                         "device": "cpu",
-                                     },
-                                 },
-                                 "train_micro_batch_size_per_gpu": 1,
-                             },
-                         ])
+@pytest.mark.parametrize("expected_failure", [pydantic.ValidationError])
 @pytest.mark.parametrize(
-    "task_name, model_name, query",
+    "enable_deepspeed, enable_zero, dtype",
+    [(True,
+      True,
+      "fp32"),
+     (False,
+      True,
+      "fp16")],
+)
+@pytest.mark.parametrize(
+    "ds_config",
     [
-        (
-            "text-generation",
-            "distilgpt2",
-            {
-                "query": "DeepSpeed is the greatest"
+        {
+            "fp16": {
+                "enabled": False
             },
-        ),
+            "bf16": {
+                "enabled": False
+            },
+            "zero_optimization": {
+                "stage": 3,
+                "offload_param": {
+                    "device": "cpu",
+                },
+            },
+            "train_micro_batch_size_per_gpu": 1,
+        },
     ],
 )
 def test_zero_config_fail(deployment, query):
-    print(deployment)
-    assert "MII Config Error" in str(deployment.value)
+    assert "assertion_error" in str(deployment.value)

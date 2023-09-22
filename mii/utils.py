@@ -12,72 +12,17 @@ from types import SimpleNamespace
 from huggingface_hub import HfApi
 
 from mii.models.score.generate import generated_score_path
-from mii.constants import (CONVERSATIONAL_NAME,
-                           FILL_MASK_NAME,
-                           MII_CACHE_PATH,
-                           MII_CACHE_PATH_DEFAULT,
-                           TEXT_GENERATION_NAME,
-                           TEXT_CLASSIFICATION_NAME,
-                           QUESTION_ANSWERING_NAME,
-                           TOKEN_CLASSIFICATION_NAME,
-                           SUPPORTED_MODEL_TYPES,
-                           ModelProvider,
-                           REQUIRED_KEYS_PER_TASK,
-                           TEXT2IMG_NAME,
-                           MII_HF_CACHE_EXPIRATION,
-                           MII_HF_CACHE_EXPIRATION_DEFAULT)
+from mii.constants import (
+    MII_CACHE_PATH,
+    MII_CACHE_PATH_DEFAULT,
+    ModelProvider,
+    SUPPORTED_MODEL_TYPES,
+    REQUIRED_KEYS_PER_TASK,
+    MII_HF_CACHE_EXPIRATION,
+    MII_HF_CACHE_EXPIRATION_DEFAULT,
+)
 
-from mii.constants import Tasks
-
-
-def get_task_name(task):
-    if task == Tasks.QUESTION_ANSWERING:
-        return QUESTION_ANSWERING_NAME
-
-    if task == Tasks.TEXT_GENERATION:
-        return TEXT_GENERATION_NAME
-
-    if task == Tasks.TEXT_CLASSIFICATION:
-        return TEXT_CLASSIFICATION_NAME
-
-    if task == Tasks.FILL_MASK:
-        return FILL_MASK_NAME
-
-    if task == Tasks.TOKEN_CLASSIFICATION:
-        return TOKEN_CLASSIFICATION_NAME
-
-    if task == Tasks.CONVERSATIONAL:
-        return CONVERSATIONAL_NAME
-
-    if task == Tasks.TEXT2IMG:
-        return TEXT2IMG_NAME
-
-    raise ValueError(f"Unknown Task {task}")
-
-
-def get_task(task_name):
-    if task_name == QUESTION_ANSWERING_NAME:
-        return Tasks.QUESTION_ANSWERING
-
-    if task_name == TEXT_GENERATION_NAME:
-        return Tasks.TEXT_GENERATION
-
-    if task_name == TEXT_CLASSIFICATION_NAME:
-        return Tasks.TEXT_CLASSIFICATION
-
-    if task_name == FILL_MASK_NAME:
-        return Tasks.FILL_MASK
-
-    if task_name == TOKEN_CLASSIFICATION_NAME:
-        return Tasks.TOKEN_CLASSIFICATION
-
-    if task_name == CONVERSATIONAL_NAME:
-        return Tasks.CONVERSATIONAL
-
-    if task_name == TEXT2IMG_NAME:
-        return Tasks.TEXT2IMG
-
-    assert False, f"Unknown Task {task_name}"
+from mii.config import TaskType
 
 
 def _get_hf_models_by_type(model_type=None, task=None):
@@ -117,7 +62,7 @@ def _get_hf_models_by_type(model_type=None, task=None):
     # Extract model IDs
     model_ids = [m.modelId for m in models]
 
-    if task == TEXT_GENERATION_NAME:
+    if task == TaskType.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         model_ids.extend([
             "microsoft/bloom-deepspeed-inference-fp16",
@@ -130,16 +75,15 @@ def _get_hf_models_by_type(model_type=None, task=None):
 
 def get_supported_models(task):
     supported_models = []
-    task_name = get_task_name(task)
 
     for model_type, provider in SUPPORTED_MODEL_TYPES.items():
         if provider == ModelProvider.HUGGING_FACE:
-            models = _get_hf_models_by_type(model_type, task_name)
+            models = _get_hf_models_by_type(model_type, task)
         elif provider == ModelProvider.ELEUTHER_AI:
-            if task_name == TEXT_GENERATION_NAME:
+            if task == TaskType.TEXT_GENERATION:
                 models = [model_type]
         elif provider == ModelProvider.DIFFUSERS:
-            models = _get_hf_models_by_type(model_type, task_name)
+            models = _get_hf_models_by_type(model_type, task)
         supported_models.extend(models)
     if not supported_models:
         raise ValueError(f"Task {task} not supported")
@@ -155,11 +99,10 @@ def check_if_task_and_model_is_supported(task, model_name):
 
 
 def check_if_task_and_model_is_valid(task, model_name):
-    task_name = get_task_name(task)
-    valid_task_models = _get_hf_models_by_type(None, task_name)
+    valid_task_models = _get_hf_models_by_type(None, task)
     assert (
         model_name in valid_task_models
-    ), f"{task_name} is not supported by {model_name}. This task is supported by {len(valid_task_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
+    ), f"{task} is not supported by {model_name}. This task is supported by {len(valid_task_models)} other models. See which models with `mii.get_supported_models(mii.{task})`."
 
 
 def full_model_path(model_path):
@@ -235,19 +178,20 @@ def extract_query_dict(task, request_dict):
     return query_dict
 
 
-def get_num_gpus(mii_configs):
-    num_gpus = mii_configs.tensor_parallel
+def get_num_gpus(mii_config):
+    num_gpus = mii_config.model_config.tensor_parallel
 
-    assert torch.cuda.device_count(
-    ) >= num_gpus, f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+    assert (
+        torch.cuda.device_count() >= num_gpus
+    ), f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
     return num_gpus
 
 
-def get_provider_name(model_name, task):
+def get_provider(model_name, task):
     if model_name == "gpt-neox":
-        provider = mii.constants.MODEL_PROVIDER_NAME_EA
-    elif task == mii.Tasks.TEXT2IMG:
-        provider = mii.constants.MODEL_PROVIDER_NAME_DIFFUSERS
+        provider = ModelProvider.ELEUTHER_AI
+    elif task == TaskType.TEXT2IMG:
+        provider = ModelProvider.DIFFUSERS
     else:
-        provider = mii.constants.MODEL_PROVIDER_NAME_HF
+        provider = ModelProvider.HUGGING_FACE
     return provider

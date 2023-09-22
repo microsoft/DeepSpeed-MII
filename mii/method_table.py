@@ -6,7 +6,7 @@ import uuid
 
 from abc import ABC, abstractmethod
 from transformers import Conversation
-from mii.constants import Tasks
+from mii.constants import TaskType
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
 from mii.models.utils import ImageResponse
@@ -14,7 +14,7 @@ from mii.models.utils import ImageResponse
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.SingleStringRequest(
-        request=request_dict['query'],
+        request=request_dict["query"],
         query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
@@ -26,9 +26,10 @@ def single_string_response_to_proto(self, response, time_taken, model_time_taken
 
 def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.MultiStringRequest(
-        request=request_dict['query'] if isinstance(request_dict['query'],
-                                                    list) else [request_dict['query']],
-        query_kwargs=kwarg_dict_to_proto(query_kwargs))
+        request=request_dict["query"] if isinstance(request_dict["query"],
+                                                    list) else [request_dict["query"]],
+        query_kwargs=kwarg_dict_to_proto(query_kwargs),
+    )
 
 
 def proto_request_to_single_input(self, request):
@@ -116,12 +117,14 @@ class TextGenerationMethods(TaskMethods):
     def pack_response_to_proto(self, response, time_taken, model_time_taken):
         text_responses = []
         for response in response:
-            text = response[0]['generated_text']
+            text = response[0]["generated_text"]
             text_responses.append(text)
 
-        return modelresponse_pb2.MultiStringReply(response=text_responses,
-                                                  time_taken=time_taken,
-                                                  model_time_taken=model_time_taken)
+        return modelresponse_pb2.MultiStringReply(
+            response=text_responses,
+            time_taken=time_taken,
+            model_time_taken=model_time_taken,
+        )
 
 
 class TextClassificationMethods(TaskMethods):
@@ -143,9 +146,10 @@ class QuestionAnsweringMethods(TaskMethods):
 
     def pack_request_to_proto(self, request_dict, **query_kwargs):
         return modelresponse_pb2.QARequest(
-            question=request_dict['question'],
-            context=request_dict['context'],
-            query_kwargs=kwarg_dict_to_proto(query_kwargs))
+            question=request_dict["question"],
+            context=request_dict["context"],
+            query_kwargs=kwarg_dict_to_proto(query_kwargs),
+        )
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
@@ -180,7 +184,7 @@ class ConversationalMethods(TaskMethods):
     def method(self):
         return "ConversationalReply"
 
-    def create_conversation(self, request, **kwargs):
+    def create_conversation(self, request):
         if isinstance(request, dict):
             assert 'text' in request and 'past_user_inputs' in request and 'generated_responses' in request, "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
             text = request['text']
@@ -210,7 +214,8 @@ class ConversationalMethods(TaskMethods):
             past_user_inputs=conv.past_user_inputs,
             generated_responses=conv.generated_responses,
             time_taken=time_taken,
-            model_time_taken=model_time_taken)
+            model_time_taken=model_time_taken,
+        )
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
@@ -248,23 +253,25 @@ class Text2ImgMethods(TaskMethods):
         img_mode = response.images[0].mode
         img_size_w, img_size_h = response.images[0].size
 
-        return modelresponse_pb2.ImageReply(images=images_bytes,
-                                            nsfw_content_detected=nsfw_content_detected,
-                                            mode=img_mode,
-                                            size_w=img_size_w,
-                                            size_h=img_size_h,
-                                            time_taken=time_taken)
+        return modelresponse_pb2.ImageReply(
+            images=images_bytes,
+            nsfw_content_detected=nsfw_content_detected,
+            mode=img_mode,
+            size_w=img_size_w,
+            size_h=img_size_h,
+            time_taken=time_taken,
+        )
 
     def unpack_response_from_proto(self, response):
         return ImageResponse(response)
 
 
 GRPC_METHOD_TABLE = {
-    Tasks.TEXT_GENERATION: TextGenerationMethods(),
-    Tasks.TEXT_CLASSIFICATION: TextClassificationMethods(),
-    Tasks.QUESTION_ANSWERING: QuestionAnsweringMethods(),
-    Tasks.FILL_MASK: FillMaskMethods(),
-    Tasks.TOKEN_CLASSIFICATION: TokenClassificationMethods(),
-    Tasks.CONVERSATIONAL: ConversationalMethods(),
-    Tasks.TEXT2IMG: Text2ImgMethods(),
+    TaskType.TEXT_GENERATION: TextGenerationMethods(),
+    TaskType.TEXT_CLASSIFICATION: TextClassificationMethods(),
+    TaskType.QUESTION_ANSWERING: QuestionAnsweringMethods(),
+    TaskType.FILL_MASK: FillMaskMethods(),
+    TaskType.TOKEN_CLASSIFICATION: TokenClassificationMethods(),
+    TaskType.CONVERSATIONAL: ConversationalMethods(),
+    TaskType.TEXT2IMG: Text2ImgMethods(),
 }

@@ -7,23 +7,24 @@ from mii.utils import mii_cache_path
 
 
 def supported_models_from_huggingface():
-    return ['gpt2', "deepset/roberta-large-squad2"]
+    return ["gpt2", "deepset/roberta-large-squad2"]
 
 
-'''TODO make this more robust. If the pipeline has already been imported then
-this might not work since the cache is set by the first import'''
+"""TODO make this more robust. If the pipeline has already been imported then
+this might not work since the cache is set by the first import"""
 
 
 def _download_hf_model_to_path(task, model_name, model_path):
 
     os.environ["TRANSFORMERS_CACHE"] = model_path
     from transformers import pipeline
+
     inference_pipeline = pipeline(task, model=model_name)
 
 
-'''generic method that will allow downloading all models that we support.
+"""generic method that will allow downloading all models that we support.
 Currently only supports HF models, but will be extended to support model checkpoints
-from other sources'''
+from other sources"""
 
 
 def download_model_and_get_path(task, model_name):
@@ -40,7 +41,7 @@ def download_model_and_get_path(task, model_name):
     return model_path
 
 
-class ImageResponse():
+class ImageResponse:
     def __init__(self, response):
         self._response = response
         self.nsfw_content_detected = response.nsfw_content_detected
@@ -50,6 +51,7 @@ class ImageResponse():
     def images(self):
         if self._deserialized_images is None:
             from PIL import Image
+
             images = []
             for idx, img_bytes in enumerate(self._response.images):
                 size = (self._response.size_w, self._response.size_h)
