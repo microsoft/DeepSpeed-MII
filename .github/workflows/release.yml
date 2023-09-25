@@ -25,7 +25,7 @@ jobs:
         echo ${{ env.RELEASE_VERSION }} > version.txt
     - name: Build DeepSpeed-MII
       run: |
-        MII_BUILD_STRING="" python setup.py bdist_wheel
+        MII_BUILD_STRING=" " python setup.py bdist_wheel
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
