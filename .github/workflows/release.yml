@@ -1,0 +1,43 @@
+name: Build and publish DeepSpeed-MII release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+    environment: release-env
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: "main"
+    - name: Get release version from tag
+      run: |
+        echo "RELEASE_VERSION=${GITHUB_REF#refs/*/v}" >> $GITHUB_ENV
+    - name: Check release version
+      run: |
+        python release/check_release_version.py --new_version ${{ env.RELEASE_VERSION }}
+    - name: Set release version in file
+      run: |
+        echo ${{ env.RELEASE_VERSION }} > version.txt
+    - name: Build DeepSpeed-MII
+      run: |
+        MII_BUILD_STRING=" " python setup.py bdist_wheel
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        repository-url: https://pypi.org/legacy/
+    - name: Bump version
+      run: |
+        python release/bump_patch_version.py --current_version ${{ env.RELEASE_VERSION }}
+    - name: Commit version.txt
+      run: |
+        git config --global user.name 'ds-release-bot'
+        git config --global user.email 'ds-release-bot@users.noreply.github.com'
+        git add version.txt
+        git commit -m "Release v${{ env.RELEASE_VERSION }}"
+        git push
