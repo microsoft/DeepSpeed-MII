@@ -19,10 +19,7 @@ jobs:
         echo "RELEASE_VERSION=${GITHUB_REF#refs/*/v}" >> $GITHUB_ENV
     - name: Check release version
       run: |
-        python release/check_release_version.py --new_version ${{ env.RELEASE_VERSION }}
-    - name: Set release version in file
-      run: |
-        echo ${{ env.RELEASE_VERSION }} > version.txt
+        python release/check_release_version.py --release_version ${{ env.RELEASE_VERSION }}
     - name: Build DeepSpeed-MII
       run: |
         MII_BUILD_STRING=" " python setup.py bdist_wheel
