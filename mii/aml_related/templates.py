@@ -393,6 +393,6 @@ requirements = \
 """torch>=2.0.0
 grpcio
 grpcio-tools
-pydantic<2.0.0
+pydantic
 asyncio
 """
