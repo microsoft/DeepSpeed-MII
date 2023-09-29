@@ -348,7 +348,7 @@ class MIIConfig(DeepSpeedConfigModel):
     @root_validator(skip_on_failure=True)
     def AML_name_valid(cls, values):
         if values.get("deployment_type") == DeploymentType.AML:
-            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
+            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
                                 string.digits + "-")
             assert (
                 set(values.get("deployment_name")) <= allowed_chars
