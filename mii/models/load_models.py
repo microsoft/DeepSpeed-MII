@@ -28,6 +28,7 @@ def load_models(model_config):
         "training_mp_size": 1,
         "replace_with_kernel_inject": model_config.replace_with_kernel_inject,
         "max_tokens": model_config.max_tokens,
+        "min_tokens": model_config.max_tokens,
     }
 
     provider = model_config.provider

@@ -195,7 +195,6 @@ def hf_provider(model_config):
         return load_with_meta_tensor(model_config)
     else:
         device = get_device(load_with_sys_mem=model_config.load_with_sys_mem)
-        print(model_config)
         inference_pipeline = pipeline(
             model_config.task,
             model=model_config.model if not is_aml() else model_config.model_path,

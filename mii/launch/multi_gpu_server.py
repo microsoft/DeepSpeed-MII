@@ -86,7 +86,6 @@ def main():
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
         port = args.server_port + local_rank
 
-        print("LAUNCHING PIPELINE")
         inference_pipeline = load_models(args.model_config)
 
         print(f"Starting server on port: {port}")

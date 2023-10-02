@@ -162,11 +162,11 @@ class ModelConfig(DeepSpeedConfigModel):
     DeepSpeed model checkpoint dict.
     """
 
-    max_tokens: int = 1024
+    max_tokens: Optional[int] = None
     """
-    This argument shows the maximum number of tokens DeepSpeed-Inference can
-    work with, including the input and output tokens. Please consider
-    increasing it to the required token-length required for your use-case.
+    The maximum number of tokens DeepSpeed-Inference can work with, including
+    the input and output tokens. Please consider increasing it to the required
+    token-length required for your use-case.
     """
     class Config:
         json_encoders = {torch.dtype: lambda x: str(x)}
