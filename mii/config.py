@@ -179,11 +179,7 @@ class ModelConfig(DeepSpeedConfigModel):
     def checkpoint_dict_valid(cls, field_value, values):
         if field_value is None:
             return field_value
-        if field_value.get("base_dir", ""):
-            raise ValueError(
-                "please unset 'base_dir' it will be set w.r.t. the deployment 'model_path'"
-            )
-        for k in ["checkpoints", "parallelization", "version", "type"]:
+        for k in ["checkpoints", "version", "type", "base_dir"]:
             if not field_value.get(k, ""):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return field_value
