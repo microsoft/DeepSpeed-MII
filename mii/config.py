@@ -237,7 +237,7 @@ class ModelConfig(DeepSpeedConfigModel):
             else:
                 model_path = MII_MODEL_PATH_DEFAULT
         aml_model_dir = os.environ.get("AZUREML_MODEL_DIR", None)
-        if aml_model_dir:
+        if aml_model_dir and not model_path.startswith(aml_model_dir):
             assert os.path.isabs(
                 aml_model_dir
             ), "AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path."
