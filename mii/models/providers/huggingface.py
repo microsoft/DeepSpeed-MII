@@ -59,12 +59,16 @@ def get_device(load_with_sys_mem=False):
     return device
 
 
-def _attempt_load(load_fn, model_name, cache_path, kwargs={}):
+def _attempt_load(load_fn, model_name, model_path, cache_path, kwargs={}):
     try:
         value = load_fn(model_name, **kwargs)
     except OSError:
-        print(f"Attempted load but failed, retrying using cache_dir={cache_path}")
-        value = load_fn(model_name, cache_dir=cache_path, **kwargs)
+        if is_aml():
+            print(f"Attempted load but failed, retrying using model_path={model_path}")
+            load_fn(model_path, **kwargs)
+        else:
+            print(f"Attempted load but failed, retrying using cache_dir={cache_path}")
+            value = load_fn(model_name, cache_dir=cache_path, **kwargs)
     return value
 
 
@@ -108,12 +112,16 @@ def load_with_meta_tensor(model_config):
     tokenizer = _attempt_load(
         AutoTokenizer.from_pretrained,
         model_config.model,
+        model_config.model_path,
         cache_path,
         kwargs={"padding_side": "left"},
     )
     tokenizer.pad_token = tokenizer.eos_token
 
-    config = _attempt_load(AutoConfig.from_pretrained, model_config.model, cache_path)
+    config = _attempt_load(AutoConfig.from_pretrained,
+                           model_config.model,
+                           model_config.model_path,
+                           cache_path)
 
     with OnDevice(dtype=torch.float16, device="meta", enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
