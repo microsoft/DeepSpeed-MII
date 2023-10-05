@@ -65,7 +65,7 @@ def _attempt_load(load_fn, model_name, model_path, cache_path, kwargs={}):
     except OSError:
         if is_aml():
             print(f"Attempted load but failed, retrying using model_path={model_path}")
-            load_fn(model_path, **kwargs)
+            value = load_fn(model_path, **kwargs)
         else:
             print(f"Attempted load but failed, retrying using cache_dir={cache_path}")
             value = load_fn(model_name, cache_dir=cache_path, **kwargs)
