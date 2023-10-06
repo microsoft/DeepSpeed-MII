@@ -38,10 +38,9 @@ jobs:
           version.txt
         body: |
           **Auto-generated PR to update version.txt after a DeepSpeed release**
-          Version - ${{ env.RELEASE_VERSION }}
-          Author  - @${{ github.actor }}
+          Released version - ${{ env.RELEASE_VERSION }}
+          Author           - @${{ github.actor }}
         branch: AutoPR/${{ env.RELEASE_VERSION }}
         assignees: ${{ github.actor }}
-        title: "Update version.txt to ${{ env.RELEASE_VERSION }}"
-        labels: AutoPR
+        title: "Update version.txt after ${{ env.RELEASE_VERSION }} release"
         author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
