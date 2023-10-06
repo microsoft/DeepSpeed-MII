@@ -52,12 +52,13 @@ version_str = open('version.txt', 'r').read().strip()
 # Building wheel for distribution, update version file
 if 'MII_BUILD_STRING' in os.environ:
     # Build string env specified, probably building for distribution
-    with open('build.txt', 'w') as fd:
+    BUILD_FILE = 'build.txt'
+    with open(BUILD_FILE, 'w') as fd:
         fd.write(os.environ.get('MII_BUILD_STRING'))
     version_str += os.environ.get('MII_BUILD_STRING')
-elif os.path.isfile('build.txt'):
+elif os.path.isfile(BUILD_FILE):
     # build.txt exists, probably installing from distribution
-    with open('build.txt', 'r') as fd:
+    with open(BUILD_FILE, 'r') as fd:
         version_str += fd.read().strip()
 else:
     # None of the above, probably installing from source
