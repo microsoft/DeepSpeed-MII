@@ -273,5 +273,4 @@ def serve_load_balancing(model_config, lb_port):
 
 if __name__ == "__main__":
     logging.basicConfig()
-    print(sys.argv[1])
     serve_inference(None, sys.argv[1])

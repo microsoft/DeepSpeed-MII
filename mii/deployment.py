@@ -35,9 +35,9 @@ def support_legacy_api(
         "enable_zero": enable_zero,
         "ds_config": ds_config,
     }
-    #TODO do this in a single for loop
+    # TODO do this in a single for loop
     for key, val in mii_config.items():
-        if not key in MIIConfig.__dict__["__fields__"]:
+        if key not in MIIConfig.__dict__["__fields__"]:
             model_config[key] = val
     mii_config = {
         k: v
@@ -73,11 +73,11 @@ def deploy(
 
     if mii_config.model_config.enable_deepspeed:
         logger.info(
-            f"************* MII is using DeepSpeed Optimizations to accelerate your model *************"
+            "************* MII is using DeepSpeed Optimizations to accelerate your model *************"
         )
     else:
         logger.info(
-            f"************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
+            "************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
         )
 
     if mii_config.deployment_type != DeploymentType.NON_PERSISTENT:
@@ -101,10 +101,13 @@ def _deploy_aml(mii_config):
         acr_name=acr_name,
         deployment_name=mii_config.deployment_name,
         model_name=mii_config.model_config.model,
+        task_name=mii_config.model_config.task,
+        replica_num=mii_config.model_config.replica_num,
+        instance_type=mii_config.instance_type,
         version=mii_config.version,
     )
     print(
-        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.model_config.deployment_name)}"
+        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.deployment_name)}"
     )
     print("Please run 'deploy.sh' to bring your deployment online")
 

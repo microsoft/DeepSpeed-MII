@@ -164,9 +164,9 @@ class ModelConfig(DeepSpeedConfigModel):
 
     max_tokens: int = 1024
     """
-    This argument shows the maximum number of tokens DeepSpeed-Inference can
-    work with, including the input and output tokens. Please consider
-    increasing it to the required token-length required for your use-case.
+    The maximum number of tokens DeepSpeed-Inference can work with, including
+    the input and output tokens. Please consider increasing it to the required
+    token-length required for your use-case.
     """
     class Config:
         json_encoders = {torch.dtype: lambda x: str(x)}
@@ -179,11 +179,7 @@ class ModelConfig(DeepSpeedConfigModel):
     def checkpoint_dict_valid(cls, field_value, values):
         if field_value is None:
             return field_value
-        if field_value.get("base_dir", ""):
-            raise ValueError(
-                "please unset 'base_dir' it will be set w.r.t. the deployment 'model_path'"
-            )
-        for k in ["checkpoints", "parallelization", "version", "type"]:
+        for k in ["checkpoints", "version", "type", "base_dir"]:
             if not field_value.get(k, ""):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return field_value
@@ -241,7 +237,7 @@ class ModelConfig(DeepSpeedConfigModel):
             else:
                 model_path = MII_MODEL_PATH_DEFAULT
         aml_model_dir = os.environ.get("AZUREML_MODEL_DIR", None)
-        if aml_model_dir:
+        if aml_model_dir and not model_path.startswith(aml_model_dir):
             assert os.path.isabs(
                 aml_model_dir
             ), "AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path."
@@ -348,7 +344,7 @@ class MIIConfig(DeepSpeedConfigModel):
     @root_validator(skip_on_failure=True)
     def AML_name_valid(cls, values):
         if values.get("deployment_type") == DeploymentType.AML:
-            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercaes +
+            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
                                 string.digits + "-")
             assert (
                 set(values.get("deployment_name")) <= allowed_chars
