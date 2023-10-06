@@ -18,7 +18,7 @@ from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
 class ReplicaConfig(DeepSpeedConfigModel):
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
-    torch_dist_port: int = None
+    torch_dist_port: int = 0
     gpu_indices: List[int] = []
 
 
