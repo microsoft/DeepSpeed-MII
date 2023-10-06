@@ -13,9 +13,8 @@ from mii.models.utils import ImageResponse
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
-    return modelresponse_pb2.SingleStringRequest(
-        request=request_dict["query"],
-        query_kwargs=kwarg_dict_to_proto(query_kwargs))
+    return modelresponse_pb2.SingleStringRequest(request=request_dict["query"],
+                                                 query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
 def single_string_response_to_proto(self, response, time_taken, model_time_taken):
@@ -26,8 +25,7 @@ def single_string_response_to_proto(self, response, time_taken, model_time_taken
 
 def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.MultiStringRequest(
-        request=request_dict["query"] if isinstance(request_dict["query"],
-                                                    list) else [request_dict["query"]],
+        request=request_dict["query"] if isinstance(request_dict["query"], list) else [request_dict["query"]],
         query_kwargs=kwarg_dict_to_proto(query_kwargs),
     )
 
@@ -45,6 +43,7 @@ def proto_request_to_list(self, request):
 
 
 class TaskMethods(ABC):
+
     @property
     @abstractmethod
     def method(self):
@@ -128,6 +127,7 @@ class TextGenerationMethods(TaskMethods):
 
 
 class TextClassificationMethods(TaskMethods):
+
     @property
     def method(self):
         return "ClassificationReply"
@@ -138,6 +138,7 @@ class TextClassificationMethods(TaskMethods):
 
 
 class QuestionAnsweringMethods(TaskMethods):
+
     @property
     def method(self):
         return "QuestionAndAnswerReply"
@@ -160,6 +161,7 @@ class QuestionAnsweringMethods(TaskMethods):
 
 
 class FillMaskMethods(TaskMethods):
+
     @property
     def method(self):
         return "FillMaskReply"
@@ -170,6 +172,7 @@ class FillMaskMethods(TaskMethods):
 
 
 class TokenClassificationMethods(TaskMethods):
+
     @property
     def method(self):
         return "TokenClassificationReply"
@@ -180,6 +183,7 @@ class TokenClassificationMethods(TaskMethods):
 
 
 class ConversationalMethods(TaskMethods):
+
     @property
     def method(self):
         return "ConversationalReply"
@@ -188,8 +192,7 @@ class ConversationalMethods(TaskMethods):
         if isinstance(request, dict):
             assert 'text' in request and 'past_user_inputs' in request and 'generated_responses' in request, "Conversation requires 'text', 'past_user_inputs', and 'generated_responses' keys"
             text = request['text']
-            conversation_id = request[
-                'conversation_id'] if 'conversation_id' in request else ""
+            conversation_id = request['conversation_id'] if 'conversation_id' in request else ""
             past_user_inputs = request['past_user_inputs']
             generated_responses = request['generated_responses']
 
@@ -226,14 +229,14 @@ class ConversationalMethods(TaskMethods):
     def pack_request_to_proto(self, request_dict, **query_kwargs):
         return modelresponse_pb2.ConversationRequest(
             text=request_dict['text'],
-            conversation_id=str(request_dict['conversation_id'])
-            if 'conversation_id' in request_dict else "",
+            conversation_id=str(request_dict['conversation_id']) if 'conversation_id' in request_dict else "",
             past_user_inputs=request_dict['past_user_inputs'],
             generated_responses=request_dict['generated_responses'],
             query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
 class Text2ImgMethods(TaskMethods):
+
     @property
     def method(self):
         return "Txt2ImgReply"

@@ -28,9 +28,7 @@ def test_restful_api(deployment, query, restful_api_port):
     url = f"http://localhost:{restful_api_port}/mii/{deployment}"
     params = {"request": query}
     json_params = json.dumps(params)
-    result = requests.post(url,
-                           data=json_params,
-                           headers={"Content-Type": "application/json"})
+    result = requests.post(url, data=json_params, headers={"Content-Type": "application/json"})
     assert result.status_code == 200
     assert "response" in result.json()
 
@@ -84,12 +82,7 @@ def test_zero_config(deployment, query):
 @pytest.mark.parametrize("expected_failure", [pydantic.ValidationError])
 @pytest.mark.parametrize(
     "enable_deepspeed, enable_zero, dtype",
-    [(True,
-      True,
-      "fp32"),
-     (False,
-      True,
-      "fp16")],
+    [(True, True, "fp32"), (False, True, "fp16")],
 )
 @pytest.mark.parametrize(
     "ds_config",

@@ -40,8 +40,7 @@ def load_models(model_config):
             inf_config["checkpoint"] = inference_pipeline.checkpoint_dict
             if model_config.dtype == torch.int8:
                 # Support for older DeepSpeed versions
-                if ("enable_qkv_quantization"
-                        in inspect.signature(deepspeed.init_inference).parameters):
+                if ("enable_qkv_quantization" in inspect.signature(deepspeed.init_inference).parameters):
                     inf_config["enable_qkv_quantization"] = True
     elif provider == mii.constants.ModelProvider.ELEUTHER_AI:
         assert False, "Eleuther AI support is currently disabled."
@@ -68,10 +67,7 @@ def load_models(model_config):
         f"> --------- MII Settings: ds_optimize={model_config.enable_deepspeed}, replace_with_kernel_inject={model_config.replace_with_kernel_inject}, enable_cuda_graph={model_config.enable_cuda_graph} "
     )
     if model_config.enable_deepspeed:
-        engine = deepspeed.init_inference(getattr(inference_pipeline,
-                                                  "model",
-                                                  inference_pipeline),
-                                          config=inf_config)
+        engine = deepspeed.init_inference(getattr(inference_pipeline, "model", inference_pipeline), config=inf_config)
         if model_config.profile_model_time:
             engine.profile_model_time()
         if hasattr(inference_pipeline, "model"):
@@ -79,13 +75,11 @@ def load_models(model_config):
 
     elif model_config.enable_zero:
         ds_config = DeepSpeedConfig(model_config.ds_config)
-        assert (
-            ds_config.zero_optimization_stage == ZeroStageEnum.weights
-        ), "DeepSpeed ZeRO inference is only supported for ZeRO-3"
+        assert (ds_config.zero_optimization_stage == ZeroStageEnum.weights
+                ), "DeepSpeed ZeRO inference is only supported for ZeRO-3"
 
         # initialise Deepspeed ZeRO and store only the engine object
-        ds_engine = deepspeed.initialize(model=inference_pipeline.model,
-                                         config=model_config.ds_config)[0]
+        ds_engine = deepspeed.initialize(model=inference_pipeline.model, config=model_config.ds_config)[0]
         ds_engine.module.eval()  # inference
         inference_pipeline.model = ds_engine.module
 

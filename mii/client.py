@@ -36,19 +36,18 @@ def mii_query_handle(deployment_name):
         return MIINonPersistentClient(task, deployment_name)
 
     mii_config = _get_mii_config(deployment_name)
-    return MIIClient(mii_config.model_config.task,
-                     "localhost", # TODO: This can probably be removed
-                     mii_config.port_number)
+    return MIIClient(
+        mii_config.model_config.task,
+        "localhost",  # TODO: This can probably be removed
+        mii_config.port_number)
 
 
 def create_channel(host, port):
     return grpc.aio.insecure_channel(
         f"{host}:{port}",
         options=[
-            ("grpc.max_send_message_length",
-             GRPC_MAX_MSG_SIZE),
-            ("grpc.max_receive_message_length",
-             GRPC_MAX_MSG_SIZE),
+            ("grpc.max_send_message_length", GRPC_MAX_MSG_SIZE),
+            ("grpc.max_receive_message_length", GRPC_MAX_MSG_SIZE),
         ],
     )
 
@@ -57,6 +56,7 @@ class MIIClient:
     """
     Client to send queries to a single endpoint.
     """
+
     def __init__(self, task, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
@@ -73,48 +73,39 @@ class MIIClient:
         return task_methods.unpack_response_from_proto(proto_response)
 
     def query(self, request_dict, **query_kwargs):
-        return self.asyncio_loop.run_until_complete(
-            self._request_async_response(request_dict,
-                                         **query_kwargs))
+        return self.asyncio_loop.run_until_complete(self._request_async_response(request_dict, **query_kwargs))
 
     async def terminate_async(self):
-        await self.stub.Terminate(
-            modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
+        await self.stub.Terminate(modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
     def terminate(self):
         self.asyncio_loop.run_until_complete(self.terminate_async())
 
     async def create_session_async(self, session_id):
-        return await self.stub.CreateSession(
-            modelresponse_pb2.SessionID(session_id=session_id))
+        return await self.stub.CreateSession(modelresponse_pb2.SessionID(session_id=session_id))
 
     def create_session(self, session_id):
-        assert (
-            self.task == TaskType.TEXT_GENERATION
-        ), f"Session creation only available for task '{TaskType.TEXT_GENERATION}'."
-        return self.asyncio_loop.run_until_complete(
-            self.create_session_async(session_id))
+        assert (self.task == TaskType.TEXT_GENERATION
+                ), f"Session creation only available for task '{TaskType.TEXT_GENERATION}'."
+        return self.asyncio_loop.run_until_complete(self.create_session_async(session_id))
 
     async def destroy_session_async(self, session_id):
-        await self.stub.DestroySession(modelresponse_pb2.SessionID(session_id=session_id)
-                                       )
+        await self.stub.DestroySession(modelresponse_pb2.SessionID(session_id=session_id))
 
     def destroy_session(self, session_id):
-        assert (
-            self.task == TaskType.TEXT_GENERATION
-        ), f"Session deletion only available for task '{TaskType.TEXT_GENERATION}'."
+        assert (self.task == TaskType.TEXT_GENERATION
+                ), f"Session deletion only available for task '{TaskType.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
 
 class MIINonPersistentClient:
+
     def __init__(self, task, deployment_name):
         self.task = task
         self.deployment_name = deployment_name
 
     def query(self, request_dict, **query_kwargs):
-        assert (
-            self.deployment_name in mii.non_persistent_models
-        ), f"deployment: {self.deployment_name} not found"
+        assert (self.deployment_name in mii.non_persistent_models), f"deployment: {self.deployment_name} not found"
         task_methods = GRPC_METHOD_TABLE[self.task]
         inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
 
@@ -122,8 +113,7 @@ class MIINonPersistentClient:
         # persistent deployments in method_table.py
         if self.task == TaskType.QUESTION_ANSWERING:
             if "question" not in request_dict or "context" not in request_dict:
-                raise Exception(
-                    "Question Answering Task requires 'question' and 'context' keys")
+                raise Exception("Question Answering Task requires 'question' and 'context' keys")
             args = (request_dict["question"], request_dict["context"])
             kwargs = query_kwargs
 

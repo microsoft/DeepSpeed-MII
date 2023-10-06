@@ -21,6 +21,7 @@ def dir_path(path_str):
 
 
 class HFModelNotFoundError(Exception):
+
     def __init__(self, model_str):
         super().__init__(f"HuggingFace model not found: '{model_str}'")
 
@@ -40,11 +41,7 @@ parser.add_argument("--model_path",
                     type=dir_path,
                     required=True,
                     help="Output directory for downloaded model files")
-parser.add_argument("--model_name",
-                    '-m',
-                    type=hf_model,
-                    required=True,
-                    help="HuggingFace model name")
+parser.add_argument("--model_name", '-m', type=hf_model, required=True, help="HuggingFace model name")
 args = parser.parse_args()
 
 for auto_func in [AutoConfig, AutoTokenizer, AutoModel]:

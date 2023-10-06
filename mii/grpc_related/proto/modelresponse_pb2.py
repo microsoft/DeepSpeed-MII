@@ -24,24 +24,20 @@ DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
 _VALUE = DESCRIPTOR.message_types_by_name['Value']
 _SESSIONID = DESCRIPTOR.message_types_by_name['SessionID']
 _SINGLESTRINGREQUEST = DESCRIPTOR.message_types_by_name['SingleStringRequest']
-_SINGLESTRINGREQUEST_QUERYKWARGSENTRY = _SINGLESTRINGREQUEST.nested_types_by_name[
-    'QueryKwargsEntry']
+_SINGLESTRINGREQUEST_QUERYKWARGSENTRY = _SINGLESTRINGREQUEST.nested_types_by_name['QueryKwargsEntry']
 _MULTISTRINGREQUEST = DESCRIPTOR.message_types_by_name['MultiStringRequest']
-_MULTISTRINGREQUEST_QUERYKWARGSENTRY = _MULTISTRINGREQUEST.nested_types_by_name[
-    'QueryKwargsEntry']
+_MULTISTRINGREQUEST_QUERYKWARGSENTRY = _MULTISTRINGREQUEST.nested_types_by_name['QueryKwargsEntry']
 _SINGLESTRINGREPLY = DESCRIPTOR.message_types_by_name['SingleStringReply']
 _MULTISTRINGREPLY = DESCRIPTOR.message_types_by_name['MultiStringReply']
 _QAREQUEST = DESCRIPTOR.message_types_by_name['QARequest']
 _QAREQUEST_QUERYKWARGSENTRY = _QAREQUEST.nested_types_by_name['QueryKwargsEntry']
 _CONVERSATIONREQUEST = DESCRIPTOR.message_types_by_name['ConversationRequest']
-_CONVERSATIONREQUEST_QUERYKWARGSENTRY = _CONVERSATIONREQUEST.nested_types_by_name[
-    'QueryKwargsEntry']
+_CONVERSATIONREQUEST_QUERYKWARGSENTRY = _CONVERSATIONREQUEST.nested_types_by_name['QueryKwargsEntry']
 _CONVERSATIONREPLY = DESCRIPTOR.message_types_by_name['ConversationReply']
 _IMAGEREPLY = DESCRIPTOR.message_types_by_name['ImageReply']
 Value = _reflection.GeneratedProtocolMessageType(
     'Value',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'DESCRIPTOR': _VALUE,
         '__module__': 'modelresponse_pb2'
@@ -51,8 +47,7 @@ _sym_db.RegisterMessage(Value)
 
 SessionID = _reflection.GeneratedProtocolMessageType(
     'SessionID',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'DESCRIPTOR': _SESSIONID,
         '__module__': 'modelresponse_pb2'
@@ -62,14 +57,12 @@ _sym_db.RegisterMessage(SessionID)
 
 SingleStringRequest = _reflection.GeneratedProtocolMessageType(
     'SingleStringRequest',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'QueryKwargsEntry':
         _reflection.GeneratedProtocolMessageType(
             'QueryKwargsEntry',
-            (_message.Message,
-             ),
+            (_message.Message, ),
             {
                 'DESCRIPTOR': _SINGLESTRINGREQUEST_QUERYKWARGSENTRY,
                 '__module__': 'modelresponse_pb2'
@@ -86,14 +79,12 @@ _sym_db.RegisterMessage(SingleStringRequest.QueryKwargsEntry)
 
 MultiStringRequest = _reflection.GeneratedProtocolMessageType(
     'MultiStringRequest',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'QueryKwargsEntry':
         _reflection.GeneratedProtocolMessageType(
             'QueryKwargsEntry',
-            (_message.Message,
-             ),
+            (_message.Message, ),
             {
                 'DESCRIPTOR': _MULTISTRINGREQUEST_QUERYKWARGSENTRY,
                 '__module__': 'modelresponse_pb2'
@@ -110,8 +101,7 @@ _sym_db.RegisterMessage(MultiStringRequest.QueryKwargsEntry)
 
 SingleStringReply = _reflection.GeneratedProtocolMessageType(
     'SingleStringReply',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'DESCRIPTOR': _SINGLESTRINGREPLY,
         '__module__': 'modelresponse_pb2'
@@ -121,8 +111,7 @@ _sym_db.RegisterMessage(SingleStringReply)
 
 MultiStringReply = _reflection.GeneratedProtocolMessageType(
     'MultiStringReply',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'DESCRIPTOR': _MULTISTRINGREPLY,
         '__module__': 'modelresponse_pb2'
@@ -132,14 +121,12 @@ _sym_db.RegisterMessage(MultiStringReply)
 
 QARequest = _reflection.GeneratedProtocolMessageType(
     'QARequest',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'QueryKwargsEntry':
         _reflection.GeneratedProtocolMessageType(
             'QueryKwargsEntry',
-            (_message.Message,
-             ),
+            (_message.Message, ),
             {
                 'DESCRIPTOR': _QAREQUEST_QUERYKWARGSENTRY,
                 '__module__': 'modelresponse_pb2'
@@ -156,14 +143,12 @@ _sym_db.RegisterMessage(QARequest.QueryKwargsEntry)
 
 ConversationRequest = _reflection.GeneratedProtocolMessageType(
     'ConversationRequest',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'QueryKwargsEntry':
         _reflection.GeneratedProtocolMessageType(
             'QueryKwargsEntry',
-            (_message.Message,
-             ),
+            (_message.Message, ),
             {
                 'DESCRIPTOR': _CONVERSATIONREQUEST_QUERYKWARGSENTRY,
                 '__module__': 'modelresponse_pb2'
@@ -180,8 +165,7 @@ _sym_db.RegisterMessage(ConversationRequest.QueryKwargsEntry)
 
 ConversationReply = _reflection.GeneratedProtocolMessageType(
     'ConversationReply',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'DESCRIPTOR': _CONVERSATIONREPLY,
         '__module__': 'modelresponse_pb2'
@@ -191,8 +175,7 @@ _sym_db.RegisterMessage(ConversationReply)
 
 ImageReply = _reflection.GeneratedProtocolMessageType(
     'ImageReply',
-    (_message.Message,
-     ),
+    (_message.Message, ),
     {
         'DESCRIPTOR': _IMAGEREPLY,
         '__module__': 'modelresponse_pb2'

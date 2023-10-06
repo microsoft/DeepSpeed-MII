@@ -39,11 +39,7 @@ def support_legacy_api(
     for key, val in mii_config.items():
         if key not in MIIConfig.__dict__["__fields__"]:
             model_config[key] = val
-    mii_config = {
-        k: v
-        for k,
-        v in mii_config.items() if k in MIIConfig.__dict__["__fields__"]
-    }
+    mii_config = {k: v for k, v in mii_config.items() if k in MIIConfig.__dict__["__fields__"]}
     mii_config["version"] = version
     mii_config["deployment_type"] = deployment_type
 
@@ -61,9 +57,7 @@ def deploy(
         mii_config = {}
 
     if args or kwargs:
-        assert (
-            not model_config
-        ), "We do not support mixture of legacy and new API options, use latest API."
+        assert (not model_config), "We do not support mixture of legacy and new API options, use latest API."
         kwargs["mii_config"] = mii_config
         model_config, mii_config = support_legacy_api(*args, **kwargs)
 
@@ -72,9 +66,7 @@ def deploy(
     mii_config = mii.config.MIIConfig(**mii_config)
 
     if mii_config.model_config.enable_deepspeed:
-        logger.info(
-            "************* MII is using DeepSpeed Optimizations to accelerate your model *************"
-        )
+        logger.info("************* MII is using DeepSpeed Optimizations to accelerate your model *************")
     else:
         logger.info(
             "************* DeepSpeed Optimizations not enabled. Please use enable_deepspeed to get better performance *************"
@@ -106,16 +98,13 @@ def _deploy_aml(mii_config):
         instance_type=mii_config.instance_type,
         version=mii_config.version,
     )
-    print(
-        f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.deployment_name)}"
-    )
+    print(f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.deployment_name)}")
     print("Please run 'deploy.sh' to bring your deployment online")
 
 
 def _deploy_nonpersistent(mii_config):
     assert (
-        int(os.getenv("WORLD_SIZE", "1"))
-        == mii_config.model_config.tensor_parallel
+        int(os.getenv("WORLD_SIZE", "1")) == mii_config.model_config.tensor_parallel
     ), "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
     deployment_name = mii_config.deployment_name
     mii.non_persistent_models[deployment_name] = (

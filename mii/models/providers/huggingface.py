@@ -19,6 +19,7 @@ class MetaTensorPipeline(object):
     """
     Class for loading HuggingFace models using meta tensors
     """
+
     def __init__(self, model, tokenizer, checkpoint_dict):
         self.model = model
         self.tokenizer = tokenizer
@@ -32,9 +33,7 @@ class MetaTensorPipeline(object):
 
         # expand proto list into py-list
         inputs = [i for i in inputs]
-        tokens = self.tokenizer.batch_encode_plus(inputs,
-                                                  return_tensors="pt",
-                                                  padding=True)
+        tokens = self.tokenizer.batch_encode_plus(inputs, return_tensors="pt", padding=True)
         for t in tokens:
             if torch.is_tensor(tokens[t]):
                 tokens[t] = tokens[t].to(device)
@@ -92,8 +91,7 @@ def create_checkpoint_dict(model_name, model_path, checkpoint_dict):
         return data
     else:
         checkpoint_files = [
-            str(entry).split("/")[-1]
-            for entry in Path(model_path).rglob("*.[bp][it][n]") if entry.is_file()
+            str(entry).split("/")[-1] for entry in Path(model_path).rglob("*.[bp][it][n]") if entry.is_file()
         ]
         data = {
             "type": "DS_MODEL",
@@ -118,21 +116,14 @@ def load_with_meta_tensor(model_config):
     )
     tokenizer.pad_token = tokenizer.eos_token
 
-    config = _attempt_load(AutoConfig.from_pretrained,
-                           model_config.model,
-                           model_config.model_path,
-                           cache_path)
+    config = _attempt_load(AutoConfig.from_pretrained, model_config.model, model_config.model_path, cache_path)
 
     with OnDevice(dtype=torch.float16, device="meta", enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
     model = model.eval()
-    checkpoint_dict = create_checkpoint_dict(model_config.model,
-                                             model_config.model_path,
-                                             model_config.checkpoint_dict)
+    checkpoint_dict = create_checkpoint_dict(model_config.model, model_config.model_path, model_config.checkpoint_dict)
     torch.distributed.barrier()
-    inference_pipeline = MetaTensorPipeline(model=model,
-                                            tokenizer=tokenizer,
-                                            checkpoint_dict=checkpoint_dict)
+    inference_pipeline = MetaTensorPipeline(model=model, tokenizer=tokenizer, checkpoint_dict=checkpoint_dict)
     return inference_pipeline
 
 
