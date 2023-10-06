@@ -31,12 +31,11 @@ jobs:
     - name: Bump version
       run: |
         python release/bump_patch_version.py --current_version ${{ env.RELEASE_VERSION }}
-    - name: Add version.txt
-      run: |
-        git add version.txt
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v4
       with:
+        add-paths: |
+          version.txt
         body: |
           **Auto-generated PR to update version.txt after a DeepSpeed release**
           Version - ${{ env.RELEASE_VERSION }}
