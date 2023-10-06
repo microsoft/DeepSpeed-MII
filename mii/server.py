@@ -89,9 +89,11 @@ class MIIServer:
                                model_config,
                                msg_server_type,
                                ds_launch_str="",
-                               server_args=[]):
+                               server_args=None):
         launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
         b64_config_str = config_to_b64_str(model_config)
+        if server_args is None:
+            server_args = []
         server_args.append(f"--model-config {b64_config_str}")
         server_args_str = " ".join(server_args)
         cmd = f"{ds_launch_str} {launch_str} {server_args_str}".strip().split(" ")
