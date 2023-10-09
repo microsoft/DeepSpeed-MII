@@ -10,20 +10,9 @@ from deepspeed.inference.engine import InferenceEngine
 from deepspeed import OnDevice
 from pathlib import Path
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig
-from transformers.utils.hub import EntryNotFoundError
-from transformers.modeling_utils import get_checkpoint_shard_files
-from transformers.utils import WEIGHTS_NAME, WEIGHTS_INDEX_NAME
+from huggingface_hub import snapshot_download
 
 from mii.utils import mii_cache_path, is_aml
-
-try:
-    from transformers.utils import cached_path, hf_bucket_url
-
-    USE_NEW_HF_CACHE = False
-except ImportError:
-    from huggingface_hub import snapshot_download
-
-    USE_NEW_HF_CACHE = True
 
 
 class MetaTensorPipeline(object):
@@ -70,89 +59,42 @@ def get_device(load_with_sys_mem=False):
     return device
 
 
-def _attempt_load(load_fn, model_name, cache_path, kwargs={}):
+def _attempt_load(load_fn, model_name, model_path, cache_path, kwargs={}):
     try:
         value = load_fn(model_name, **kwargs)
     except OSError:
-        print(f"Attempted load but failed, retrying using cache_dir={cache_path}")
-        value = load_fn(model_name, cache_dir=cache_path, **kwargs)
+        if is_aml():
+            print(f"Attempted load but failed, retrying using model_path={model_path}")
+            value = load_fn(model_path, **kwargs)
+        else:
+            print(f"Attempted load but failed, retrying using cache_dir={cache_path}")
+            value = load_fn(model_name, cache_dir=cache_path, **kwargs)
     return value
 
 
-def get_checkpoint_files(pretrained_model_name_or_path):
-    cache_dir = None
-    is_sharded = False
-    revision = None
-    local_files_only = False
-
-    filename = WEIGHTS_NAME
-    archive_file = hf_bucket_url(pretrained_model_name_or_path,
-                                 filename=filename,
-                                 revision=revision)
-
-    try:
-        resolved_archive_file = cached_path(
-            archive_file,
-            cache_dir=cache_dir,
-            local_files_only=local_files_only,
-        )
-        return [resolved_archive_file]
-
-    except (EntryNotFoundError, FileNotFoundError):
-        if filename == WEIGHTS_NAME:
-            # Maybe the checkpoint is sharded, we try to grab the index name in this case.
-            archive_file = hf_bucket_url(
-                pretrained_model_name_or_path,
-                filename=WEIGHTS_INDEX_NAME,
-                revision=revision,
-            )
-            resolved_archive_file = cached_path(
-                archive_file,
-                cache_dir=cache_dir,
-                local_files_only=local_files_only,
-            )
-            is_sharded = True
-
-    if is_sharded:
-        # resolved_archive_file becomes a list of files that point to the different checkpoint shards in this case.
-        resolved_archive_file, sharded_metadata = get_checkpoint_shard_files(
-            pretrained_model_name_or_path,
-            resolved_archive_file,
-            cache_dir=cache_dir,
-            revision=revision,
-        )
-
-        return resolved_archive_file
-
-
 def create_checkpoint_dict(model_name, model_path, checkpoint_dict):
-    if USE_NEW_HF_CACHE:
-        model_path = snapshot_download(
-            model_name,
-            cache_dir=model_path,
-            allow_patterns=[
-                "*.bin",
-                "*.json",
-                "*.pt",
-            ],
-            revision=None,
-        )
     if checkpoint_dict:
-        checkpoint_dict["base_dir"] = model_path
         return checkpoint_dict
-    elif os.path.isfile(os.path.join(model_path, "ds_inference_config.json")):
+    model_path = snapshot_download(
+        model_name,
+        cache_dir=model_path,
+        allow_patterns=[
+            "*.bin",
+            "*.json",
+            "*.pt",
+        ],
+        revision=None,
+    )
+    if os.path.isfile(os.path.join(model_path, "ds_inference_config.json")):
         with open(os.path.join(model_path, "ds_inference_config.json")) as f:
             data = json.load(f)
         data["base_dir"] = model_path
         return data
     else:
-        if USE_NEW_HF_CACHE:
-            checkpoint_files = [
-                str(entry).split("/")[-1]
-                for entry in Path(model_path).rglob("*.[bp][it][n]") if entry.is_file()
-            ]
-        else:
-            checkpoint_files = get_checkpoint_files(model_name)
+        checkpoint_files = [
+            str(entry).split("/")[-1]
+            for entry in Path(model_path).rglob("*.[bp][it][n]") if entry.is_file()
+        ]
         data = {
             "type": "DS_MODEL",
             "checkpoints": checkpoint_files,
@@ -170,12 +112,16 @@ def load_with_meta_tensor(model_config):
     tokenizer = _attempt_load(
         AutoTokenizer.from_pretrained,
         model_config.model,
+        model_config.model_path,
         cache_path,
         kwargs={"padding_side": "left"},
     )
     tokenizer.pad_token = tokenizer.eos_token
 
-    config = _attempt_load(AutoConfig.from_pretrained, model_config.model, cache_path)
+    config = _attempt_load(AutoConfig.from_pretrained,
+                           model_config.model,
+                           model_config.model_path,
+                           cache_path)
 
     with OnDevice(dtype=torch.float16, device="meta", enabled=True):
         model = AutoModelForCausalLM.from_config(config, torch_dtype=torch.bfloat16)
@@ -195,7 +141,6 @@ def hf_provider(model_config):
         return load_with_meta_tensor(model_config)
     else:
         device = get_device(load_with_sys_mem=model_config.load_with_sys_mem)
-        print(model_config)
         inference_pipeline = pipeline(
             model_config.task,
             model=model_config.model if not is_aml() else model_config.model_path,

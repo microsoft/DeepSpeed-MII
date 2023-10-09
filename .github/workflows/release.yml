@@ -31,10 +31,16 @@ jobs:
     - name: Bump version
       run: |
         python release/bump_patch_version.py --current_version ${{ env.RELEASE_VERSION }}
-    - name: Commit version.txt
-      run: |
-        git config --global user.name 'ds-release-bot'
-        git config --global user.email 'ds-release-bot@users.noreply.github.com'
-        git add version.txt
-        git commit -m "Release v${{ env.RELEASE_VERSION }}"
-        git push
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v4
+      with:
+        add-paths: |
+          version.txt
+        body: |
+          **Auto-generated PR to update version.txt after a DeepSpeed release**
+          Released version - ${{ env.RELEASE_VERSION }}
+          Author           - @${{ github.actor }}
+        branch: AutoPR/${{ env.RELEASE_VERSION }}
+        assignees: ${{ github.actor }}
+        title: "Update version.txt after ${{ env.RELEASE_VERSION }} release"
+        author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
