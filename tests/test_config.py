@@ -4,9 +4,9 @@
 # DeepSpeed Team
 
 import pytest
-import pydantic
 
 import mii
+from mii import pydantic_v1
 
 
 @pytest.mark.parametrize("port_number", [12345])
@@ -23,7 +23,7 @@ def test_base_configs(deployment_name, mii_config, model_config):
 @pytest.mark.parametrize("port_number", ["fail"])
 @pytest.mark.parametrize("tensor_parallel", [3.5])
 def test_base_configs_literalfail(deployment_name, mii_config, model_config):
-    with pytest.raises(pydantic.ValidationError):
+    with pytest.raises(pydantic_v1.ValidationError):
         mii_config["deployment_name"] = deployment_name
         mii_config["model_config"] = model_config
         mii_config = mii.config.MIIConfig(**mii_config)
