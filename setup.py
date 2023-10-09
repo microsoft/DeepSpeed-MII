@@ -49,13 +49,16 @@ version_str = open('version.txt', 'r').read().strip()
 # Build specifiers like .devX can be added at install time. Otherwise, add the git hash.
 # example: MII_BUILD_STR=".dev20201022" python setup.py sdist bdist_wheel
 
+MII_BUILD_STRING = 'MII_BUILD_STRING'
+BUILD_FILE = 'build.txt'
+mii_build_string = os.environ.get(MII_BUILD_STRING)
+
 # Building wheel for distribution, update version file
-if 'MII_BUILD_STRING' in os.environ:
+if mii_build_string:
     # Build string env specified, probably building for distribution
-    BUILD_FILE = 'build.txt'
     with open(BUILD_FILE, 'w') as fd:
-        fd.write(os.environ.get('MII_BUILD_STRING'))
-    version_str += os.environ.get('MII_BUILD_STRING')
+        fd.write(mii_build_string)
+    version_str += mii_build_string
 elif os.path.isfile(BUILD_FILE):
     # build.txt exists, probably installing from distribution
     with open(BUILD_FILE, 'r') as fd:
