@@ -74,66 +74,67 @@ class ModelResponseStub(object):
 
 class ModelResponseServicer(object):
     """Missing associated documentation comment in .proto file."""
+    ERROR_MSG = 'Method not implemented!'
+
     def Terminate(self, request, context):
         """Missing associated documentation comment in .proto file."""
-        ERROR_MSG = 'Method not implemented!'
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details()
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def CreateSession(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def DestroySession(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def GeneratorReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def ClassificationReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def QuestionAndAnswerReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def FillMaskReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def TokenClassificationReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def ConversationalReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
     def Txt2ImgReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details(ERROR_MSG)
-        raise NotImplementedError(ERROR_MSG)
+        context.set_details(self.ERROR_MSG)
+        raise NotImplementedError(self.ERROR_MSG)
 
 
 def add_ModelResponseServicer_to_server(servicer, server):
