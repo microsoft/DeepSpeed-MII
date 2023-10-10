@@ -6,9 +6,9 @@ import torch
 import os
 import string
 from typing import List, Optional, Dict, Any
-from pydantic import validator, root_validator, Field
 import mii
 from .constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
+from .pydantic_v1 import validator, root_validator, Field
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 from deepspeed.inference.config import DtypeEnum
