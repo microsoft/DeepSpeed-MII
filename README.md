@@ -202,7 +202,7 @@ While only the model name or path is required to stand up a persistent deploymen
 - `replica_num: int` The number of model replicas to stand up.
 
 **`mii.client()` Options**:
-- TODO
+- `model_or_deployment_name: str` Name of the model or `deployment_name` passed to `mii.serve()`
 
 Users can also control the generation characteristics for individual prompts (i.e., when calling `client.generate()`) with the following options:
 
