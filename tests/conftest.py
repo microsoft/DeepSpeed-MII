@@ -5,7 +5,7 @@
 
 import pytest
 import os
-import mii
+import mii.legacy as mii
 from types import SimpleNamespace
 
 

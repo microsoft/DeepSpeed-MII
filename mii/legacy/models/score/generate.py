@@ -3,10 +3,10 @@
 
 # DeepSpeed Team
 import os
-import mii
+import mii.legacy as mii
 import pprint
-from mii.logging import logger
-from mii.constants import DeploymentType
+from mii.legacy.logging import logger
+from mii.legacy.constants import DeploymentType
 
 
 def create_score_file(mii_config):

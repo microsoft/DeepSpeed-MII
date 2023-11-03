@@ -5,8 +5,8 @@
 
 import pytest
 
-import mii
-from mii import pydantic_v1
+import mii.legacy as mii
+from mii.legacy import pydantic_v1
 
 
 @pytest.mark.parametrize("port_number", [12345])

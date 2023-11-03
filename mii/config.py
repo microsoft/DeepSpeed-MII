@@ -2,17 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import torch
 import os
 import string
-from typing import List, Optional, Dict, Any
-import mii
-from .constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
-from .pydantic_v1 import validator, root_validator, Field
+from typing import List, Optional, Union, Dict, Any
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
-from deepspeed.inference.config import DtypeEnum
 from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
+from deepspeed.inference import RaggedInferenceEngineConfig
+
+from mii.constants import DeploymentType, TaskType, ModelProvider
+from mii.errors import DeploymentNotFoundError
+from mii.pydantic_v1 import Field, root_validator
+from mii.tokenizers import MIITokenizerWrapper
+from mii.utils import generate_deployment_name, get_default_task, import_score_file
 
 
 class ReplicaConfig(DeepSpeedConfigModel):
@@ -20,66 +22,54 @@ class ReplicaConfig(DeepSpeedConfigModel):
     tensor_parallel_ports: List[int] = []
     torch_dist_port: int = None
     gpu_indices: List[int] = []
+    zmq_port: int = None
 
 
 class ModelConfig(DeepSpeedConfigModel):
-    model: str
+    model_name_or_path: str
     """
-    Name of a supported model for the task. Models in MII are sourced from
-    multiple open-source projects such as Huggingface Transformer, FairSeq,
-    EluetherAI etc. For the list of supported models for each task, please see
-    here [TODO].
+    Model name or path of the model to HuggingFace model to be deployed.
     """
 
-    task: TaskType
+    tokenizer: Optional[Union[str, MIITokenizerWrapper]] = None
     """
-    Name of the machine learning task to be deployed.Currently MII supports the
-    following list of tasks ``['text-generation', 'text-classification',
-    'question-answering', 'fill-mask', 'token-classification',
-    'conversational', 'text-to-image']``
+    Tokenizer wrapped with `MIITokenizerWrapper`, name or path of the
+    HuggingFace tokenizer to be used.
     """
 
-    dtype: DtypeEnum = DtypeEnum.fp32
+    task: Optional[TaskType] = TaskType.TEXT_GENERATION
     """
-    Desired model data type, will convert model to this type.  Supported target
-    types: `torch.half`, `torch.float`, `torch.int8` (for BLOOM models)
-    """
-
-    model_path: str = ""
-    """
-    In LOCAL deployments this is the local path where model checkpoints are
-    available. In AML deployments this is an optional relative path with
-    AZURE_MODEL_DIR for the deployment.
+    Name of the task to be performed by the model.
     """
 
-    load_with_sys_mem: bool = False
+    tensor_parallel: int = int(os.getenv("WORLD_SIZE", "1"))
     """
-    Loads the model onto system memory instead of GPU memory. This can help
-    avoid OOM errors when sharding a model across several GPUs because MII will
-    try to load a full copy of each model onto each GPU initially.
-    """
-
-    meta_tensor: bool = False
-    """
-    Loads the initial HuggingFace model using Meta Tensors that use no memory.
-    Can dramatically improve load time and reduce memory requirements on
-    supported models. Supported for GPT-J, GPT-NeoX, OPT, and BLOOM when kernel
-    injection is enabled. Supported for all models when kernel injection is
-    disabled.
+    Tensor parallelism to use for a model (i.e., how many GPUs to shard a model
+    across). This defaults to the `WORLD_SIZE` environment variable, or a value
+    of 1 if that variable is not set. This value is also propagated to the
+    `inference_engine_config`.
     """
 
-    deploy_rank: Optional[List[int]] = None
+    inference_engine_config: RaggedInferenceEngineConfig = {}
     """
-    GPU indices a model is deployed on. Note that CUDA_VISIBLE_DEVICES does not
-    work with DeepSpeed-MII.
+    DeepSpeed inference engine config. This is automatically generated, but you
+    can provide a set of custom configs.
     """
 
     torch_dist_port: int = 29500
     """
-    Torch distributed port.
+    Torch distributed port to be used. This also serves as a base port when
+    multiple replicas are deployed. For example, if there are 2 replicas, the
+    first will use port 29500 and the second will use port 29600.
     """
 
-    replica_num: int = 1
+    zmq_port_number: int = 25555
+    """
+    Port number to use for the ZMQ communication (for broadcasting requests and
+    responses among all ranks in ragged batching).
+    """
+
+    replica_num: int = Field(1, gt=0)
     """
     Number of model replicas. Enables easy data parallelism.
     """
@@ -90,219 +80,64 @@ class ModelConfig(DeepSpeedConfigModel):
     generated, but you can provide a set of custom configs.
     """
 
-    profile_model_time: bool = False
-    """
-    Enable profiling of model times (i.e., without communication overhead).
-    """
-
-    skip_model_check: bool = False
-    """
-    Skip validation that a model supports a given task.
-    """
-
-    hf_auth_token: Optional[str] = Field(
-        None,
-        deprecated=True,
-        deprecated_msg=
-        "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation.",
-    )
-    """
-    HuggingFace authentication token for accessing models. Will be propagated
-    to all ModelConfig if none are provided there.
-    """
-
-    trust_remote_code: bool = Field(
-        False,
-        deprecated=True,
-        deprecated_msg=
-        "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation.",
-    )
-    """
-    HuggingFace `tranformer.pipeline` option for `trust_remote_code`.
-    """
-
-    pipeline_kwargs: Dict[str, Any] = {}
-    """
-    kwargs to be passed to HuggingFace's `transformer.pipeline`.
-    """
-
-    # TODO: Replace with DeepSpeedInferenceConfig
-    enable_deepspeed: bool = True
-    """
-    Enable DeepSpeed-Inference.
-    """
-
-    enable_zero: bool = False
-    """
-    Enable Zero-Inference.
-    """
-
-    ds_config: Dict[str, Any] = {}
-    """
-    DeepSpeed config to use when Zero-Inference is enabled.
-    """
-
-    tensor_parallel: int = 1
-    """
-    Tensor parallelism to use for a model (i.e., how many GPUs to shard a model across).
-    """
-
-    enable_cuda_graph: bool = False
-    """
-    Enables CUDA Graph captures with DeepSpeed-Inference.
-    """
-
-    replace_with_kernel_inject: bool = True
-    """
-    Enable custom kernel injection with DeepSpeed-Inference.
-    """
-
-    checkpoint_dict: Optional[Dict[str, Any]] = None
-    """
-    DeepSpeed model checkpoint dict.
-    """
-
-    max_tokens: int = 1024
+    max_length: Optional[int] = None
     """
     The maximum number of tokens DeepSpeed-Inference can work with, including
-    the input and output tokens. Please consider increasing it to the required
-    token-length required for your use-case.
+    the input and output tokens.
     """
-    class Config:
-        json_encoders = {torch.dtype: lambda x: str(x)}
 
+    all_rank_output: bool = False
+    """
+    Weather to return output on all ranks for `mii.pipeline`. Default behavior
+    is to only return on rank 0.
+    """
+
+    sync_debug: bool = False
+    """
+    Inserts additional synchronization points for debugging purposes.
+    """
+
+    profile_model_time: bool = False
+    """
+    Log performance information about model inference with very little overhead.
+    """
     @property
-    def provider(self):
-        return mii.utils.get_provider(self.model, self.task)
-
-    @validator("checkpoint_dict")
-    def checkpoint_dict_valid(cls, field_value, values):
-        if field_value is None:
-            return field_value
-        for k in ["checkpoints", "version", "type", "base_dir"]:
-            if not field_value.get(k, ""):
-                raise ValueError(f"Missing key={k} in checkpoint_dict")
-        return field_value
-
-    @validator("deploy_rank", pre=True)
-    def deploy_rank_to_list(cls, field_value, values):
-        if field_value and not isinstance(field_value, list):
-            field_value = [field_value]
-        return field_value
+    def provider(self) -> ModelProvider:
+        return ModelProvider.HUGGING_FACE
 
     @root_validator
-    def zero_or_meta(cls, values):
-        if values.get("enable_zero"):
-            assert not values.get(
-                "meta_tensor"
-            ), "ZeRO-Inference does not support meta tensors."
+    def auto_fill_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if not values.get("tokenizer"):
+            values["tokenizer"] = values.get("model_name_or_path")
+        if not values.get("task"):
+            values["task"] = get_default_task(values.get("model_name_or_path"))
         return values
 
     @root_validator
-    def bloom_model_valid(cls, values):
-        if "bigscience/bloom" in values.get("model"):
-            # TODO: SHould be albe to use DtypeEnum here
-            assert values.get("dtype") in [
-                torch.int8,
-                torch.float16,
-            ], "Bloom models only support fp16/int8."
-            assert not values.get(
-                "enable_cuda_graph"
-            ), "Bloom models do not support CUDA Graph."
-        return values
-
-    @root_validator
-    def deploy_rank_valid(cls, values):
+    def propagate_tp_size(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         tensor_parallel = values.get("tensor_parallel")
-        deploy_rank = values.get("deploy_rank")
-
-        # if deploy rank is not given, default to align with TP value
-        if deploy_rank is None:
-            deploy_rank = list(range(tensor_parallel))
-
-        # number of ranks provided must be equal to TP size, DP is handled outside MII currently
-        assert tensor_parallel == len(
-            deploy_rank
-        ), f"{len(deploy_rank)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {tensor_parallel}"
-
-        values["deploy_rank"] = deploy_rank
+        values.get("inference_engine_config").tensor_parallel.tp_size = tensor_parallel
         return values
 
     @root_validator
-    def set_model_path(cls, values):
-        model_path = values.get("model_path")
-        if not model_path:
-            if values.get("deployment_type") == DeploymentType.AML:
-                model_path = "model"
-            else:
-                model_path = MII_MODEL_PATH_DEFAULT
-        aml_model_dir = os.environ.get("AZUREML_MODEL_DIR", None)
-        if aml_model_dir and not model_path.startswith(aml_model_dir):
-            assert os.path.isabs(
-                aml_model_dir
-            ), "AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path."
-            assert not os.path.isabs(
-                model_path
-            ), f"model_path={model_path} must be relative to append w/ AML path."
-            model_path = os.path.join(aml_model_dir, model_path)
-
-        values["model_path"] = model_path
-        return values
-
-    @root_validator
-    def validate_model_and_task(cls, values):
-        task = values.get("task")
-        model = values.get("model")
-        if not values.get("skip_model_check"):
-            mii.utils.check_if_task_and_model_is_valid(task, model)
-            if values.get("enable_deepspeed"):
-                mii.utils.check_if_task_and_model_is_supported(task, model)
-        # Skip any future checks
-        values["skip_model_check"] = True
-        return values
-
-    @root_validator
-    def meta_tensor_or_sys_mem(cls, values):
-        if values.get("meta_tensor") and values.get("load_with_sys_mem"):
-            raise ValueError(
-                "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
-            )
-        return values
-
-    @root_validator
-    def zero_dtype_valid(cls, values):
-        if values.get("enable_zero"):
-            if values.get("ds_config").get("fp16", {}).get("enabled", False):
-                # TODO: We should be able to use DtypeEnum instead of torch.float
-                assert (
-                    values.get("dtype") == torch.float16
-                ), "ZeRO FP16 enabled, `dtype` must be set to `torch.float16`"
-            else:
-                assert (
-                    values.get("dtype") == torch.float32
-                ), "ZeRO FP16 disabled, `dtype` must be set to `torch.float32`"
-        return values
-
-    @root_validator
-    def deepspeed_or_zero(cls, values):
-        assert not (
-            values.get("enable_deepspeed") and values.get("enable_zero")
-        ), "DeepSpeed and ZeRO cannot both be enabled, select only one"
+    def check_replica_config(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        num_replica_config = len(values.get("replica_configs"))
+        if num_replica_config > 0:
+            assert num_replica_config == values.get("replica_num"), "Number of replica configs must match replica_num"
         return values
 
 
 class MIIConfig(DeepSpeedConfigModel):
-    deployment_name: str
+    deployment_name: str = ""
     """
     Name of the deployment. Used as an identifier for obtaining a inference
-    server client and posting queries.
+    server client and posting queries. Automatically generated if it is not provided.
     """
 
     deployment_type: DeploymentType = DeploymentType.LOCAL
     """
-    One of the `enum mii.DeploymentTypes: [LOCAL]`.
+    One of the `enum mii.DeploymentTypes:`
     * `LOCAL` uses a grpc server to create a local deployment.
-    * `NON_PERSISTENT` creates a local deployment that will end when the process exits.
     * `AML` will generate the assets necessary to deploy on AML resources.
     """
 
@@ -342,7 +177,7 @@ class MIIConfig(DeepSpeedConfigModel):
     AML instance type to use when create AML deployment assets.
     """
     @root_validator(skip_on_failure=True)
-    def AML_name_valid(cls, values):
+    def AML_name_valid(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get("deployment_type") == DeploymentType.AML:
             allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
                                 string.digits + "-")
@@ -351,12 +186,25 @@ class MIIConfig(DeepSpeedConfigModel):
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
         return values
 
-    def generate_replica_configs(self):
+    @root_validator(skip_on_failure=True)
+    def check_deployment_name(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        deployment_name = values.get("deployment_name")
+        if not deployment_name:
+            model_name_or_path = values.get("model_config").model_name_or_path
+            deployment_name = generate_deployment_name(
+                model_name_or_path=model_name_or_path)
+            values["deployment_name"] = deployment_name
+        return values
+
+    def generate_replica_configs(self) -> None:
+        if self.model_config.replica_configs:
+            return
         # TODO: refactor this function
         hostfile = self.hostfile
         port_number = self.port_number
         torch_dist_port = self.model_config.torch_dist_port
         tensor_parallel = self.model_config.tensor_parallel
+        zmq_port = self.model_config.zmq_port_number
         replica_num = self.model_config.replica_num
         replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
         replica_configs = []
@@ -372,12 +220,13 @@ class MIIConfig(DeepSpeedConfigModel):
                     tensor_parallel_ports=tensor_parallel_ports,
                     torch_dist_port=replica_torch_dist_port,
                     gpu_indices=gpu_indices,
+                    zmq_port=zmq_port + i,
                 ))
 
         self.model_config.replica_configs = replica_configs
 
 
-def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
+def _allocate_processes(hostfile_path: str, tensor_parallel: int, replica_num: int):
     resource_pool = fetch_hostfile(hostfile_path)
     assert (
         resource_pool is not None and len(resource_pool) > 0
@@ -415,3 +264,20 @@ def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
         )
 
     return replica_pool
+
+
+def get_mii_config(model_or_deployment_name: str) -> MIIConfig:
+    try:
+        deployment_name = model_or_deployment_name
+        mii_config = import_score_file(deployment_name, DeploymentType.LOCAL).mii_config
+    except:
+        try:
+            deployment_name = generate_deployment_name(
+                model_name_or_path=model_or_deployment_name)
+            mii_config = import_score_file(deployment_name,
+                                           DeploymentType.LOCAL).mii_config
+        except:
+            raise DeploymentNotFoundError(
+                f"Could not find a deployment named {model_or_deployment_name} or {deployment_name}"
+            )
+    return MIIConfig(**mii_config)

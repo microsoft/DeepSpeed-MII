@@ -9,13 +9,75 @@ import sys
 import tempfile
 import time
 from collections import defaultdict
+from typing import Optional, Any, Dict, Union, List
+
 from deepspeed.accelerator import get_accelerator
+from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 
-from mii.utils import get_num_gpus
+import mii
+from mii.client import MIIClient
+from mii.config import ModelConfig, MIIConfig, ReplicaConfig
+from mii.constants import DeploymentType
 from mii.logging import logger
+from mii.score import create_score_file
+from mii.utils import import_score_file
 
 
-def config_to_b64_str(config):
+def serve(model_name_or_path: str = "",
+          model_config: Optional[Dict[str,
+                                      Any]] = None,
+          mii_config: Optional[Dict[str,
+                                    Any]] = None,
+          **kwargs) -> Union[None,
+                             MIIClient]:
+    if model_config is None:
+        model_config = {}
+    if mii_config is None:
+        mii_config = {}
+    if model_name_or_path:
+        if "model_name_or_path" in model_config:
+            assert model_config.get("model_name_or_path") == model_name_or_path, "model_name_or_path in model_config must match model_name_or_path"
+        model_config["model_name_or_path"] = model_name_or_path
+    for key, val in kwargs.items():
+        if key in ModelConfig.__dict__["__fields__"]:
+            if key in model_config:
+                assert model_config.get(key) == val, f"{key} in model_config must match {key}"
+            model_config[key] = val
+        elif key in MIIConfig.__dict__["__fields__"]:
+            if key in mii_config:
+                assert mii_config.get(key) == val, f"{key} in mii_config must match {key}"
+            mii_config[key] = val
+        else:
+            raise ValueError(f"Invalid keyword argument {key}")
+    if "model_config" in mii_config:
+        assert mii_config.get("model_config") == model_config, "model_config in mii_config must match model_config"
+    mii_config["model_config"] = model_config
+    mii_config = MIIConfig(**mii_config)
+
+    #MIIServer(mii_config)
+    create_score_file(mii_config)
+
+    if mii_config.deployment_type == DeploymentType.LOCAL:
+        import_score_file(mii_config.deployment_name, DeploymentType.LOCAL).init()
+        return MIIClient(mii_config=mii_config)
+    if mii_config.deployment_type == DeploymentType.AML:
+        acr_name = mii.aml_related.utils.get_acr_name()
+        mii.aml_related.utils.generate_aml_scripts(
+            acr_name=acr_name,
+            deployment_name=mii_config.deployment_name,
+            model_name=mii_config.model_config.model,
+            task_name=mii_config.model_config.task,
+            replica_num=mii_config.model_config.replica_num,
+            instance_type=mii_config.instance_type,
+            version=mii_config.version,
+        )
+        print(
+            f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.deployment_name)}"
+        )
+        print("Please run 'deploy.sh' to bring your deployment online")
+
+
+def config_to_b64_str(config: DeepSpeedConfigModel) -> str:
     # convert json str -> bytes
     json_bytes = config.json().encode()
     # base64 encoded bytes
@@ -25,13 +87,10 @@ def config_to_b64_str(config):
 
 
 class MIIServer:
-    """Initialize the model, setup the server for the model under model_path"""
-    def __init__(self, mii_config):
+    """Initialize the model, setup the server for the model"""
+    def __init__(self, mii_config: MIIConfig) -> None:
 
         self.task = mii_config.model_config.task
-        self.num_gpus = get_num_gpus(mii_config)
-        assert self.num_gpus > 0, "GPU count must be greater than 0"
-
         self.port_number = mii_config.port_number
 
         if not os.path.isfile(mii_config.hostfile):
@@ -47,7 +106,9 @@ class MIIServer:
         self._wait_until_server_is_live(processes,
                                         mii_config.model_config.replica_configs)
 
-    def _wait_until_server_is_live(self, processes, deployment):
+    def _wait_until_server_is_live(self,
+                                   processes: List[subprocess.Popen],
+                                   deployment: List[ReplicaConfig]):
         for process, repl_config in zip(processes, deployment):
             sockets_open = False
             while not sockets_open:
@@ -61,10 +122,14 @@ class MIIServer:
                         "server crashed for some reason, unable to proceed")
                 time.sleep(4)
                 logger.info("waiting for server to start...")
+            # TODO: Fix displaying outputs from logger
+            # When we launch processes on multiple nodes using " --force_multi",
+            # all the outputs from logger to stdout is displayed when the process is stopped.
+            # This is confusing because you see the message "server has started ..." when you stop the process.
             logger.info(
                 f"server has started on ports {repl_config.tensor_parallel_ports}")
 
-    def _is_socket_open(self, host, port):
+    def _is_socket_open(self, host: str, port: int) -> bool:
         import socket
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -72,7 +137,7 @@ class MIIServer:
         sock.close()
         return result == 0
 
-    def _is_server_process_alive(self, process):
+    def _is_server_process_alive(self, process: subprocess.Popen) -> bool:
         if process is None:
             return True
         try:
@@ -86,10 +151,10 @@ class MIIServer:
         return is_alive
 
     def _launch_server_process(self,
-                               model_config,
-                               msg_server_type,
-                               ds_launch_str="",
-                               server_args=None):
+                               model_config: ModelConfig,
+                               msg_server_type: str,
+                               ds_launch_str: str = "",
+                               server_args: List[str] = None) -> subprocess.Popen:
         launch_str = f"{sys.executable} -m mii.launch.multi_gpu_server"
         b64_config_str = config_to_b64_str(model_config)
         if server_args is None:
@@ -98,15 +163,17 @@ class MIIServer:
         server_args_str = " ".join(server_args)
         cmd = f"{ds_launch_str} {launch_str} {server_args_str}".strip().split(" ")
 
-        mii_env = os.environ.copy()
-        mii_env["TRANSFORMERS_CACHE"] = model_config.model_path
-        logger.info(f"{msg_server_type} server launch: {cmd}")
-        return subprocess.Popen(cmd, env=mii_env)
+        logger.info(f"msg_server launch: {cmd}")
+        return subprocess.Popen(cmd)
 
-    def _generate_ds_launch_str(self, replica_config, hostfile):
+    def _generate_ds_launch_str(self,
+                                replica_config: ReplicaConfig,
+                                hostfile: str,
+                                use_multiple_hosts) -> str:
         # use different hostfiles for replica instances
         # pass /dev/null when no replica is used
-        worker_str = f"-H {hostfile} "
+        #worker_str = f"-H {hostfile} "
+        worker_str = ""
         # pin deepspeed launch to specific gpu id(s)
         included_gpus = f"{replica_config.hostname}:{','.join(map(str, replica_config.gpu_indices))}"
         worker_str += f"-i {included_gpus} "
@@ -116,10 +183,12 @@ class MIIServer:
         worker_str += f"--master_port {replica_config.torch_dist_port}"
 
         ds_launch_str = f"deepspeed {worker_str} --master_addr localhost --no_ssh_check --no_local_rank --no_python"
+        if use_multiple_hosts:
+            ds_launch_str += f" --force_multi"
 
         return ds_launch_str
 
-    def _initialize_service(self, mii_config):
+    def _initialize_service(self, mii_config: MIIConfig) -> List[subprocess.Popen]:
         processes = []
         server_args = [
             f"--deployment-name {mii_config.deployment_name}",
@@ -131,26 +200,33 @@ class MIIServer:
         for repl_config in mii_config.model_config.replica_configs:
             host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
+        use_multiple_hosts = len(
+            set(repl_config.hostname
+                for repl_config in mii_config.model_config.replica_configs)) > 1
+
         # Start replica instances
         for repl_config in mii_config.model_config.replica_configs:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             hostfile.write(
                 f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
                 .encode())
-            ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name)
+            ds_launch_str = self._generate_ds_launch_str(repl_config,
+                                                         hostfile.name,
+                                                         use_multiple_hosts)
             processes.append(
                 self._launch_server_process(
                     mii_config.model_config,
                     "MII server",
                     ds_launch_str=ds_launch_str,
-                    server_args=server_args +
-                    [f"--server-port {repl_config.tensor_parallel_ports[0]}"],
+                    server_args=server_args + [
+                        f"--server-port {repl_config.tensor_parallel_ports[0]} --zmq-port {repl_config.zmq_port}"
+                    ],
                 ))
-            # start load balancer here. We don't use deepspeed launcher for the
-            # load balancer because it does not need a GPU. The deepspeed
-            # launcher determines the number of processes to launch based on
-            # GPUs available on the host or CUDA_VISIBLE_DEVICES, and it is
-            # expected to assign one GPU to one process.
+        # start load balancer here. We don't use deepspeed launcher for the
+        # load balancer because it does not need a GPU. The deepspeed
+        # launcher determines the number of processes to launch based on
+        # GPUs available on the host or CUDA_VISIBLE_DEVICES, and it is
+        # expected to assign one GPU to one process.
         processes.append(
             self._launch_server_process(
                 mii_config.model_config,

@@ -5,40 +5,12 @@
 import asyncio
 import grpc
 import requests
-import mii
-from .grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from .constants import GRPC_MAX_MSG_SIZE, TaskType, DeploymentType
-from .method_table import GRPC_METHOD_TABLE
-from .config import MIIConfig
-from .utils import import_score_file
+from typing import Dict, Any, Callable
 
-
-def _get_mii_config(deployment_name):
-    mii_config = import_score_file(deployment_name, DeploymentType.LOCAL).mii_config
-    return MIIConfig(**mii_config)
-
-
-def mii_query_handle(deployment_name):
-    """Get a query handle for a local deployment:
-
-        mii/examples/local/gpt2-query-example.py
-        mii/examples/local/roberta-qa-query-example.py
-
-    Arguments:
-        deployment_name: Name of the deployment. Used as an identifier for posting queries for ``LOCAL`` deployment.
-
-    Returns:
-        query_handle: A query handle with a single method `.query(request_dictionary)` using which queries can be sent to the model.
-    """
-
-    if deployment_name in mii.non_persistent_models:
-        inference_pipeline, task = mii.non_persistent_models[deployment_name]
-        return MIINonPersistentClient(task, deployment_name)
-
-    mii_config = _get_mii_config(deployment_name)
-    return MIIClient(mii_config.model_config.task,
-                     "localhost", # TODO: This can probably be removed
-                     mii_config.port_number)
+from mii.config import get_mii_config, MIIConfig
+from mii.constants import GRPC_MAX_MSG_SIZE, TaskType
+from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
+from mii.task_methods import TASK_METHODS_DICT
 
 
 def create_channel(host, port):
@@ -57,32 +29,77 @@ class MIIClient:
     """
     Client to send queries to a single endpoint.
     """
-    def __init__(self, task, host, port):
+    def __init__(self, mii_config: MIIConfig, host: str = "localhost") -> None:
+        self.mii_config = mii_config
+        self.task = mii_config.model_config.task
+        self.port = mii_config.port_number
         self.asyncio_loop = asyncio.get_event_loop()
-        channel = create_channel(host, port)
+        channel = create_channel(host, self.port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
-        self.task = task
+
+    def __call__(self, *args, **kwargs):
+        return self.generate(*args, **kwargs)
 
     async def _request_async_response(self, request_dict, **query_kwargs):
-        if self.task not in GRPC_METHOD_TABLE:
-            raise ValueError(f"unknown task: {self.task}")
-
-        task_methods = GRPC_METHOD_TABLE[self.task]
+        task_methods = TASK_METHODS_DICT[self.task]
         proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
         proto_response = await getattr(self.stub, task_methods.method)(proto_request)
         return task_methods.unpack_response_from_proto(proto_response)
 
-    def query(self, request_dict, **query_kwargs):
+    async def _request_async_response_stream(self, request_dict, **query_kwargs):
+        task_methods = TASK_METHODS_DICT[self.task]
+        proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
+        assert hasattr(task_methods, "method_stream_out"), f"{self.task} does not support streaming response"
+        async for response in getattr(self.stub,
+                                      task_methods.method_stream_out)(proto_request):
+            yield task_methods.unpack_response_from_proto(response)
+
+    def generate(self,
+                 prompt: str,
+                 streaming_fn: Callable = None,
+                 **query_kwargs: Dict[str,
+                                      Any]):
+        if not isinstance(prompt, str):
+            raise RuntimeError(
+                "MII client only supports a single query string, multi-string will be added soon"
+            )
+        request_dict = {"query": prompt}
+        if streaming_fn is not None:
+            return self._generate_stream(streaming_fn, request_dict, **query_kwargs)
+
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,
                                          **query_kwargs))
+
+    def _generate_stream(self,
+                         callback,
+                         request_dict: Dict[str,
+                                            str],
+                         **query_kwargs: Dict[str,
+                                              Any]):
+        async def put_result():
+            response_stream = self._request_async_response_stream(
+                request_dict,
+                **query_kwargs)
+
+            while True:
+                try:
+                    response = await response_stream.__anext__()
+                    callback(response)
+                except StopAsyncIteration:
+                    break
+
+        self.asyncio_loop.run_until_complete(put_result())
 
     async def terminate_async(self):
         await self.stub.Terminate(
             modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
-    def terminate(self):
+    def terminate_server(self):
         self.asyncio_loop.run_until_complete(self.terminate_async())
+        if self.mii_config.enable_restful_api:
+            requests.get(
+                f"http://localhost:{self.mii_config.restful_api_port}/terminate")
 
     async def create_session_async(self, session_id):
         return await self.stub.CreateSession(
@@ -106,44 +123,7 @@ class MIIClient:
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
 
 
-class MIINonPersistentClient:
-    def __init__(self, task, deployment_name):
-        self.task = task
-        self.deployment_name = deployment_name
+def client(model_or_deployment_name: str) -> MIIClient:
+    mii_config = get_mii_config(model_or_deployment_name)
 
-    def query(self, request_dict, **query_kwargs):
-        assert (
-            self.deployment_name in mii.non_persistent_models
-        ), f"deployment: {self.deployment_name} not found"
-        task_methods = GRPC_METHOD_TABLE[self.task]
-        inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
-
-        # TODO: refactor so this code is shared between non-persistent and
-        # persistent deployments in method_table.py
-        if self.task == TaskType.QUESTION_ANSWERING:
-            if "question" not in request_dict or "context" not in request_dict:
-                raise Exception(
-                    "Question Answering Task requires 'question' and 'context' keys")
-            args = (request_dict["question"], request_dict["context"])
-            kwargs = query_kwargs
-
-        elif self.task == TaskType.CONVERSATIONAL:
-            conv = task_methods.create_conversation(request_dict)
-            args = (conv, )
-            kwargs = query_kwargs
-
-        else:
-            args = (request_dict["query"], )
-            kwargs = query_kwargs
-
-        return task_methods.run_inference(inference_pipeline, args, query_kwargs)
-
-    def terminate(self):
-        print(f"Terminating {self.deployment_name}...")
-        del mii.non_persistent_models[self.deployment_name]
-
-
-def terminate_restful_gateway(deployment_name):
-    mii_config = _get_mii_config(deployment_name)
-    if mii_config.enable_restful_api:
-        requests.get(f"http://localhost:{mii_config.restful_api_port}/terminate")
+    return MIIClient(mii_config)

@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 import os
-from mii.utils import mii_cache_path
+from mii.legacy.utils import mii_cache_path
 
 
 def supported_models_from_huggingface():

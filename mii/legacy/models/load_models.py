@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 import os
-import mii
+import mii.legacy as mii
 import torch
 import inspect
 import deepspeed
@@ -33,7 +33,7 @@ def load_models(model_config):
 
     provider = model_config.provider
     if provider == mii.constants.ModelProvider.HUGGING_FACE:
-        from mii.models.providers.huggingface import hf_provider
+        from mii.legacy.models.providers.huggingface import hf_provider
 
         inference_pipeline = hf_provider(model_config)
         if model_config.meta_tensor:
@@ -60,7 +60,7 @@ def load_models(model_config):
         inf_config["config"] = inference_pipeline.neox_args
         """
     elif provider == mii.constants.ModelProvider.DIFFUSERS:
-        from mii.models.providers.diffusers import diffusers_provider
+        from mii.legacy.models.providers.diffusers import diffusers_provider
         inference_pipeline = diffusers_provider(model_config)
     else:
         raise ValueError(f"Unknown model provider {provider}")

@@ -75,7 +75,7 @@ with open("mii/version.py", 'w') as fd:
 thisdir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(thisdir, 'README.md'), encoding='utf-8') as fin:
     readme_text = fin.read()
-
+print("PACKAGES", find_packages())
 setup(name="deepspeed-mii",
       version=version_str,
       long_description=readme_text,
@@ -90,7 +90,8 @@ setup(name="deepspeed-mii",
       },
       install_requires=install_requires,
       extras_require=extras_require,
-      packages=find_packages(),
+      packages=find_packages(exclude=("tests",
+                                      )),
       classifiers=[
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',

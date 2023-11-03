@@ -6,10 +6,10 @@ import uuid
 
 from abc import ABC, abstractmethod
 from transformers import Conversation
-from mii.constants import TaskType
-from mii.grpc_related.proto import modelresponse_pb2
-from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
-from mii.models.utils import ImageResponse
+from mii.legacy.constants import TaskType
+from mii.legacy.grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
+from mii.legacy.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
+from mii.legacy.models.utils import ImageResponse
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):

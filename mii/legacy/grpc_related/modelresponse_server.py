@@ -7,29 +7,24 @@ from concurrent import futures
 import logging
 
 import grpc
-
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from .proto import modelresponse_pb2_grpc
+from .proto import legacymodelresponse_pb2_grpc as modelresponse_pb2_grpc
 import sys
 import threading
 import time
-import queue
 
-from mii.constants import (
+from mii.legacy.constants import (
     GRPC_MAX_MSG_SIZE,
     CREATE_SESSION_METHOD,
     DESTROY_SESSION_METHOD,
     TERMINATE_METHOD,
     LB_MAX_WORKER_THREADS,
     SERVER_SHUTDOWN_TIMEOUT,
-    STREAM_RESPONSE_QUEUE_TIMEOUT,
     TaskType,
 )
-from mii.task_methods import TASK_METHODS_DICT
-from mii.client import create_channel
-from mii.utils import unpack_proto_query_kwargs
-
-from mii.constants import GenerationFinishReason
+from mii.legacy.method_table import GRPC_METHOD_TABLE
+from mii.legacy.client import create_channel
+from mii.legacy.utils import unpack_proto_query_kwargs
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -51,19 +46,37 @@ class ModelResponse(ServiceBase):
     """
     Implementation class of an MII inference server
     """
-    def __init__(self, async_pipeline=None):
+    def __init__(self, inference_pipeline):
         super().__init__()
-        self.inference_pipeline = async_pipeline
-        self.method_name_to_task = {m.method: t for t, m in TASK_METHODS_DICT.items()}
+        self.inference_pipeline = inference_pipeline
+        self.method_name_to_task = {m.method: t for t, m in GRPC_METHOD_TABLE.items()}
         self.lock = threading.Lock()
 
+    def _get_model_time(self, model, sum_times=False):
+        model_times = []
+        # Only grab model times if profiling was enabled/exists
+        if getattr(model, "model_profile_enabled", False):
+            model_times = model.model_times()
+
+        if len(model_times) > 0:
+            if sum_times:
+                model_time = sum(model_times)
+            else:
+                # Unclear how to combine values, so just grab the most recent one
+                model_time = model_times[-1]
+        else:
+            # no model times were captured
+            model_time = -1
+        return model_time
+
     def CreateSession(self, request, context):
-        task_methods = TASK_METHODS_DICT[TaskType.TEXT_GENERATION]
+        task_methods = GRPC_METHOD_TABLE[TaskType.TEXT_GENERATION]
         task_methods.create_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def DestroySession(self, request, context):
-        self.inference_pipeline.destroy_session(request.session_id)
+        task_methods = GRPC_METHOD_TABLE[TaskType.TEXT_GENERATION]
+        task_methods.destroy_session(request.session_id)
         return google_dot_protobuf_dot_empty__pb2.Empty()
 
     def _run_inference(self, method_name, request_proto):
@@ -71,54 +84,44 @@ class ModelResponse(ServiceBase):
             raise ValueError(f"unknown method: {method_name}")
 
         task = self.method_name_to_task[method_name]
-        if task not in TASK_METHODS_DICT:
+        if task not in GRPC_METHOD_TABLE:
             raise ValueError(f"unknown task: {task}")
 
-        task_methods = TASK_METHODS_DICT[task]
+        task_methods = GRPC_METHOD_TABLE[task]
         args, kwargs = task_methods.unpack_request_from_proto(request_proto)
 
-        session_id = kwargs.pop("session_id", None)
-
         start = time.time()
-        uid = self.inference_pipeline.put_request(args, kwargs, session_id)
-        response = self.inference_pipeline.get_response(uid)
+        with self.lock:
+            response = task_methods.run_inference(self.inference_pipeline, args, kwargs)
         end = time.time()
 
-        if session_id is None:
-            self.inference_pipeline.destroy_session(session_id, uid)
+        model_time = (self._get_model_time(self.inference_pipeline.model,
+                                           sum_times=True) if hasattr(
+                                               self.inference_pipeline,
+                                               "model") else -1)
 
-        return task_methods.pack_response_to_proto(response, end - start, -1)
+        return task_methods.pack_response_to_proto(response, end - start, model_time)
 
     def GeneratorReply(self, request, context):
         return self._run_inference("GeneratorReply", request)
 
-    def _run_inference_stream(self, method_name, request_proto) -> int:
-        task = self.method_name_to_task[method_name]
-        task_methods = TASK_METHODS_DICT[task]
-        args, kwargs = task_methods.unpack_request_from_proto(request_proto)
+    def Txt2ImgReply(self, request, context):
+        return self._run_inference("Txt2ImgReply", request)
 
-        session_id = kwargs.pop("session_id", None)
-        kwargs["stream"] = True
-        return self.inference_pipeline.put_request(args, kwargs, session_id)
+    def ClassificationReply(self, request, context):
+        return self._run_inference("ClassificationReply", request)
 
-    def GeneratorReplyStream(self, request, context):
-        method_name = "GeneratorReply"
-        task = self.method_name_to_task[method_name]
-        task_methods = TASK_METHODS_DICT[task]
-        _, kwargs = task_methods.unpack_request_from_proto(request)
-        session_id = kwargs.pop("session_id", None)
+    def QuestionAndAnswerReply(self, request, context):
+        return self._run_inference("QuestionAndAnswerReply", request)
 
-        uid = self._run_inference_stream(method_name, request)
-        while True:
-            r = self.inference_pipeline.get_response(uid)
-            done = r[0].finish_reason != GenerationFinishReason.NONE
-            response = task_methods.pack_response_to_proto(r, 0.0, 0.0)
-            yield response
-            if done:
-                break
+    def FillMaskReply(self, request, context):
+        return self._run_inference("FillMaskReply", request)
 
-        if session_id is None:
-            self.inference_pipeline.destroy_session(session_id, uid)
+    def TokenClassificationReply(self, request, context):
+        return self._run_inference("TokenClassificationReply", request)
+
+    def ConversationalReply(self, request, context):
+        return self._run_inference("ConversationalReply", request)
 
 
 class AtomicCounter:
@@ -131,10 +134,6 @@ class AtomicCounter:
             current_value = self.value
             self.value += 1
             return current_value
-
-    def get(self):
-        with self.lock:
-            return self.value
 
 
 def _get_grpc_method_name(method):
@@ -171,18 +170,6 @@ class ParallelStubInvoker:
                                proto_request),
             self.asyncio_loop).result()
 
-    def invoke_stream(self, method_name, proto_request, result_queue):
-        async def invoke_stream_async():
-            stub = self.stubs[0]  # Only the first stub is used for streaming
-            method = getattr(stub, method_name)
-            response = method(proto_request)
-
-            async for r in response:
-                result_queue.put(r)
-
-        return asyncio.run_coroutine_threadsafe(invoke_stream_async(),
-                                                self.asyncio_loop).result()
-
 
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
     def __init__(self, model_config):
@@ -210,9 +197,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
     def intercept_service(self, continuation, handler_call_details):
         next_handler = continuation(handler_call_details)
-
-        call_count = self.counter.get_and_increment()
-        replica_index = call_count % len(self.stubs)
+        assert next_handler.unary_unary is not None
 
         def invoke_intercept_method(request_proto, context):
             method_name = _get_grpc_method_name(handler_call_details.method)
@@ -224,7 +209,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
 
-            call_count = self.counter.get()
+            call_count = self.counter.get_and_increment()
             replica_index = call_count % len(self.stubs)
 
             if method_name == CREATE_SESSION_METHOD:
@@ -250,53 +235,25 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             ret = self.stubs[replica_index].invoke(method_name, request_proto)
             return ret
 
-        if next_handler.unary_unary is not None:
-            return grpc.unary_unary_rpc_method_handler(
-                invoke_intercept_method,
-                request_deserializer=next_handler.request_deserializer,
-                response_serializer=next_handler.response_serializer)
-        else:
-            method_name = _get_grpc_method_name(handler_call_details.method)
-            result_queue = queue.Queue()
-
-            def call_invoker(request_proto, context):
-                self.stubs[replica_index].invoke_stream(method_name,
-                                                        request_proto,
-                                                        result_queue)
-
-            def invoke_intercept_method_stream(request_proto, context):
-                threading.Thread(target=call_invoker,
-                                 args=(request_proto,
-                                       context)).start()
-                while True:
-                    try:
-                        response_proto = result_queue.get(
-                            timeout=STREAM_RESPONSE_QUEUE_TIMEOUT)
-                        yield response_proto
-                        if response_proto.details[0].finish_reason != str(
-                                GenerationFinishReason.NONE):
-                            break
-                    except queue.Empty:
-                        print(
-                            f"Haven't received a streaming response in {STREAM_RESPONSE_QUEUE_TIMEOUT} second(s)"
-                        )
-                        break
-
-            return grpc.unary_stream_rpc_method_handler(
-                invoke_intercept_method_stream,
-                request_deserializer=next_handler.request_deserializer,
-                response_serializer=next_handler.response_serializer)
+        return grpc.unary_unary_rpc_method_handler(
+            invoke_intercept_method,
+            request_deserializer=next_handler.request_deserializer,
+            response_serializer=next_handler.response_serializer,
+        )
 
 
 def _do_serve(service_impl, port, interceptors=[]):
     stop_event = service_impl.get_stop_event()
-
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=LB_MAX_WORKER_THREADS),
-                         interceptors=interceptors,
-                         options=[("grpc.max_send_message_length",
-                                   GRPC_MAX_MSG_SIZE),
-                                  ("grpc.max_receive_message_length",
-                                   GRPC_MAX_MSG_SIZE)])
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=LB_MAX_WORKER_THREADS),
+        interceptors=interceptors,
+        options=[
+            ("grpc.max_send_message_length",
+             GRPC_MAX_MSG_SIZE),
+            ("grpc.max_receive_message_length",
+             GRPC_MAX_MSG_SIZE),
+        ],
+    )
     modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)
     server.add_insecure_port(f"[::]:{port}")
     print(f"About to start server")
@@ -306,10 +263,8 @@ def _do_serve(service_impl, port, interceptors=[]):
     server.stop(SERVER_SHUTDOWN_TIMEOUT)
 
 
-def serve_inference(async_pipeline, port):
-    async_pipeline.start()
-    _do_serve(ModelResponse(async_pipeline=async_pipeline), port)
-    async_pipeline.shutdown()
+def serve_inference(inference_pipeline, port):
+    _do_serve(ModelResponse(inference_pipeline), port)
 
 
 def serve_load_balancing(model_config, lb_port):

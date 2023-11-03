@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 import os
-import mii
+import mii.legacy as mii
 
 from .logging import logger
 from .models.score import create_score_file

@@ -13,25 +13,49 @@ class DeploymentType(str, Enum):
 
 class TaskType(str, Enum):
     TEXT_GENERATION = "text-generation"
+    TEXT_CLASSIFICATION = "text-classification"
+    QUESTION_ANSWERING = "question-answering"
+    FILL_MASK = "fill-mask"
+    TOKEN_CLASSIFICATION = "token-classification"
+    CONVERSATIONAL = "conversational"
+    TEXT2IMG = "text-to-image"
 
 
 class ModelProvider(str, Enum):
     HUGGING_FACE = "hugging-face"
-
-
-class GenerationFinishReason(str, Enum):
-    STOP = "stop"
-    LENGTH = "length"
-    NONE = "none"
+    ELEUTHER_AI = "eleuther-ai"
+    DIFFUSERS = "diffusers"
 
 
 SUPPORTED_MODEL_TYPES = {
+    'roberta': ModelProvider.HUGGING_FACE,
+    'xlm-roberta': ModelProvider.HUGGING_FACE,
+    'gpt2': ModelProvider.HUGGING_FACE,
+    'distilbert': ModelProvider.HUGGING_FACE,
+    'bert': ModelProvider.HUGGING_FACE,
+    'gpt_neo': ModelProvider.HUGGING_FACE,
+    'gptj': ModelProvider.HUGGING_FACE,
     'opt': ModelProvider.HUGGING_FACE,
+    'bloom': ModelProvider.HUGGING_FACE,
+    'gpt-neox': ModelProvider.ELEUTHER_AI,
+    'stable-diffusion': ModelProvider.DIFFUSERS,
     'llama': ModelProvider.HUGGING_FACE
 }
 
 REQUIRED_KEYS_PER_TASK = {
     TaskType.TEXT_GENERATION: ["query"],
+    TaskType.TEXT_CLASSIFICATION: ["query"],
+    TaskType.QUESTION_ANSWERING: ["context",
+                                  "question"],
+    TaskType.FILL_MASK: ["query"],
+    TaskType.TOKEN_CLASSIFICATION: ["query"],
+    TaskType.CONVERSATIONAL: [
+        "text",
+        "conversation_id",
+        "past_user_inputs",
+        "generated_responses",
+    ],
+    TaskType.TEXT2IMG: ["query"],
 }
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
@@ -56,12 +80,9 @@ TERMINATE_METHOD = "Terminate"
 CREATE_SESSION_METHOD = "CreateSession"
 DESTROY_SESSION_METHOD = "DestroySession"
 
-LB_MAX_WORKER_THREADS = 256
+LB_MAX_WORKER_THREADS = 32
 
 SERVER_SHUTDOWN_TIMEOUT = 10
 
 RESTFUL_GATEWAY_SHUTDOWN_TIMEOUT = 1
 RESTFUL_API_PATH = "mii"
-
-STREAM_RESPONSE_QUEUE_TIMEOUT = 600
-ZMQ_RECV_TIMEOUT = 5 * 1000

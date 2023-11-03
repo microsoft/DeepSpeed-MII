@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import logging
 import sys
+import logging
 
 log_levels = {
     "debug": logging.DEBUG,
