@@ -21,24 +21,28 @@
 
 - [DeepSpeed-MII](#deepspeed-model-implementations-for-inference)
 - [Key Technologies](#key-technologies)
-- [How does MII work?](#deepspeed-fastgen)
+- [How does MII work?](#how-does-mii-work)
 - [Supported Models](#supported-models)
 - [Getting Started](#getting-started-with-mii)
-- [DeepSpeed-MII Legacy](#deepspeed-mii-legacy)
 
 <!-- tocstop -->
 
 # DeepSpeed Model Implementations for Inference
+
+Introducing DeepSpeed-MII, an open-source Python library designed by DeepSpeed to democratize powerful model inference with a focus on high-throughput, low latency, and cost-effectiveness.
+
+* DeepSpeed-MII v0.1 introduces several features such as blocked KV-caching, continuous batching, Dynamic SplitFuse, tensor parallelism, and high-performance CUDA kernels to support fast high throughput text-generation for LLMs such as Llama-2-70B. DeepSpeed-MII delivers up to 2.3 times higher effective throughput compared to leading systems such as vLLM. For detailed performance results please see our [DeepSpeed-FastGen blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen).
 
 <div align="center">
  <img src="docs/images/fastgen-hero-light.png#gh-light-mode-only" width="800px">
  <img src="docs/images/fastgen-hero-dark.png#gh-dark-mode-only" width="800px">
 </div>
 
-Introducing DeepSpeed-MII, an open-source Python library designed by DeepSpeed to democratize powerful model inference with a focus on low latency and cost-effectiveness. We leverage several features such as blocked KV-caching, continuous batching, Dynamic SplitFuse, tensor parallelism, and high-performance CUDA kernels to deliver up to 2.3 times higher effective throughput compared to leading systems such as vLLM. DeepSpeed-MII delivers this performance empowers seamless, high-throughput inference for language models like LLaMA-70B, offering a user-friendly serving and pipeline API. For detailed performance results please see our [blog for further details](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen).
-
+* We first [announced MII](https://www.deepspeed.ai/2022/10/10/mii.html) in 2022, which covers all prior releases up to v0.0.9. In addition to language models, we also support accelerating [text2image models like Stable Diffusion](examples/benchmark/txt2img). For more details on our previous releases please see our [legacy APIs](mii/legacy/).
 
 # Key Technologies
+
+## MII for High-Throughput Text Generation
 
 DeepSpeed-MII provides accelerated text-generation inference through the use of four key technologies:
 
@@ -48,6 +52,16 @@ DeepSpeed-MII provides accelerated text-generation inference through the use of 
 * High Performance CUDA Kernels
 
 For a deeper dive into understanding these features please [refer to our blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen) which also includes a detailed performance analysis.
+
+## MII Legacy
+
+In the past, MII introduced several [key performance optimizations](https://www.deepspeed.ai/2022/10/10/mii.html#inference-optimizations-with-mii) for low-latency serving scenarios:
+
+* DeepFusion for Transformers
+* Multi-GPU Inference with Tensor-Slicing
+* ZeRO-Inference for Resource Constrained Systems
+* Compiler Optimizations
+
 
 # How does MII work?
 
@@ -73,12 +87,19 @@ model family | size range | ~model count
 [mistral](https://huggingface.co/models?other=mistral) | 7B | 1,100
 [opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 900
 
+## MII Legacy Model Support
+
+MII Legacy APIs support over 50,000 different models including BERT, RoBERTa, Stable Diffusion, and other text-generation models like Bloom, GPT-J, etc. For a full list please see our [legacy supported models table](mii/legacy/#supported-models-and-tasks).
 
 # Getting Started with MII
 
 DeepSpeed-MII allows users to create non-persistent and persistent deployments for supported models in just a few lines of code.
 
-## Install
+- [Installation](#installation)
+- [Non-Persistent Pipeline](#non-persistent-pipeline)
+- [Persistent Deployment](#persistent-deployment)
+
+## Installation
 
 The fasest way to get started is with our [PyPI release of DeepSpeed-MII](https://pypi.org/project/deepspeed-mii/) which means you can get started within minutes via:
 
@@ -99,9 +120,9 @@ response = pipe("DeepSpeed is", max_new_tokens=128)
 print(response)
 ```
 
-### Model parallelism
+### Tensor parallelism
 
-Taking advantage of multi-GPU systems for greater performance is easy with MII. When run with the `deepspeed` launcher, model parallelism is automatically controlled by the `--num_gpus` flag:
+Taking advantage of multi-GPU systems for greater performance is easy with MII. When run with the `deepspeed` launcher, tensor parallelism is automatically controlled by the `--num_gpus` flag:
 
 ```bash
 # Run on a single GPU
@@ -210,11 +231,6 @@ Users can also control the generation characteristics for individual prompts (i.
 
 - `max_length: int` Sets the per-prompt maximum token length for prompt + response.
 - `max_new_tokens: int` Sets the maximum number of tokens generated in the response.
-
-
-# DeepSpeed MII Legacy
-
-The DeepSpeed-MII project has gone through a significant restructure for its v0.1 release. However, we are still exposing the pre-v0.1 version of MII for future releases. If you want to utilize this older version please refer to our [old landing page](mii/legacy/) for details on getting started.
 
 
 # Contributing
