@@ -12,14 +12,16 @@
 ## Latest News
 
 * [2023/11] [DeepSpeed-FastGen: High-throughput Text Generation for LLMs via MII and DeepSpeed-Inference](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen)
+* [2022/11] [Stable Diffusion Image Generation under 1 second w. DeepSpeed MII](examples/benchmark/txt2img)
+* [2022/10] [Announcing DeepSpeed Model Implementations for Inference (MII)](https://www.deepspeed.ai/2022/10/10/mii.html)
 
 # Contents
 
 <!-- toc -->
 
 - [DeepSpeed-MII](#deepspeed-model-implementations-for-inference)
-- [How does MII work?](#how-does-mii-work)
-- [DeepSpeed-FastGen](#deepspeed-fastgen)
+- [Key Technologies](#key-technologies)
+- [How does MII work?](#deepspeed-fastgen)
 - [Supported Models](#supported-models)
 - [Getting Started](#getting-started-with-mii)
 - [DeepSpeed-MII Legacy](#deepspeed-mii-legacy)
