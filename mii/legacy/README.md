@@ -103,7 +103,7 @@ pip install deepspeed-mii
 
 MII-Public can be deployed on-premises or on any cloud offering with just a few lines of code. MII creates a lightweight GRPC server to support this form of deployment and provides a GRPC inference endpoint for queries.
 
-Several deployment and query examples can be found here: [examples/local](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/local)
+Several deployment and query examples can be found here: [examples/local](examples/local)
 
 As an example here is a deployment of the [bigscience/bloom-560m](https://huggingface.co/bigscience/bloom-560m) model from Hugging Face:
 
@@ -231,7 +231,7 @@ This deployment process is very similar to local deployments and we will modify 
 
 ---
 
-Several other AML deployment examples can be found here: [examples/aml](https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/aml)
+Several other AML deployment examples can be found here: [examples/aml](examples/aml)
 
 **Setup**
 
@@ -303,19 +303,19 @@ For latency-critical scenarios, where a small batch size of 1 is often used, MII
 
 4. Up to 9x for various text representation tasks like fill-mask, text classification, question answering, and token classification using RoBERTa- and BERT- based models (*Figures 5 and 6*).
 
-[ ![multi gpu latency](/docs/images/llm-latency-sd-latency.png) ](/docs/images/llm-latency-sd-latency-zoom.png)
+[ ![multi gpu latency](docs/images/llm-latency-sd-latency.png) ](docs/images/llm-latency-sd-latency-zoom.png)
 *Figure 2: (Left) Best achievable latency for large models. MII-Azure (int8) offers 5.7X lower latency compared to Baseline for Bloom-176B. (Right) Stable Diffusion text to image generation latency comparison.*
 
-[ ![OPT and BLOOM Models](/docs/images/opt-bloom.png) ](/docs/images/opt-bloom.png)
+[ ![OPT and BLOOM Models](docs/images/opt-bloom.png) ](docs/images/opt-bloom.png)
 *Figure 3: Latency comparison for OPT and BLOOM models. MII-Azure is up to 2.8x faster than baseline.*
 
-[ ![GPT Models](/docs/images/gpt.png) ](/docs/images/mii/gpt.png)
+[ ![GPT Models](docs/images/gpt.png) ](docs/images/mii/gpt.png)
 *Figure 4: Latency comparison for GPT models. MII-Azure is up to 3x faster than baseline.*
 
-[ ![Roberta Models](/docs/images/roberta.png) ](/docs/images/roberta.png)
+[ ![Roberta Models](docs/images/roberta.png) ](docs/images/roberta.png)
 *Figure 5: Latency comparison for RoBERTa models. MII offers up to 9x lower model latency and up to 3x lower end-to-end latency than baseline on several tasks and RoBERTa variants [^overhead_details].*
 
-[ ![Bert Models](/docs/images/bert.png) ](/docs/images/bert.png)
+[ ![Bert Models](docs/images/bert.png) ](docs/images/bert.png)
 *Figure 6: Latency comparison for BERT models. MII offers up to 8.9x lower model latency and up to 4.5x end-to-end latency across several tasks and BERT variants[^overhead_details].*
 
 [^overhead_details]: The end-to-end latency of an inference workload is comprised of two components: i) actual model execution, and ii) pre-/post-processing before and after the model execution. MII optimizes the actual model execution but leaves the pre-/post-processing pipeline for future optimizations. We notice that text representation tasks have significant pre-/post-processing overhead (*Figures G and H*). We plan to address those in a future update.
@@ -326,10 +326,10 @@ MII can significantly reduce the inference cost of very expensive language model
 
 *Figures 7 and 8* show that MII-Public offers over 10x throughput improvement and cost reduction compared to the baseline, respectively. Furthermore, MII-Azure offers over 30x improvement in throughput and cost compared to the baseline.
 
-[ ![tput large models](/docs/images/tput-llms.png) ](/docs/images/tput-llms.png)
+[ ![tput large models](docs/images/tput-llms.png) ](docs/images/tput-llms.png)
 *Figure 7: Throughput comparison per A100-80GB GPU for large models. MII-Public offers over 15x throughput improvement while MII-Azure offers over 40x throughput improvement.*
 
-[ ![azure cost](/docs/images/azure-cost.png) ](/docs/images/azure-cost.png)
+[ ![azure cost](docs/images/azure-cost.png) ](docs/images/azure-cost.png)
 *Figure 8: Cost of generating 1 million tokens on Azure with different model types. MII-Azure reduces the cost of generation by over 40x.*
 
 # Community Tutorials
