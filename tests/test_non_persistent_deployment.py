@@ -4,7 +4,7 @@
 # DeepSpeed Team
 
 import pytest
-import mii
+import mii.legacy as mii
 
 
 @pytest.mark.parametrize("deployment_type", [mii.DeploymentType.NON_PERSISTENT])

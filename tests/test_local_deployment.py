@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 import pytest
-import mii
+import mii.legacy as mii
 
 
 @pytest.mark.parametrize(

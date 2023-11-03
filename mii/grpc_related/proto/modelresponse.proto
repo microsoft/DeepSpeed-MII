@@ -34,6 +34,12 @@ service ModelResponse {
   rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
   rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
   rpc Txt2ImgReply(MultiStringRequest) returns (ImageReply) {}
+
+  rpc GeneratorReplyStream (MultiStringRequest) returns (stream GenerationReply) {}
+}
+
+message Dictionary {
+    map<string, Value> values = 1;
 }
 
 message Value {
@@ -42,6 +48,7 @@ message Value {
         int64 ivalue = 2;
         float fvalue = 3;
         bool bvalue = 4;
+        Dictionary mvalue = 5;
     }
 }
 
@@ -69,6 +76,23 @@ message MultiStringReply {
   repeated string response = 1;
   float time_taken = 2;
   float model_time_taken = 3;
+}
+
+message GenerationDetails {
+  string finish_reason = 1;
+  int64 prompt_tokens = 2;
+  int64 generated_tokens = 3;
+}
+
+message GenerationReply {
+  repeated string response = 1;
+  // A request may contain multiple prompts and they produce different number of tokens.
+  // When streaming output is enabled, a response may contain generated tokens only for some prompts.
+  // `indices` represents the indices of prompts for which `response` and `details` are provided.
+  repeated int64 indices = 2;
+  repeated GenerationDetails details = 3;
+  float time_taken = 4;
+  float model_time_taken = 5;
 }
 
 message QARequest {

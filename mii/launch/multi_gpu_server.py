@@ -2,18 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import os
 import argparse
 import base64
 import json
+import os
 
 from mii.config import ModelConfig
-from mii.models.load_models import load_models
 from mii.grpc_related.modelresponse_server import serve_inference, serve_load_balancing
 from mii.grpc_related.restful_gateway import RestfulGatewayThread
+from mii.pipeline import async_pipeline
 
 
-def b64_encoded_config(config_str):
+def b64_encoded_config(config_str: str) -> ModelConfig:
     # str -> bytes
     b64_bytes = config_str.encode()
     # decode b64 bytes -> json bytes
@@ -24,7 +24,7 @@ def b64_encoded_config(config_str):
     return ModelConfig(**config_dict)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--deployment-name", type=str, help="Name of deployment")
     parser.add_argument(
@@ -38,6 +38,7 @@ def main():
         default=0,
         help="Port to user for DeepSpeed inference server.",
     )
+    parser.add_argument("--zmq-port", type=int, default=0, help="Port to use for ZMQ.")
     parser.add_argument("--load-balancer",
                         action="store_true",
                         help="Launch load balancer process.")
@@ -85,9 +86,8 @@ def main():
         assert args.server_port, "--server-port must be provided."
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
         port = args.server_port + local_rank
-
-        inference_pipeline = load_models(args.model_config)
-
+        args.model_config.zmq_port_number = args.zmq_port
+        inference_pipeline = async_pipeline(args.model_config)
         print(f"Starting server on port: {port}")
         serve_inference(inference_pipeline, port)
 

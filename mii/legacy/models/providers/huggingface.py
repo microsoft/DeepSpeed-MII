@@ -12,7 +12,7 @@ from pathlib import Path
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from huggingface_hub import snapshot_download
 
-from mii.utils import mii_cache_path, is_aml
+from mii.legacy.utils import mii_cache_path, is_aml
 
 
 class MetaTensorPipeline(object):

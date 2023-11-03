@@ -4,8 +4,8 @@
 # DeepSpeed Team
 import grpc
 
-import mii
-from mii.logging import logger
+import mii.legacy as mii
+from mii.legacy.logging import logger
 
 
 def terminate(deployment_name):

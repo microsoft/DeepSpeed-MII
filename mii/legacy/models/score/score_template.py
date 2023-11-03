@@ -9,7 +9,7 @@ import json
 import time
 import torch
 
-import mii
+import mii.legacy as mii
 
 model = None
 

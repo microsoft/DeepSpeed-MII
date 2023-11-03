@@ -1,0 +1,103 @@
+// Copyright 2015 gRPC authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+/*option java_multiple_files = true;
+option java_package = "io.grpc.examples.helloworld";
+option java_outer_classname = "HelloWorldProto";
+option objc_class_prefix = "HLW";*/
+
+import "google/protobuf/empty.proto";
+
+package legacymodelresponse;
+
+service ModelResponse {
+  rpc Terminate (google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc CreateSession (SessionID) returns (google.protobuf.Empty) {}
+  rpc DestroySession (SessionID) returns (google.protobuf.Empty) {}
+  rpc GeneratorReply (MultiStringRequest) returns (MultiStringReply) {}
+  rpc ClassificationReply (SingleStringRequest) returns (SingleStringReply) {}
+  rpc QuestionAndAnswerReply(QARequest) returns (SingleStringReply) {}
+  rpc FillMaskReply(SingleStringRequest) returns (SingleStringReply) {}
+  rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
+  rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
+  rpc Txt2ImgReply(MultiStringRequest) returns (ImageReply) {}
+}
+
+message Value {
+    oneof oneof_values {
+        string svalue = 1;
+        int64 ivalue = 2;
+        float fvalue = 3;
+        bool bvalue = 4;
+    }
+}
+
+message SessionID {
+  string session_id = 1;
+}
+
+message SingleStringRequest {
+  string request = 1;
+  map<string,Value> query_kwargs = 2;
+}
+
+message MultiStringRequest {
+  repeated string request = 1;
+  map<string,Value> query_kwargs = 2;
+}
+
+message SingleStringReply {
+  string response = 1;
+  float time_taken = 2;
+  float model_time_taken = 3;
+}
+
+message MultiStringReply {
+  repeated string response = 1;
+  float time_taken = 2;
+  float model_time_taken = 3;
+}
+
+message QARequest {
+  string question = 1;
+  string context = 2;
+  map<string,Value> query_kwargs = 3;
+}
+
+message ConversationRequest {
+  string text = 1;
+  string conversation_id = 2;
+  repeated string past_user_inputs = 3;
+  repeated string generated_responses = 4;
+  map<string,Value> query_kwargs = 5;
+}
+
+message ConversationReply {
+  string conversation_id = 1;
+  repeated string past_user_inputs = 2;
+  repeated string generated_responses = 3;
+  float time_taken = 4;
+  float model_time_taken = 5;
+}
+
+message ImageReply {
+  repeated bytes images = 1;
+  repeated bool nsfw_content_detected = 2;
+  string mode = 3;
+  int64 size_w = 4;
+  int64 size_h = 5;
+  float time_taken = 6;
+}
