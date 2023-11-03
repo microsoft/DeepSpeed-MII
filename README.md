@@ -27,11 +27,11 @@
 
 <!-- tocstop -->
 
-# DeepSpeed Model Implementations for Inference
+# DeepSpeed Model Implementations for Inference (MII)
 
-Introducing DeepSpeed-MII, an open-source Python library designed by DeepSpeed to democratize powerful model inference with a focus on high-throughput, low latency, and cost-effectiveness.
+Introducing MII, an open-source Python library designed by DeepSpeed to democratize powerful model inference with a focus on high-throughput, low latency, and cost-effectiveness.
 
-* DeepSpeed-MII v0.1 introduces several features such as blocked KV-caching, continuous batching, Dynamic SplitFuse, tensor parallelism, and high-performance CUDA kernels to support fast high throughput text-generation for LLMs such as Llama-2-70B. DeepSpeed-MII delivers up to 2.3 times higher effective throughput compared to leading systems such as vLLM. For detailed performance results please see our [DeepSpeed-FastGen blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen).
+* MII v0.1 introduces several features such as blocked KV-caching, continuous batching, Dynamic SplitFuse, tensor parallelism, and high-performance CUDA kernels to support fast high throughput text-generation for LLMs such as Llama-2-70B. MII delivers up to 2.3 times higher effective throughput compared to leading systems such as vLLM. For detailed performance results please see our [DeepSpeed-FastGen blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen).
 
 <div align="center">
  <img src="docs/images/fastgen-hero-light.png#gh-light-mode-only" width="800px">
@@ -44,7 +44,7 @@ Introducing DeepSpeed-MII, an open-source Python library designed by DeepSpeed t
 
 ## MII for High-Throughput Text Generation
 
-DeepSpeed-MII provides accelerated text-generation inference through the use of four key technologies:
+MII provides accelerated text-generation inference through the use of four key technologies:
 
 * Blocked KV Caching
 * Continuous Batching
