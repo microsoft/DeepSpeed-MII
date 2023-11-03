@@ -43,8 +43,8 @@ Introducing DeepSpeed-MII, an open-source Python library designed by DeepSpeed t
 DeepSpeed-MII provides accelerated text-generation inference through the use of four key technologies:
 
 * Blocked KV Caching
-* Continous Batching
-* Dynamic SplitFuse 
+* Continuous Batching
+* Dynamic SplitFuse
 * High Performance CUDA Kernels
 
 For a deeper dive into understanding these features please [refer to our blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen) which also includes a detailed performance analysis.
@@ -80,7 +80,7 @@ DeepSpeed-MII allows users to create non-persistent and persistent deployments f
 
 ## Install
 
-The fasest way to get started is with our [PyPI release of DeepSpeed-MII](https://pypi.org/project/deepspeed-mii/) which means you can get started within minutes via: 
+The fasest way to get started is with our [PyPI release of DeepSpeed-MII](https://pypi.org/project/deepspeed-mii/) which means you can get started within minutes via:
 
 ```bash
 pip install deepspeed-mii
