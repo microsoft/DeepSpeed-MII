@@ -107,7 +107,7 @@ The fasest way to get started is with our [PyPI release of DeepSpeed-MII](https:
 pip install deepspeed-mii
 ```
 
-For ease of use and significant reduction in lengthy compile times that many projects require in this space we distribute a pre-compiled python wheel covering the majority of our custom kernels through a new library called [DeepSpeed-Kernels](https://github.com/microsoft/DeepSpeed-Kernels). We have found this library to be very portable across environments with NVIDIA GPUs with compute capabilities 8.0+ (Ampere+), CUDA 11.6+, and Ubuntu 20+. In most cases you shouldn't even need to know this library exists as it is a dependency of DeepSpeed-MII and will be isntalled with it. However, if for whatever reason you need to compile our kernels manually please see our [advanced installation docs](https://github.com/microsoft/DeepSpeed-Kernels#source).
+For ease of use and significant reduction in lengthy compile times that many projects require in this space we distribute a pre-compiled python wheel covering the majority of our custom kernels through a new library called [DeepSpeed-Kernels](https://github.com/microsoft/DeepSpeed-Kernels). We have found this library to be very portable across environments with NVIDIA GPUs with compute capabilities 8.0+ (Ampere+), CUDA 11.6+, and Ubuntu 20+. In most cases you shouldn't even need to know this library exists as it is a dependency of DeepSpeed-MII and will be installed with it. However, if for whatever reason you need to compile our kernels manually please see our [advanced installation docs](https://github.com/microsoft/DeepSpeed-Kernels#source).
 
 ## Non-Persistent Pipeline
 
