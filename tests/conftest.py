@@ -4,33 +4,22 @@
 # DeepSpeed Team
 
 import pytest
+import time
+import torch
 import os
-import mii.legacy as mii
+import mii
 from types import SimpleNamespace
 
 
-@pytest.fixture(scope="function", params=["fp16"])
-def dtype(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[1])
+@pytest.fixture(scope="function", params=[None])
 def tensor_parallel(request):
-    return request.param
+    if request.param is not None:
+        return request.param
+    return int(os.getenv("WORLD_SIZE", "1"))
 
 
 @pytest.fixture(scope="function", params=[50050])
 def port_number(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def meta_tensor(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def load_with_sys_mem(request):
     return request.param
 
 
@@ -49,19 +38,14 @@ def restful_api_port(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=["text-generation"])
+@pytest.fixture(scope="function", params=[mii.TaskType.TEXT_GENERATION])
 def task_name(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=["bigscience/bloom-560m"])
+@pytest.fixture(scope="function", params=["facebook/opt-1.3b"])
 def model_name(request):
     return request.param
-
-
-@pytest.fixture(scope="function")
-def deployment_name(model_name):
-    return model_name + "-deployment"
 
 
 @pytest.fixture(scope="function", params=[mii.DeploymentType.LOCAL])
@@ -70,17 +54,7 @@ def deployment_type(request):
 
 
 @pytest.fixture(scope="function", params=[True])
-def enable_deepspeed(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[False])
-def enable_zero(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[{}])
-def ds_config(request):
+def all_rank_output(request):
     return request.param
 
 
@@ -88,27 +62,16 @@ def ds_config(request):
 def model_config(
     task_name: str,
     model_name: str,
-    dtype: str,
     tensor_parallel: int,
-    meta_tensor: bool,
-    load_with_sys_mem: bool,
     replica_num: int,
-    enable_deepspeed: bool,
-    enable_zero: bool,
-    ds_config: dict,
+    all_rank_output: bool,
 ):
     config = SimpleNamespace(
+        model_name_or_path=model_name,
         task=task_name,
-        model=model_name,
-        dtype=dtype,
         tensor_parallel=tensor_parallel,
-        model_path=os.getenv("TRANSFORMERS_CACHE",
-                             ""),
-        meta_tensor=meta_tensor,
         replica_num=replica_num,
-        enable_deepspeed=enable_deepspeed,
-        enable_zero=enable_zero,
-        ds_config=ds_config,
+        all_rank_output=all_rank_output,
     )
     return config.__dict__
 
@@ -129,31 +92,38 @@ def mii_config(
     return config.__dict__
 
 
-@pytest.fixture(scope="function", params=[None])
+@pytest.fixture(scope="function", params=[None], ids=["nofail"])
 def expected_failure(request):
     return request.param
 
 
 @pytest.fixture(scope="function")
-def deployment(deployment_name, mii_config, model_config, expected_failure):
+def pipeline(model_config, expected_failure):
     if expected_failure is not None:
         with pytest.raises(expected_failure) as excinfo:
-            mii.deploy(
-                deployment_name=deployment_name,
-                mii_config=mii_config,
-                model_config=model_config,
-            )
+            mii.pipeline(model_config=model_config)
         yield excinfo
     else:
-        mii.deploy(
-            deployment_name=deployment_name,
-            mii_config=mii_config,
-            model_config=model_config,
-        )
-        yield deployment_name
-        mii.terminate(deployment_name)
+        pipe = mii.pipeline(model_config=model_config)
+        yield pipe
+        del pipe.inference_engine
+        del pipe
+        torch.cuda.empty_cache()
 
 
-@pytest.fixture(scope="function", params=[{"query": "DeepSpeed is the greatest"}])
+@pytest.fixture(scope="function")
+def deployment(mii_config, model_config, expected_failure):
+    if expected_failure is not None:
+        with pytest.raises(expected_failure) as excinfo:
+            mii.serve(model_config=model_config, mii_config=mii_config)
+        yield excinfo
+    else:
+        client = mii.serve(model_config=model_config, mii_config=mii_config)
+        yield client
+        client.terminate_server()
+        time.sleep(1)
+
+
+@pytest.fixture(scope="function", params=["DeepSpeed is the greatest"], ids=["query0"])
 def query(request):
     return request.param
