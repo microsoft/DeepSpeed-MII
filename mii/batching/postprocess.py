@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import torch
 
@@ -14,17 +14,34 @@ def run_batch_processing(input_tensor: torch.Tensor,
                          requests: "RaggedRequestBatch",
                          processor_fns: Dict[str,
                                              Any]) -> torch.Tensor:
-    idx_list = []
-    output_list = []
+    idx_list: List[int] = []
+    output_list: List[torch.Tensor] = []
+
+    # Apply all the post-processing functions
     for key, process_fn in processor_fns.items():
+
+        # Get the index of tensors that need to be processed
         idx = [i for i, r in enumerate(requests) if key in r.post_processing]
         if not idx:
+            # Short circuit if there is not work to do
             continue
+
+        # Run post processing on the filtered inputs
         filtered_input = input_tensor[idx]
         idx_list.extend(idx)
         output_list.append(process_fn(filtered_input))
+
+    # If there was no work done, return the input tensor
     if not output_list:
         return input_tensor
+
+    # If there are unprocessed requests, append them to the output
+    unprocessed_idx = list(set(range(len(requests))).difference(idx_list))
+    if unprocessed_idx:
+        idx_list.append(unprocessed_idx)
+        output_list.append(input_tensor[unprocessed_idx])
+
+    # Concatenate and return the output
     output = torch.cat(output_list, dim=0)
     return output[torch.argsort(torch.tensor(idx_list))]
 
