@@ -134,6 +134,7 @@ class RaggedRequest:
     sampler: BaseGenerationSampler
     stop_criterion: BaseGenerationStopCriterion
     stream: bool = False
+    ignore_eos: bool = False
 
     _next_token: Union[None, torch.Tensor] = None
     _is_done: bool = False
@@ -150,6 +151,8 @@ class RaggedRequest:
 
     @property
     def is_done(self) -> bool:
+        if self.ignore_eos:
+            return False
         return self._is_done
 
     @is_done.setter
@@ -536,6 +539,7 @@ class RaggedBatchBase:
         max_length = kwargs.pop("max_length", self.max_length)
         max_new_tokens = kwargs.pop("max_new_tokens", max_length - len(input_tokens))
         stream = kwargs.pop("stream", False)
+        ignore_eos = kwargs.pop("ignore_eos", False)
         # TODO: Add back this check
         # if self.policy.get_length(uid) + len(token_ids) >= max_length:
         #    raise ValueError(f"Session {uid} has reached max length {max_length}.")
@@ -578,6 +582,7 @@ class RaggedBatchBase:
                 sampler=sampler,
                 stop_criterion=stop_criterion,
                 stream=stream,
+                ignore_eos=ignore_eos,
             )
         ]
 
@@ -712,6 +717,8 @@ class MIIAsyncPipeline(RaggedBatchBase):
                     kwargs: Dict,
                     session_id: Union[str,
                                       None] = None) -> int:
+        if not self.is_rank_0:
+            return
         if self.stop_thread:
             raise RuntimeError("The request queue was shutdown.")
 
