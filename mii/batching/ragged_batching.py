@@ -564,6 +564,11 @@ class RaggedBatchBase:
         )
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
+        print("CREATING REQUEST:")
+        print("INPUT TOKENS", input_tokens)
+        print("INPUT_LENGTH", len(input_tokens))
+        print("MAX LENGTH", max_length)
+        print("MAX_NEW_TOKENS", max_new_tokens)
 
         return [
             RaggedRequest(
