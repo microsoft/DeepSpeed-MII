@@ -89,7 +89,11 @@ def load_models(model_config):
         ds_engine.module.eval()  # inference
         inference_pipeline.model = ds_engine.module
 
-    if model_config.load_with_sys_mem:
+    # Set device property only if setter method available.
+    if (
+        model_config.load_with_sys_mem
+        and inference_pipeline.__class__.device.fset is not None
+    ):
         inference_pipeline.device = torch.device(f"cuda:{local_rank}")
 
     # Free up memory used when initially loading models
