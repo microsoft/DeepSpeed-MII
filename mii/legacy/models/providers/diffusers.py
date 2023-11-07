@@ -20,7 +20,8 @@ def diffusers_provider(model_config: ModelConfig):
         kwargs["revision"] = "fp16"
 
     pipeline = attempt_load(DiffusionPipeline.from_pretrained,
-                            model_config.model, model_config.model_path,
+                            model_config.model,
+                            model_config.model_path,
                             kwargs=kwargs)
     pipeline = pipeline.to(f"cuda:{local_rank}")
     pipeline.set_progress_bar_config(disable=True)
