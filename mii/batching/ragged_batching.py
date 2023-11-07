@@ -388,7 +388,7 @@ class RaggedBatchBase:
 
     def _print_profiled_times(self) -> None:
         self._iters += 1
-        if not (self._iters % 100 == 0):
+        if not (self._iters % 10000 == 0):
             return
         for event, times in self._profiled_times.items():
             mean_time = sum(times) / len(times)
