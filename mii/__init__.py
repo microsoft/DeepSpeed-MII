@@ -6,13 +6,13 @@ try:
     import grpc
     from .pipeline import pipeline
     from .server import serve
-    from .client import client
+    from .client import MIIClient, client
 except ImportError as e:
     print("Warning: DeepSpeed-FastGen could not be imported:")
     print(e)
     pass
 
-from .legacy import MIIServer, MIIClient, mii_query_handle, deploy, terminate, DeploymentType, TaskType, aml_output_path, MIIConfig, ModelConfig, get_supported_models
+from .legacy import MIIServer, mii_query_handle, deploy, terminate, DeploymentType, TaskType, aml_output_path, MIIConfig, ModelConfig, get_supported_models
 
 __version__ = "0.0.0"
 try:
