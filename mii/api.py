@@ -100,6 +100,8 @@ def serve(model_name_or_path: str = "",
                                              mii_config=mii_config,
                                              **kwargs)
 
+    # Eventually we will move away from generating score files, leaving this
+    # here as a placeholder for now.
     #MIIServer(mii_config)
     create_score_file(mii_config)
 
