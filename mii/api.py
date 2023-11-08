@@ -5,7 +5,7 @@
 from typing import Optional, Any, Dict, Tuple, Union
 
 import mii
-from mii.backend import MIIClient  #, MIIServer
+from mii.backend import MIIClient  # , MIIServer
 from mii.batching import MIIPipeline, MIIAsyncPipeline
 from mii.config import get_mii_config, ModelConfig, MIIConfig
 from mii.constants import DeploymentType
@@ -16,12 +16,14 @@ from mii.modeling.tokenizers import load_tokenizer
 from mii.utils import import_score_file
 
 
-def _parse_kwargs_to_model_config(model_name_or_path: str = "",
-                                  model_config: Optional[Dict[str,
-                                                              Any]] = None,
-                                  **kwargs) -> Tuple[ModelConfig,
-                                                     Dict[str,
-                                                          Any]]:
+def _parse_kwargs_to_model_config(
+    model_name_or_path: str = "",
+    model_config: Optional[Dict[str,
+                                Any]] = None,
+    **kwargs,
+) -> Tuple[ModelConfig,
+           Dict[str,
+                Any]]:
     if model_config is None:
         model_config = {}
 
@@ -30,7 +32,9 @@ def _parse_kwargs_to_model_config(model_name_or_path: str = "",
     # If model_name_or_path is set in model config, make sure it matches the kwarg
     if model_name_or_path:
         if "model_name_or_path" in model_config:
-            assert model_config.get("model_name_or_path") == model_name_or_path, "model_name_or_path in model_config must match model_name_or_path"
+            assert (
+                model_config.get("model_name_or_path") == model_name_or_path
+            ), "model_name_or_path in model_config must match model_name_or_path"
         model_config["model_name_or_path"] = model_name_or_path
 
     # Fill model_config dict with relevant kwargs, store remaining kwargs in a new dict
@@ -38,7 +42,9 @@ def _parse_kwargs_to_model_config(model_name_or_path: str = "",
     for key, val in kwargs.items():
         if key in ModelConfig.__dict__["__fields__"]:
             if key in model_config:
-                assert model_config.get(key) == val, f"{key} in model_config must match {key}"
+                assert (
+                    model_config.get(key) == val
+                ), f"{key} in model_config must match {key}"
             model_config[key] = val
         else:
             remaining_kwargs[key] = val
@@ -48,14 +54,18 @@ def _parse_kwargs_to_model_config(model_name_or_path: str = "",
     return model_config, remaining_kwargs
 
 
-def _parse_kwargs_to_mii_config(model_name_or_path: str = "",
-                                model_config: Optional[Dict[str,
-                                                            Any]] = None,
-                                mii_config: Optional[Dict[str,
-                                                          Any]] = None,
-                                **kwargs) -> MIIConfig:
+def _parse_kwargs_to_mii_config(
+    model_name_or_path: str = "",
+    model_config: Optional[Dict[str,
+                                Any]] = None,
+    mii_config: Optional[Dict[str,
+                              Any]] = None,
+    **kwargs,
+) -> MIIConfig:
     # Parse all model_config kwargs
-    model_config, remaining_kwargs = _parse_kwargs_to_model_config(model_name_or_path=model_name_or_path, model_config=model_config, **kwargs)
+    model_config, remaining_kwargs = _parse_kwargs_to_model_config(
+        model_name_or_path=model_name_or_path, model_config=model_config, **kwargs
+    )
 
     if mii_config is None:
         mii_config = {}
@@ -64,7 +74,9 @@ def _parse_kwargs_to_mii_config(model_name_or_path: str = "",
 
     # Verify that any model_config kwargs match any existing model_config in the mii_config
     if "model_config" in mii_config:
-        assert mii_config.get("model_config") == model_config, "mii_config['model_config'] must match model_config"
+        assert (
+            mii_config.get("model_config") == model_config
+        ), "mii_config['model_config'] must match model_config"
     else:
         mii_config["model_config"] = model_config
 
@@ -72,7 +84,9 @@ def _parse_kwargs_to_mii_config(model_name_or_path: str = "",
     for key, val in remaining_kwargs.items():
         if key in MIIConfig.__dict__["__fields__"]:
             if key in mii_config:
-                assert mii_config.get(key) == val, f"{key} in mii_config must match {key}"
+                assert (
+                    mii_config.get(key) == val
+                ), f"{key} in mii_config must match {key}"
             mii_config[key] = val
         else:
             raise UnknownArgument(f"Keyword argument {key} not recognized")
@@ -88,21 +102,25 @@ def client(model_or_deployment_name: str) -> MIIClient:
     return MIIClient(mii_config)
 
 
-def serve(model_name_or_path: str = "",
-          model_config: Optional[Dict[str,
-                                      Any]] = None,
-          mii_config: Optional[Dict[str,
-                                    Any]] = None,
-          **kwargs) -> Union[None,
-                             MIIClient]:
-    mii_config = _parse_kwargs_to_mii_config(model_name_or_path=model_name_or_path,
-                                             model_config=model_config,
-                                             mii_config=mii_config,
-                                             **kwargs)
+def serve(
+    model_name_or_path: str = "",
+    model_config: Optional[Dict[str,
+                                Any]] = None,
+    mii_config: Optional[Dict[str,
+                              Any]] = None,
+    **kwargs,
+) -> Union[None,
+           MIIClient]:
+    mii_config = _parse_kwargs_to_mii_config(
+        model_name_or_path=model_name_or_path,
+        model_config=model_config,
+        mii_config=mii_config,
+        **kwargs,
+    )
 
     # Eventually we will move away from generating score files, leaving this
     # here as a placeholder for now.
-    #MIIServer(mii_config)
+    # MIIServer(mii_config)
     create_score_file(mii_config)
 
     if mii_config.deployment_type == DeploymentType.LOCAL:
@@ -125,27 +143,35 @@ def serve(model_name_or_path: str = "",
         print("Please run 'deploy.sh' to bring your deployment online")
 
 
-def pipeline(model_name_or_path: str = "",
-             model_config: Optional[Dict[str,
-                                         Any]] = None,
-             **kwargs) -> MIIPipeline:
-    model_config, remaining_kwargs = _parse_kwargs_to_model_config(model_name_or_path=model_name_or_path, model_config=model_config, **kwargs)
+def pipeline(
+    model_name_or_path: str = "",
+    model_config: Optional[Dict[str,
+                                Any]] = None,
+    **kwargs,
+) -> MIIPipeline:
+    model_config, remaining_kwargs = _parse_kwargs_to_model_config(
+        model_name_or_path=model_name_or_path, model_config=model_config, **kwargs
+    )
     if remaining_kwargs:
         raise UnknownArgument(
             f"Keyword argument(s) {remaining_kwargs.keys()} not recognized")
 
     inference_engine = load_model(model_config)
     tokenizer = load_tokenizer(model_config)
-    inference_pipeline = MIIPipeline(inference_engine=inference_engine,
-                                     tokenizer=tokenizer,
-                                     model_config=model_config)
+    inference_pipeline = MIIPipeline(
+        inference_engine=inference_engine,
+        tokenizer=tokenizer,
+        model_config=model_config,
+    )
     return inference_pipeline
 
 
 def async_pipeline(model_config: ModelConfig) -> MIIAsyncPipeline:
     inference_engine = load_model(model_config)
     tokenizer = load_tokenizer(model_config)
-    inference_pipeline = MIIAsyncPipeline(inference_engine=inference_engine,
-                                          tokenizer=tokenizer,
-                                          model_config=model_config)
+    inference_pipeline = MIIAsyncPipeline(
+        inference_engine=inference_engine,
+        tokenizer=tokenizer,
+        model_config=model_config,
+    )
     return inference_pipeline
