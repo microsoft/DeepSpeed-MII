@@ -20,6 +20,21 @@ import zmq
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils.timer import SynchronizedWallClockTimer
 
+from mii.batching.constants import (MAX_LENGTH_KWARG,
+                                    MAX_NEW_TOKENS_KWARG,
+                                    STREAM_KWARG,
+                                    IGNORE_EOS_KWARG,
+                                    TOP_P_KWARG,
+                                    TOP_K_KWARG,
+                                    TEMPERATURE_KWARG,
+                                    STREAM_DEFAULT,
+                                    IGNORE_EOS_DEFAULT,
+                                    TOP_P_DEFAULT,
+                                    TOP_K_NAME,
+                                    TOP_P_NAME,
+                                    TEMP_NAME,
+                                    SAMPLER_NAME,
+                                    STOP_NAME)
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
 from mii.batching.generation.samplers import LogitsSampler
 from mii.batching.generation.stop_criterion import EosGenerationStopCriterion
@@ -536,48 +551,46 @@ class RaggedBatchBase:
                      input_tokens: torch.Tensor,
                      kwargs: Dict) -> List[RaggedRequest]:
         prompt_length = len(input_tokens)
-        max_length = kwargs.pop("max_length", self.max_length)
-        assert max_length > prompt_length, "prompt_length must be less than max_length"
-        max_new_tokens = kwargs.pop("max_new_tokens", max_length - prompt_length)
-        stream = kwargs.pop("stream", False)
-        ignore_eos = kwargs.pop("ignore_eos", False)
+        max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
+        assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
+        max_new_tokens = kwargs.pop(MAX_NEW_TOKENS_KWARG, max_length - prompt_length)
+        stream = kwargs.pop(STREAM_KWARG, STREAM_DEFAULT)
+        ignore_eos = kwargs.pop(IGNORE_EOS_KWARG, IGNORE_EOS_DEFAULT)
         # TODO: Add back this check
         # if self.policy.get_length(uid) + len(token_ids) >= max_length:
         #    raise ValueError(f"Session {uid} has reached max length {max_length}.")
 
         post_processing = []
 
-        top_p = kwargs.pop("top_p", 0.9)
-        top_p_name = f"TopP_{top_p}"
+        top_p = kwargs.pop(TOP_P_KWARG, TOP_P_DEFAULT)
+        top_p_name = "_".join(TOP_P_NAME, str(top_p))
         if top_p_name not in self._post_processors:
             self._post_processors[top_p_name] = TopPLogitProcessor(top_p=top_p)
         post_processing.append(top_p_name)
 
-        top_k = kwargs.pop("top_k", None)
+        top_k = kwargs.pop(TOP_K_KWARG, None)
         if top_k is not None:
-            top_k_name = f"TopK_{top_k}"
+            top_k_name = "_".join(TOP_K_NAME, str(top_k))
             if top_k_name not in self._post_processors:
                 self._post_processors[top_k_name] = TopKLogitProcessor(top_k=top_k)
             post_processing.append(top_k_name)
 
-        temp = kwargs.pop("temperature", None)
+        temp = kwargs.pop(TEMPERATURE_KWARG, None)
         if temp is not None:
-            temp_name = f"Temp_{temp}"
+            temp_name = "_".join(TEMP_NAME, str(temp))
             if temp_name not in self._post_processors:
                 self._post_processors[temp_name] = TemperatureLogitProcessor(
                     temperature=temp)
             post_processing.append(temp_name)
 
-        sampler_name = "Sampler"
-        if sampler_name not in self._post_processors:
-            self._post_processors[sampler_name] = LogitsSampler()
-        post_processing.append(sampler_name)
+        if SAMPLER_NAME not in self._post_processors:
+            self._post_processors[SAMPLER_NAME] = LogitsSampler()
+        post_processing.append(SAMPLER_NAME)
 
-        stop_name = "Stop"
-        if stop_name not in self._post_processors:
-            self._post_processors[stop_name] = EosGenerationStopCriterion(
+        if STOP_NAME not in self._post_processors:
+            self._post_processors[STOP_NAME] = EosGenerationStopCriterion(
                 tokenizer=self.tokenizer)
-        post_processing.append(stop_name)
+        post_processing.append(STOP_NAME)
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
 
