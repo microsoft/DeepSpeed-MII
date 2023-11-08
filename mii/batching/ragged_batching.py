@@ -563,21 +563,21 @@ class RaggedBatchBase:
         post_processing = []
 
         top_p = kwargs.pop(TOP_P_KWARG, TOP_P_DEFAULT)
-        top_p_name = "_".join(TOP_P_NAME, str(top_p))
+        top_p_name = "_".join((TOP_P_NAME, str(top_p)))
         if top_p_name not in self._post_processors:
             self._post_processors[top_p_name] = TopPLogitProcessor(top_p=top_p)
         post_processing.append(top_p_name)
 
         top_k = kwargs.pop(TOP_K_KWARG, None)
         if top_k is not None:
-            top_k_name = "_".join(TOP_K_NAME, str(top_k))
+            top_k_name = "_".join((TOP_K_NAME, str(top_k)))
             if top_k_name not in self._post_processors:
                 self._post_processors[top_k_name] = TopKLogitProcessor(top_k=top_k)
             post_processing.append(top_k_name)
 
         temp = kwargs.pop(TEMPERATURE_KWARG, None)
         if temp is not None:
-            temp_name = "_".join(TEMP_NAME, str(temp))
+            temp_name = "_".join((TEMP_NAME, str(temp)))
             if temp_name not in self._post_processors:
                 self._post_processors[temp_name] = TemperatureLogitProcessor(
                     temperature=temp)

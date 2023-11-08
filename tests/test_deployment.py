@@ -53,3 +53,13 @@ def test_multi_replica(deployment, query):
     assert single_query_time == pytest.approx(
         double_query_time, 0.1
     ), "two queries should take about the same time as one query"
+
+
+def test_query_kwargs(deployment, query):
+    output = deployment(query,
+                        max_length=128,
+                        ignore_eos=True,
+                        top_p=0.9,
+                        top_k=50,
+                        temperature=0.9)
+    assert output, "output is empty"
