@@ -725,8 +725,11 @@ class MIIAsyncPipeline(RaggedBatchBase):
                     kwargs: Dict,
                     session_id: Union[str,
                                       None] = None) -> int:
-        if not self.is_rank_0:
-            return
+        # TODO: We should avoid any request/response work with non-rank 0, but
+        # this requires some refactoring how we do the put and request in
+        # `ModelResponse`
+        #if not self.is_rank_0:
+        #    return
         if self.stop_thread:
             raise RuntimeError("The request queue was shutdown.")
 
@@ -741,9 +744,18 @@ class MIIAsyncPipeline(RaggedBatchBase):
             for r in self.make_request(uid, input_tokens, kwargs):
                 self.request_queue.put(r)
 
+        # Temporary hack to avoid non-rank 0 processes not shutting down. See related TODO above.
+        if self.is_rank_0:
+            self.request_queue.empty()
+
         return uid
 
     def get_response(self, uid: int) -> List[Response]:
+        # TODO: We should avoid any request/response work with non-rank 0, but
+        # this requires some refactoring how we do the put and request in
+        # `ModelResponse`
+        #if not self.is_rank_0:
+        #    return
         result = self.result_queues[uid].get()
         generated_token_ids = result[0]
         if len(generated_token_ids) == 0:
@@ -789,4 +801,4 @@ class MIIAsyncPipeline(RaggedBatchBase):
                         post_processing=None,
                         stream=None,
                     ))
-            self.uids.remove(uid)
+                self.uids.remove(uid)

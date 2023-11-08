@@ -9,72 +9,13 @@ import sys
 import tempfile
 import time
 from collections import defaultdict
-from typing import Optional, Any, Dict, Union, List
+from typing import List
 
 from deepspeed.accelerator import get_accelerator
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 
-import mii
-from mii.client import MIIClient
 from mii.config import ModelConfig, MIIConfig, ReplicaConfig
-from mii.constants import DeploymentType
 from mii.logging import logger
-from mii.score import create_score_file
-from mii.utils import import_score_file
-
-
-def serve(model_name_or_path: str = "",
-          model_config: Optional[Dict[str,
-                                      Any]] = None,
-          mii_config: Optional[Dict[str,
-                                    Any]] = None,
-          **kwargs) -> Union[None,
-                             MIIClient]:
-    if model_config is None:
-        model_config = {}
-    if mii_config is None:
-        mii_config = {}
-    if model_name_or_path:
-        if "model_name_or_path" in model_config:
-            assert model_config.get("model_name_or_path") == model_name_or_path, "model_name_or_path in model_config must match model_name_or_path"
-        model_config["model_name_or_path"] = model_name_or_path
-    for key, val in kwargs.items():
-        if key in ModelConfig.__dict__["__fields__"]:
-            if key in model_config:
-                assert model_config.get(key) == val, f"{key} in model_config must match {key}"
-            model_config[key] = val
-        elif key in MIIConfig.__dict__["__fields__"]:
-            if key in mii_config:
-                assert mii_config.get(key) == val, f"{key} in mii_config must match {key}"
-            mii_config[key] = val
-        else:
-            raise ValueError(f"Invalid keyword argument {key}")
-    if "model_config" in mii_config:
-        assert mii_config.get("model_config") == model_config, "model_config in mii_config must match model_config"
-    mii_config["model_config"] = model_config
-    mii_config = MIIConfig(**mii_config)
-
-    #MIIServer(mii_config)
-    create_score_file(mii_config)
-
-    if mii_config.deployment_type == DeploymentType.LOCAL:
-        import_score_file(mii_config.deployment_name, DeploymentType.LOCAL).init()
-        return MIIClient(mii_config=mii_config)
-    if mii_config.deployment_type == DeploymentType.AML:
-        acr_name = mii.aml_related.utils.get_acr_name()
-        mii.aml_related.utils.generate_aml_scripts(
-            acr_name=acr_name,
-            deployment_name=mii_config.deployment_name,
-            model_name=mii_config.model_config.model,
-            task_name=mii_config.model_config.task,
-            replica_num=mii_config.model_config.replica_num,
-            instance_type=mii_config.instance_type,
-            version=mii_config.version,
-        )
-        print(
-            f"AML deployment assets at {mii.aml_related.utils.aml_output_path(mii_config.deployment_name)}"
-        )
-        print("Please run 'deploy.sh' to bring your deployment online")
 
 
 def config_to_b64_str(config: DeepSpeedConfigModel) -> str:

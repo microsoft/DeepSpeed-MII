@@ -25,8 +25,8 @@ from mii.constants import (
     STREAM_RESPONSE_QUEUE_TIMEOUT,
     TaskType,
 )
-from mii.task_methods import TASK_METHODS_DICT
-from mii.client import create_channel
+from mii.grpc_related.task_methods import TASK_METHODS_DICT
+from mii.backend.client import create_channel
 from mii.utils import unpack_proto_query_kwargs
 
 from mii.constants import GenerationFinishReason

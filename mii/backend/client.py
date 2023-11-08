@@ -7,10 +7,10 @@ import grpc
 import requests
 from typing import Dict, Any, Callable
 
-from mii.config import get_mii_config, MIIConfig
+from mii.config import MIIConfig
 from mii.constants import GRPC_MAX_MSG_SIZE, TaskType
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
-from mii.task_methods import TASK_METHODS_DICT
+from mii.grpc_related.task_methods import TASK_METHODS_DICT
 
 
 def create_channel(host, port):
@@ -121,9 +121,3 @@ class MIIClient:
             self.task == TaskType.TEXT_GENERATION
         ), f"Session deletion only available for task '{TaskType.TEXT_GENERATION}'."
         self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
-
-
-def client(model_or_deployment_name: str) -> MIIClient:
-    mii_config = get_mii_config(model_or_deployment_name)
-
-    return MIIClient(mii_config)
