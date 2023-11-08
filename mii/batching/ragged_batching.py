@@ -494,6 +494,14 @@ class RaggedBatchBase:
                 break
 
             max_blocks = free_blocks - self.scheduled_req_blocks
+
+            # Check capacity to mitigate the deadlock risk
+            # We don't schedule requests when we find that a prompt is too long to fit to the KV cache
+            if len(r.input_tokens) > 1:
+                req_tokens, _ = self.inference_engine.query(r.uid, len(r.input_tokens), max_blocks)
+                if req_tokens < len(r.input_tokens):
+                    break
+
             req_tokens = min(len(r.input_tokens), max_batch_size)
             req_tokens, req_blocks = self.inference_engine.query(r.uid, req_tokens, max_blocks)
 
@@ -541,6 +549,9 @@ class RaggedBatchBase:
         # We want to process next token generation first
         self._do_schedule_requests(next_token_gen_reqs)
         self._do_schedule_requests(prompt_reqs)
+
+        if len(self.buffer) > 0 and len(self.scheduled_requests) == 0:
+            raise RuntimeError("Deadlock detected: No requests were scheduled.")
 
         scheduled_requests_ids = set(id(r) for r in self.scheduled_requests)
         self.buffer = deque(
