@@ -713,7 +713,8 @@ class MIIAsyncPipeline(RaggedBatchBase):
         while True:
             self.generate()
 
-            if self.stop_thread:  # and self.request_queue.empty() and all(q.empty() for q in self.result_queues.values())):
+            if (self.stop_thread and self.request_queue.empty()
+                    and all(q.empty() for q in self.result_queues.values())):
                 break
 
     def _get_uid(self, session_id: Union[str, None]):
@@ -751,14 +752,15 @@ class MIIAsyncPipeline(RaggedBatchBase):
             if uid not in self.result_queues:
                 self.result_queues[uid] = queue.Queue()
 
+        # Temporary hack to avoid non-rank 0 processes not shutting down. See
+        # related TODO above.
+        if not self.is_rank_0:
+            return uid
+
         for input in args[0]:
             input_tokens = self.tokenizer.encode(input)
             for r in self.make_request(uid, input_tokens, kwargs):
                 self.request_queue.put(r)
-
-        # Temporary hack to avoid non-rank 0 processes not shutting down. See related TODO above.
-        if not self.is_rank_0:
-            self.request_queue.queue.clear()
 
         return uid
 
@@ -766,8 +768,13 @@ class MIIAsyncPipeline(RaggedBatchBase):
         # TODO: We should avoid any request/response work with non-rank 0, but
         # this requires some refactoring how we do the put and request in
         # `ModelResponse`
-        #if not self.is_rank_0:
-        #    return
+        if not self.is_rank_0:
+            return [
+                Response(generated_text="",
+                         prompt_length=None,
+                         generated_length=None,
+                         finish_reason=None)
+            ]
         result = self.result_queues[uid].get()
         generated_token_ids = result[0]
         if len(generated_token_ids) == 0:
