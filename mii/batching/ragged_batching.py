@@ -713,8 +713,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
         while True:
             self.generate()
 
-            if (self.stop_thread and self.request_queue.empty()
-                    and all(q.empty() for q in self.result_queues.values())):
+            if self.stop_thread:  # and self.request_queue.empty() and all(q.empty() for q in self.result_queues.values())):
                 break
 
     def _get_uid(self, session_id: Union[str, None]):
@@ -758,8 +757,8 @@ class MIIAsyncPipeline(RaggedBatchBase):
                 self.request_queue.put(r)
 
         # Temporary hack to avoid non-rank 0 processes not shutting down. See related TODO above.
-        if self.is_rank_0:
-            self.request_queue.empty()
+        if not self.is_rank_0:
+            self.request_queue.queue.clear()
 
         return uid
 
@@ -814,4 +813,4 @@ class MIIAsyncPipeline(RaggedBatchBase):
                         post_processing=None,
                         stream=None,
                     ))
-                self.uids.remove(uid)
+            self.uids.remove(uid)
