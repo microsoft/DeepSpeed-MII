@@ -568,8 +568,24 @@ class RaggedBatchBase:
             self.buffer = deque(
                 [r for r in self.buffer if id(r) not in scheduled_requests_ids])
 
+    def _queue_flush_request(self, uid: int) -> None:
+        self.request_queue.put_nowait(
+            RaggedRequest(
+                uid=uid,
+                input_tokens=None,
+                prompt_tokens=None,
+                seq_length=None,
+                max_length=None,
+                max_new_tokens=None,
+                last_in_prompt=None,
+                post_processing=None,
+                stream=None,
+            ))
+
     def reset_request_status(self):
-        self.flush([r.uid for r in self.buffer if r.seq_length > 0])
+        for r in self.buffer:
+            if r.seq_length > 0:
+                self._queue_flush_request(r.uid)
 
         new_buffer = deque()
         for r in self.buffer:
