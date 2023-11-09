@@ -800,20 +800,21 @@ class MIIAsyncPipeline(RaggedBatchBase):
         return self._is_shutdown
 
     def flush_uid(self, uid: int) -> None:
-        if self.is_rank_0:
-            self.request_queue.put_nowait(
-                RaggedRequest(
-                    uid=uid,
-                    input_tokens=None,
-                    prompt_length=None,
-                    seq_length=None,
-                    max_length=None,
-                    max_new_tokens=None,
-                    last_in_prompt=None,
-                    post_processing=None,
-                    stream=None,
-                ))
-        self.uids.remove(uid)
+        with self.lock:
+            if self.is_rank_0:
+                self.request_queue.put_nowait(
+                    RaggedRequest(
+                        uid=uid,
+                        input_tokens=None,
+                        prompt_length=None,
+                        seq_length=None,
+                        max_length=None,
+                        max_new_tokens=None,
+                        last_in_prompt=None,
+                        post_processing=None,
+                        stream=None,
+                    ))
+            self.uids.remove(uid)
 
     def destroy_session(self, session_id: str) -> None:
         with self.lock:
@@ -822,4 +823,4 @@ class MIIAsyncPipeline(RaggedBatchBase):
             del self.session_to_uid[session_id]
             if uid in self.result_queues:
                 del self.result_queues[uid]
-            self.flush_uid(uid)
+        self.flush_uid(uid)
