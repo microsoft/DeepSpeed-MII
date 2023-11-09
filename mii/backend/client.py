@@ -60,15 +60,15 @@ class MIIClient:
                  streaming_fn: Callable = None,
                  **query_kwargs: Dict[str,
                                       Any]):
+        if isinstance(prompts, str):
+            prompts = [prompts]
         if streaming_fn is not None:
-            if not isinstance(prompts, str):
+            if len(prompts) > 1:
                 raise RuntimeError(
                     "MII client streaming only supports a single prompt input.")
             request_dict = {"query": prompts}
             return self._generate_stream(streaming_fn, request_dict, **query_kwargs)
 
-        if isinstance(prompts, str):
-            prompts = [prompts]
         request_dict = {"query": prompts}
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,

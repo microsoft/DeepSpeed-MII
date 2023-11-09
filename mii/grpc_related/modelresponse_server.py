@@ -100,10 +100,11 @@ class ModelResponse(ServiceBase):
     def _run_inference_stream(self, method_name, request_proto) -> int:
         task = self.method_name_to_task[method_name]
         task_methods = TASK_METHODS_DICT[task]
-        args, kwargs = task_methods.unpack_request_from_proto(request_proto)
+        prompts, kwargs = task_methods.unpack_request_from_proto(request_proto)
 
         kwargs["stream"] = True
-        return self.inference_pipeline.put_request(args, kwargs)
+        # NOTE: Streaming handle only single prompt inputs
+        return self.inference_pipeline.put_request(prompts[0], kwargs)
 
     def GeneratorReplyStream(self, request, context):
         method_name = "GeneratorReply"
@@ -112,9 +113,10 @@ class ModelResponse(ServiceBase):
 
         uid = self._run_inference_stream(method_name, request)
         while True:
-            r = self.inference_pipeline.get_response(uid)
-            done = r[0].finish_reason != GenerationFinishReason.NONE
-            response = task_methods.pack_response_to_proto(r, 0.0, 0.0)
+            response_uid, r = self.inference_pipeline.get_response()
+            assert uid == response_uid, "uid mismatch"
+            done = r.finish_reason != GenerationFinishReason.NONE
+            response = task_methods.pack_response_to_proto([r], 0.0, 0.0)
             yield response
             if done:
                 break
