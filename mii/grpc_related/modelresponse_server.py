@@ -92,7 +92,7 @@ class ModelResponse(ServiceBase):
 
         if session_id is None:
             for uid in uids:
-                self.inference_pipeline.destroy_session(session_id, uid)
+                self.inference_pipeline.flush_uid(uid)
 
         return task_methods.pack_response_to_proto(responses, end - start, -1)
 
