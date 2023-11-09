@@ -125,7 +125,7 @@ class RaggedRequestMsg:
 class RaggedRequest:
     uid: int
     input_tokens: torch.Tensor
-    prompt_length: int
+    prompt_tokens: torch.Tensor
     seq_length: int
     max_length: int
     max_new_tokens: int
@@ -140,6 +140,10 @@ class RaggedRequest:
     _is_done: bool = False
     _generated_tokens: List[torch.Tensor] = field(default_factory=list)
     _finish_reason: GenerationFinishReason = GenerationFinishReason.NONE
+
+    @property
+    def prompt_length(self) -> int:
+        return len(self.prompt_tokens)
 
     @property
     def next_token(self) -> Union[None, torch.Tensor]:
@@ -197,6 +201,9 @@ class RaggedRequest:
     def accumulate_generated_token(self) -> None:
         if not self.is_done:
             self._generated_tokens.append(self.next_token)
+
+    def clear_generated_token(self) -> None:
+        self._generated_tokens.clear()
 
     def set_next_as_input(self) -> None:
         if self.next_token is not None:
@@ -537,11 +544,30 @@ class RaggedBatchBase:
         self._do_schedule_requests(prompt_reqs)
 
         if len(self.buffer) > 0 and len(self.scheduled_requests) == 0:
-            raise RuntimeError("Deadlock detected: No requests were scheduled.")
+            print(
+                "Deadlock detected. Resetting KV cache and recomputing requests. Consider limiting number of concurrent requests or decreasing max lengths of prompts/generations."
+            )
+            self.scheduled_requests = RaggedRequestBatch([])
+            self.reset_request_status()
+        else:
+            scheduled_requests_ids = set(id(r) for r in self.scheduled_requests)
+            self.buffer = deque(
+                [r for r in self.buffer if id(r) not in scheduled_requests_ids])
 
-        scheduled_requests_ids = set(id(r) for r in self.scheduled_requests)
-        self.buffer = deque(
-            [r for r in self.buffer if id(r) not in scheduled_requests_ids])
+    def reset_request_status(self):
+        self.flush([r.uid for r in self.buffer if r.seq_length > 0])
+
+        new_buffer = deque()
+        for r in self.buffer:
+            new_req = copy.copy(r)
+            new_req.prompt_tokens = new_req.input_tokens = torch.concat(
+                [r.prompt_tokens] + [t.unsqueeze(0) for t in r.generated_tokens])
+            new_req.seq_length = 0
+            new_req.max_new_tokens = r.max_new_tokens - len(r.generated_tokens)
+            new_req.clear_generated_token()
+            new_buffer.append(new_req)
+
+        self.buffer = new_buffer
 
     def make_request(self,
                      uid: int,
@@ -584,7 +610,7 @@ class RaggedBatchBase:
             RaggedRequest(
                 uid=uid,
                 input_tokens=input_tokens,
-                prompt_length=len(input_tokens),
+                prompt_tokens=input_tokens,
                 seq_length=0,
                 max_length=max_length,
                 max_new_tokens=max_new_tokens,
@@ -637,7 +663,7 @@ class MIIPipeline(RaggedBatchBase):
                         RaggedRequest(
                             uid=uid,
                             input_tokens=None,
-                            prompt_length=None,
+                            prompt_tokens=None,
                             seq_length=None,
                             max_length=None,
                             max_new_tokens=None,
@@ -796,7 +822,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
                     RaggedRequest(
                         uid=uid,
                         input_tokens=None,
-                        prompt_length=None,
+                        prompt_tokens=None,
                         seq_length=None,
                         max_length=None,
                         max_new_tokens=None,
