@@ -30,14 +30,14 @@ def init():
         start_server = False
 
     if start_server:
-        mii.server.MIIServer(mii_config)
+        mii.backend.MIIServer(mii_config)
 
     global model
     model = None
 
     # In AML deployments both the GRPC client and server are used in the same process
     if mii.utils.is_aml():
-        model = mii.client.MIIClient(mii_config=mii_config)
+        model = mii.backend.MIIClient(mii_config=mii_config)
 
 
 def run(request):

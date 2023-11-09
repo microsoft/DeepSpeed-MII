@@ -6,3 +6,7 @@
 
 class DeploymentNotFoundError(Exception):
     pass
+
+
+class UnknownArgument(Exception):
+    pass
