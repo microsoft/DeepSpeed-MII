@@ -44,8 +44,8 @@ class LogitsSampler(BaseGenerationSampler):
         logits = logits.float()
         sampler = Categorical(logits=logits)
         next_tokens = sampler.sample()
-        logprobs = sampler.log_prob(next_tokens)
-        return next_tokens, logprobs
+        #logprobs = sampler.log_prob(next_tokens)
+        return next_tokens  #, logprobs
 
 
 class GreedySampler(BaseGenerationSampler):

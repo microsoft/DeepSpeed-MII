@@ -20,20 +20,28 @@ import zmq
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils.timer import SynchronizedWallClockTimer
 
-from mii.batching.generation.logit_processors import BaseLogitProcessor
-from mii.batching.generation.samplers import BaseGenerationSampler
-from mii.batching.generation.stop_criterion import BaseGenerationStopCriterion
+from mii.batching.constants import (MAX_LENGTH_KWARG,
+                                    MAX_NEW_TOKENS_KWARG,
+                                    STREAM_KWARG,
+                                    IGNORE_EOS_KWARG,
+                                    TOP_P_KWARG,
+                                    TOP_K_KWARG,
+                                    TEMPERATURE_KWARG,
+                                    STREAM_DEFAULT,
+                                    IGNORE_EOS_DEFAULT,
+                                    TOP_P_DEFAULT,
+                                    TOP_K_NAME,
+                                    TOP_P_NAME,
+                                    TEMP_NAME,
+                                    SAMPLER_NAME,
+                                    STOP_NAME)
+from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
+from mii.batching.generation.samplers import LogitsSampler
+from mii.batching.generation.stop_criterion import EosGenerationStopCriterion
 from mii.batching.postprocess import (
-    _create_postprocessor,
-    run_batch_logit_processor,
+    run_batch_logit_processing,
     run_batch_sampler,
     run_batch_stop_criterion,
-    DEFAULT_LOGITS_PROCESSOR,
-    DEFAULT_SAMPLER,
-    DEFAULT_STOP_CRITERION,
-    LOGITS_PROCESSORS,
-    SAMPLERS,
-    STOP_CRITERIA,
 )
 from mii.batching.utils import sync_debug, profiler
 from mii.constants import GenerationFinishReason, ZMQ_RECV_TIMEOUT
@@ -130,9 +138,7 @@ class RaggedRequest:
     max_length: int
     max_new_tokens: int
     last_in_prompt: bool
-    logit_processor: BaseLogitProcessor
-    sampler: BaseGenerationSampler
-    stop_criterion: BaseGenerationStopCriterion
+    post_processing: List[object]
     stream: bool = False
     ignore_eos: bool = False
 
@@ -315,7 +321,9 @@ class RaggedBatchBase:
         self.scheduled_seq_num = 0
         self.scheduled_req_blocks = 0
 
-        self.logit_processor = run_batch_logit_processor
+        # TODO: we will need to prune self._post_processors for long running deployments
+        self._post_processors = {}
+        self.logit_processor = run_batch_logit_processing
         self.sampler = run_batch_sampler
         self.stop_criterion = run_batch_stop_criterion
 
@@ -439,9 +447,15 @@ class RaggedBatchBase:
             running_requests: RaggedRequestBatch) -> Tuple[torch.Tensor,
                                                            torch.Tensor]:
         next_token_logits = next_token_logits[:, :self.vocab_size]
-        next_token_logits = self.logit_processor(next_token_logits, running_requests)
-        next_tokens = self.sampler(next_token_logits, running_requests)
-        done_tokens = self.stop_criterion(next_tokens, running_requests)
+        next_token_logits = self.logit_processor(next_token_logits,
+                                                 running_requests,
+                                                 self._post_processors)
+        next_tokens = self.sampler(next_token_logits,
+                                   running_requests,
+                                   self._post_processors)
+        done_tokens = self.stop_criterion(next_tokens,
+                                          running_requests,
+                                          self._post_processors)
         next_tokens = next_tokens.to(torch.device("cpu"), non_blocking=False)
         return next_tokens, done_tokens
 
@@ -573,36 +587,47 @@ class RaggedBatchBase:
                      uid: int,
                      input_tokens: torch.Tensor,
                      kwargs: Dict) -> List[RaggedRequest]:
-        max_length = kwargs.pop("max_length", self.max_length)
-        max_new_tokens = kwargs.pop("max_new_tokens", max_length - len(input_tokens))
-        stream = kwargs.pop("stream", False)
-        ignore_eos = kwargs.pop("ignore_eos", False)
+        prompt_length = len(input_tokens)
+        max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
+        assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
+        max_new_tokens = kwargs.pop(MAX_NEW_TOKENS_KWARG, max_length - prompt_length)
+        stream = kwargs.pop(STREAM_KWARG, STREAM_DEFAULT)
+        ignore_eos = kwargs.pop(IGNORE_EOS_KWARG, IGNORE_EOS_DEFAULT)
         # TODO: Add back this check
         # if self.policy.get_length(uid) + len(token_ids) >= max_length:
         #    raise ValueError(f"Session {uid} has reached max length {max_length}.")
 
-        postprocess_config = kwargs.pop("postprocess_config", {})
-        accepted_keys = ("logit_processor", "sampler", "stop_criterion")
-        for key in postprocess_config.keys():
-            if key not in accepted_keys:
-                raise ValueError(
-                    f"Unknown postprocess_config keyword {key}. Accepted keywords are {accepted_keys}"
-                )
-        logit_processor = _create_postprocessor(
-            postprocess_config.get("logit_processor",
-                                   DEFAULT_LOGITS_PROCESSOR),
-            LOGITS_PROCESSORS,
-        )
-        sampler = _create_postprocessor(
-            postprocess_config.get("sampler",
-                                   DEFAULT_SAMPLER),
-            SAMPLERS)
-        stop_criterion = _create_postprocessor(
-            postprocess_config.get("stop_criterion",
-                                   DEFAULT_STOP_CRITERION),
-            STOP_CRITERIA,
-            {"tokenizer": self.tokenizer},
-        )
+        post_processing = []
+
+        top_p = kwargs.pop(TOP_P_KWARG, TOP_P_DEFAULT)
+        top_p_name = "_".join((TOP_P_NAME, str(top_p)))
+        if top_p_name not in self._post_processors:
+            self._post_processors[top_p_name] = TopPLogitProcessor(top_p=top_p)
+        post_processing.append(top_p_name)
+
+        top_k = kwargs.pop(TOP_K_KWARG, None)
+        if top_k is not None:
+            top_k_name = "_".join((TOP_K_NAME, str(top_k)))
+            if top_k_name not in self._post_processors:
+                self._post_processors[top_k_name] = TopKLogitProcessor(top_k=top_k)
+            post_processing.append(top_k_name)
+
+        temp = kwargs.pop(TEMPERATURE_KWARG, None)
+        if temp is not None:
+            temp_name = "_".join((TEMP_NAME, str(temp)))
+            if temp_name not in self._post_processors:
+                self._post_processors[temp_name] = TemperatureLogitProcessor(
+                    temperature=temp)
+            post_processing.append(temp_name)
+
+        if SAMPLER_NAME not in self._post_processors:
+            self._post_processors[SAMPLER_NAME] = LogitsSampler()
+        post_processing.append(SAMPLER_NAME)
+
+        if STOP_NAME not in self._post_processors:
+            self._post_processors[STOP_NAME] = EosGenerationStopCriterion(
+                tokenizer=self.tokenizer)
+        post_processing.append(STOP_NAME)
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
 
@@ -615,9 +640,7 @@ class RaggedBatchBase:
                 max_length=max_length,
                 max_new_tokens=max_new_tokens,
                 last_in_prompt=True,
-                logit_processor=logit_processor,
-                sampler=sampler,
-                stop_criterion=stop_criterion,
+                post_processing=post_processing,
                 stream=stream,
                 ignore_eos=ignore_eos,
             )
@@ -668,9 +691,7 @@ class MIIPipeline(RaggedBatchBase):
                             max_length=None,
                             max_new_tokens=None,
                             last_in_prompt=None,
-                            logit_processor=None,
-                            sampler=None,
-                            stop_criterion=None,
+                            post_processing=None,
                             stream=None,
                         ))
 
@@ -768,14 +789,15 @@ class MIIAsyncPipeline(RaggedBatchBase):
             if uid not in self.result_queues:
                 self.result_queues[uid] = queue.Queue()
 
+        # Temporary hack to avoid non-rank 0 processes not shutting down. See
+        # related TODO above.
+        if not self.is_rank_0:
+            return uid
+
         for input in args[0]:
             input_tokens = self.tokenizer.encode(input)
             for r in self.make_request(uid, input_tokens, kwargs):
                 self.request_queue.put(r)
-
-        # Temporary hack to avoid non-rank 0 processes not shutting down. See related TODO above.
-        if self.is_rank_0:
-            self.request_queue.empty()
 
         return uid
 
@@ -783,8 +805,13 @@ class MIIAsyncPipeline(RaggedBatchBase):
         # TODO: We should avoid any request/response work with non-rank 0, but
         # this requires some refactoring how we do the put and request in
         # `ModelResponse`
-        #if not self.is_rank_0:
-        #    return
+        if not self.is_rank_0:
+            return [
+                Response(generated_text="",
+                         prompt_length=None,
+                         generated_length=None,
+                         finish_reason=None)
+            ]
         result = self.result_queues[uid].get()
         generated_token_ids = result[0]
         if len(generated_token_ids) == 0:
@@ -827,9 +854,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
                         max_length=None,
                         max_new_tokens=None,
                         last_in_prompt=None,
-                        logit_processor=None,
-                        sampler=None,
-                        stop_criterion=None,
+                        post_processing=None,
                         stream=None,
                     ))
-                self.uids.remove(uid)
+            self.uids.remove(uid)
