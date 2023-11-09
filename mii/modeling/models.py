@@ -14,9 +14,8 @@ def load_model(model_config: ModelConfig) -> InferenceEngineV2:
     init_distributed(model_config)
     provider = model_config.provider
     if provider == ModelProvider.HUGGING_FACE:
-        inference_engine = build_hf_engine(
-            path=model_config.model_name_or_path,
-            engine_config=model_config.inference_engine_config)
+        inference_engine = build_hf_engine(path=model_config.model_name_or_path,
+                                           engine_config=model_config.inference_engine_config)
     else:
         raise ValueError(f"Unknown model provider {provider}")
 

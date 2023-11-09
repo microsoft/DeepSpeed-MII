@@ -12,6 +12,7 @@ FLOAT_PAD = -float("inf")
 
 
 class BaseLogitProcessor(abc.ABC):
+
     def __call__(self, logits: torch.Tensor) -> torch.Tensor:
         return self.forward(logits)
 
@@ -24,6 +25,7 @@ class BaseLogitProcessor(abc.ABC):
 
 
 class TopKLogitProcessor(BaseLogitProcessor):
+
     def __init__(self, top_k: int) -> None:
         self.top_k = top_k
 
@@ -39,6 +41,7 @@ class TopKLogitProcessor(BaseLogitProcessor):
 
 
 class TopPLogitProcessor(BaseLogitProcessor):
+
     def __init__(self, top_p: float) -> None:
         assert 0.0 <= top_p <= 1.0
         self.top_p = top_p
@@ -64,6 +67,7 @@ class TopPLogitProcessor(BaseLogitProcessor):
 
 
 class TemperatureLogitProcessor(BaseLogitProcessor):
+
     def __init__(self, temperature: float) -> None:
         self.temperature = temperature
         assert self.temperature > 0.0
@@ -76,6 +80,7 @@ class TemperatureLogitProcessor(BaseLogitProcessor):
 
 
 class PipelineLogitProcessor(BaseLogitProcessor):
+
     def __init__(self, pipeline: List[BaseLogitProcessor]) -> None:
         assert all(isinstance(step, BaseLogitProcessor) for step in pipeline)
         self.pipeline = pipeline
@@ -86,23 +91,19 @@ class PipelineLogitProcessor(BaseLogitProcessor):
         return logits
 
     def get_key(self) -> str:
-        return super().get_key(
-        ) + f"_{'_'.join(step.get_key() for step in self.pipeline)}"
+        return super().get_key() + f"_{'_'.join(step.get_key() for step in self.pipeline)}"
 
 
 class NucleusSamplingLogitProcessor(BaseLogitProcessor):
-    def __init__(self,
-                 top_k: Optional[int] = None,
-                 top_p: Optional[float] = None) -> None:
+
+    def __init__(self, top_k: Optional[int] = None, top_p: Optional[float] = None) -> None:
         assert top_k is not None or top_p is not None
         if top_k is None:
             self._processor = TopPLogitProcessor(top_p)
         elif top_p is None:
             self._processor = TopKLogitProcessor(top_k)
         else:
-            self._processor = PipelineLogitProcessor(
-                [TopKLogitProcessor(top_k),
-                 TopPLogitProcessor(top_p)])
+            self._processor = PipelineLogitProcessor([TopKLogitProcessor(top_k), TopPLogitProcessor(top_p)])
 
     def forward(self, logits: torch.Tensor) -> torch.Tensor:
         return self._processor(logits)

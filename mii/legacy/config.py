@@ -168,6 +168,7 @@ class ModelConfig(DeepSpeedConfigModel):
     the input and output tokens. Please consider increasing it to the required
     token-length required for your use-case.
     """
+
     class Config:
         json_encoders = {torch.dtype: lambda x: str(x)}
 
@@ -193,9 +194,7 @@ class ModelConfig(DeepSpeedConfigModel):
     @root_validator
     def zero_or_meta(cls, values):
         if values.get("enable_zero"):
-            assert not values.get(
-                "meta_tensor"
-            ), "ZeRO-Inference does not support meta tensors."
+            assert not values.get("meta_tensor"), "ZeRO-Inference does not support meta tensors."
         return values
 
     @root_validator
@@ -206,9 +205,7 @@ class ModelConfig(DeepSpeedConfigModel):
                 torch.int8,
                 torch.float16,
             ], "Bloom models only support fp16/int8."
-            assert not values.get(
-                "enable_cuda_graph"
-            ), "Bloom models do not support CUDA Graph."
+            assert not values.get("enable_cuda_graph"), "Bloom models do not support CUDA Graph."
         return values
 
     @root_validator
@@ -238,12 +235,8 @@ class ModelConfig(DeepSpeedConfigModel):
                 model_path = MII_MODEL_PATH_DEFAULT
         aml_model_dir = os.environ.get("AZUREML_MODEL_DIR", None)
         if aml_model_dir and not model_path.startswith(aml_model_dir):
-            assert os.path.isabs(
-                aml_model_dir
-            ), "AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path."
-            assert not os.path.isabs(
-                model_path
-            ), f"model_path={model_path} must be relative to append w/ AML path."
+            assert os.path.isabs(aml_model_dir), "AZUREML_MODEL_DIR={aml_model_dir} must be an absolute path."
+            assert not os.path.isabs(model_path), f"model_path={model_path} must be relative to append w/ AML path."
             model_path = os.path.join(aml_model_dir, model_path)
 
         values["model_path"] = model_path
@@ -264,9 +257,7 @@ class ModelConfig(DeepSpeedConfigModel):
     @root_validator
     def meta_tensor_or_sys_mem(cls, values):
         if values.get("meta_tensor") and values.get("load_with_sys_mem"):
-            raise ValueError(
-                "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
-            )
+            raise ValueError("`meta_tensor` and `load_with_sys_mem` cannot be active at the same time.")
         return values
 
     @root_validator
@@ -275,19 +266,16 @@ class ModelConfig(DeepSpeedConfigModel):
             if values.get("ds_config").get("fp16", {}).get("enabled", False):
                 # TODO: We should be able to use DtypeEnum instead of torch.float
                 assert (
-                    values.get("dtype") == torch.float16
-                ), "ZeRO FP16 enabled, `dtype` must be set to `torch.float16`"
+                    values.get("dtype") == torch.float16), "ZeRO FP16 enabled, `dtype` must be set to `torch.float16`"
             else:
                 assert (
-                    values.get("dtype") == torch.float32
-                ), "ZeRO FP16 disabled, `dtype` must be set to `torch.float32`"
+                    values.get("dtype") == torch.float32), "ZeRO FP16 disabled, `dtype` must be set to `torch.float32`"
         return values
 
     @root_validator
     def deepspeed_or_zero(cls, values):
-        assert not (
-            values.get("enable_deepspeed") and values.get("enable_zero")
-        ), "DeepSpeed and ZeRO cannot both be enabled, select only one"
+        assert not (values.get("enable_deepspeed")
+                    and values.get("enable_zero")), "DeepSpeed and ZeRO cannot both be enabled, select only one"
         return values
 
 
@@ -341,14 +329,13 @@ class MIIConfig(DeepSpeedConfigModel):
     """
     AML instance type to use when create AML deployment assets.
     """
+
     @root_validator(skip_on_failure=True)
     def AML_name_valid(cls, values):
         if values.get("deployment_type") == DeploymentType.AML:
-            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
-                                string.digits + "-")
-            assert (
-                set(values.get("deployment_name")) <= allowed_chars
-            ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
+            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase + string.digits + "-")
+            assert (set(values.get("deployment_name")) <=
+                    allowed_chars), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
         return values
 
     def generate_replica_configs(self):
@@ -379,9 +366,7 @@ class MIIConfig(DeepSpeedConfigModel):
 
 def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
     resource_pool = fetch_hostfile(hostfile_path)
-    assert (
-        resource_pool is not None and len(resource_pool) > 0
-    ), f"No hosts found in {hostfile_path}"
+    assert (resource_pool is not None and len(resource_pool) > 0), f"No hosts found in {hostfile_path}"
 
     replica_pool = []
     allocated_num = 0
@@ -391,19 +376,15 @@ def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
             if allocated_num >= replica_num:
                 break
             if slots < tensor_parallel:
-                raise ValueError(
-                    f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required"
-                )
+                raise ValueError(f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required")
 
             allocated_num_on_host = slots - available_on_host
             replica_pool.append((
                 host,
-                [
-                    i for i in range(
-                        allocated_num_on_host,
-                        allocated_num_on_host + tensor_parallel,
-                    )
-                ],
+                [i for i in range(
+                    allocated_num_on_host,
+                    allocated_num_on_host + tensor_parallel,
+                )],
             ))
             allocated_num += 1
 
@@ -411,7 +392,6 @@ def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
 
     if allocated_num < replica_num:
         raise ValueError(
-            f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
-        )
+            f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed")
 
     return replica_pool

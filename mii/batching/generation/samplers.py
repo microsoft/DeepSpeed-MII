@@ -10,12 +10,12 @@ from torch.distributions import Categorical
 
 
 class BaseGenerationSampler(abc.ABC):
+
     @abc.abstractmethod
     def __call__(
         self,
         logits: torch.Tensor,
-    ) -> Tuple[torch.LongTensor,
-               torch.Tensor]:
+    ) -> Tuple[torch.LongTensor, torch.Tensor]:
         """
         Given the logits, return the next token to add to the sequence, as well
         as the log probability of the token
@@ -36,11 +36,11 @@ class BaseGenerationSampler(abc.ABC):
 
 
 class LogitsSampler(BaseGenerationSampler):
+
     def __call__(
         self,
         logits: torch.Tensor,
-    ) -> Tuple[torch.LongTensor,
-               torch.Tensor]:
+    ) -> Tuple[torch.LongTensor, torch.Tensor]:
         logits = logits.float()
         sampler = Categorical(logits=logits)
         next_tokens = sampler.sample()
@@ -49,6 +49,7 @@ class LogitsSampler(BaseGenerationSampler):
 
 
 class GreedySampler(BaseGenerationSampler):
+
     def __call__(self, logits: torch.Tensor) -> Tuple[torch.LongTensor, torch.Tensor]:
         logits = logits.float()
         sampler = Categorical(logits=logits)

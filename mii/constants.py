@@ -25,10 +25,7 @@ class GenerationFinishReason(str, Enum):
     NONE = "none"
 
 
-SUPPORTED_MODEL_TYPES = {
-    'opt': ModelProvider.HUGGING_FACE,
-    'llama': ModelProvider.HUGGING_FACE
-}
+SUPPORTED_MODEL_TYPES = {'opt': ModelProvider.HUGGING_FACE, 'llama': ModelProvider.HUGGING_FACE}
 
 REQUIRED_KEYS_PER_TASK = {
     TaskType.TEXT_GENERATION: ["query"],

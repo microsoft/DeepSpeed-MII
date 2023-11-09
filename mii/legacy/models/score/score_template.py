@@ -42,9 +42,7 @@ def init():
 
 def run(request):
     global mii_config, model
-    assert (
-        model is not None
-    ), "grpc client has not been setup when this model was created"
+    assert (model is not None), "grpc client has not been setup when this model was created"
 
     request_dict = json.loads(request)
 

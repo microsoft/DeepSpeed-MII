@@ -20,21 +20,9 @@ import zmq
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils.timer import SynchronizedWallClockTimer
 
-from mii.batching.constants import (MAX_LENGTH_KWARG,
-                                    MAX_NEW_TOKENS_KWARG,
-                                    STREAM_KWARG,
-                                    IGNORE_EOS_KWARG,
-                                    TOP_P_KWARG,
-                                    TOP_K_KWARG,
-                                    TEMPERATURE_KWARG,
-                                    STREAM_DEFAULT,
-                                    IGNORE_EOS_DEFAULT,
-                                    TOP_P_DEFAULT,
-                                    TOP_K_NAME,
-                                    TOP_P_NAME,
-                                    TEMP_NAME,
-                                    SAMPLER_NAME,
-                                    STOP_NAME)
+from mii.batching.constants import (MAX_LENGTH_KWARG, MAX_NEW_TOKENS_KWARG, STREAM_KWARG, IGNORE_EOS_KWARG,
+                                    TOP_P_KWARG, TOP_K_KWARG, TEMPERATURE_KWARG, STREAM_DEFAULT, IGNORE_EOS_DEFAULT,
+                                    TOP_P_DEFAULT, TOP_K_NAME, TOP_P_NAME, TEMP_NAME, SAMPLER_NAME, STOP_NAME)
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
 from mii.batching.generation.samplers import LogitsSampler
 from mii.batching.generation.stop_criterion import EosGenerationStopCriterion
@@ -80,6 +68,7 @@ class Response:
 
 
 class ResponseBatch:
+
     def __init__(self, responses: List[Response]) -> None:
         self.responses = responses
 
@@ -122,10 +111,8 @@ class RaggedRequestMsg:
     def from_msg(msg: Dict[str, int]) -> Self:
         return RaggedRequestMsg(
             uid=msg["uid"],
-            input_tokens=None
-            if msg["input_tokens"] is None else torch.tensor(msg["input_tokens"],
-                                                             dtype=torch.int32,
-                                                             device=torch.device("cpu")),
+            input_tokens=None if msg["input_tokens"] is None else torch.tensor(
+                msg["input_tokens"], dtype=torch.int32, device=torch.device("cpu")),
         )
 
 
@@ -187,8 +174,7 @@ class RaggedRequest:
         if self.is_done:
             self._finish_reason = GenerationFinishReason.STOP
             return True
-        if (self.seq_length >= self.max_length) or (self.num_generated_tokens >=
-                                                    self.max_new_tokens):
+        if (self.seq_length >= self.max_length) or (self.num_generated_tokens >= self.max_new_tokens):
             self._finish_reason = GenerationFinishReason.LENGTH
             return True
         return False
@@ -196,8 +182,7 @@ class RaggedRequest:
     def get_msg(self) -> RaggedRequestMsg:
         return RaggedRequestMsg(
             uid=self.uid,
-            input_tokens=None
-            if self.input_tokens is None else self.input_tokens.tolist(),
+            input_tokens=None if self.input_tokens is None else self.input_tokens.tolist(),
         )
 
     def accumulate_generated_token(self) -> None:
@@ -213,6 +198,7 @@ class RaggedRequest:
 
 
 class RaggedRequestBatch:
+
     def __init__(self, requests: List[RaggedRequest]) -> None:
         self.requests = requests
 
@@ -293,6 +279,7 @@ class RaggedRequestBatch:
 
 
 class RaggedBatchBase:
+
     def __init__(self, inference_engine, tokenizer, model_config):
         self.inference_engine = inference_engine
         self.tokenizer = tokenizer
@@ -368,9 +355,7 @@ class RaggedBatchBase:
         running_requests = scheduled_requests.requests_to_run
         running_requests.update_seq_length()
         if running_requests:
-            next_tokens, done_tokens = self._process_logits(
-                next_token_logits, running_requests
-            )
+            next_tokens, done_tokens = self._process_logits(next_token_logits, running_requests)
             running_requests.next_tokens = next_tokens
             running_requests.done_tokens = done_tokens
 
@@ -420,8 +405,7 @@ class RaggedBatchBase:
             try:
                 json_data = self.socket.recv_string()
                 data_dicts = ujson.loads(json_data)
-                self.scheduled_requests = RaggedRequestBatch(
-                    [RaggedRequestMsg.from_msg(msg) for msg in data_dicts])
+                self.scheduled_requests = RaggedRequestBatch([RaggedRequestMsg.from_msg(msg) for msg in data_dicts])
             except zmq.Again:
                 self.scheduled_requests = RaggedRequestBatch([])
 
@@ -434,21 +418,12 @@ class RaggedBatchBase:
         self.scheduled_req_blocks = 0
 
     @sync_debug
-    def _process_logits(
-            self,
-            next_token_logits: torch.Tensor,
-            running_requests: RaggedRequestBatch) -> Tuple[torch.Tensor,
-                                                           torch.Tensor]:
+    def _process_logits(self, next_token_logits: torch.Tensor,
+                        running_requests: RaggedRequestBatch) -> Tuple[torch.Tensor, torch.Tensor]:
         next_token_logits = next_token_logits[:, :self.vocab_size]
-        next_token_logits = self.logit_processor(next_token_logits,
-                                                 running_requests,
-                                                 self._post_processors)
-        next_tokens = self.sampler(next_token_logits,
-                                   running_requests,
-                                   self._post_processors)
-        done_tokens = self.stop_criterion(next_tokens,
-                                          running_requests,
-                                          self._post_processors)
+        next_token_logits = self.logit_processor(next_token_logits, running_requests, self._post_processors)
+        next_tokens = self.sampler(next_token_logits, running_requests, self._post_processors)
+        done_tokens = self.stop_criterion(next_tokens, running_requests, self._post_processors)
         next_tokens = next_tokens.to(torch.device("cpu"), non_blocking=False)
         return next_tokens, done_tokens
 
@@ -466,8 +441,7 @@ class RaggedBatchBase:
             if r.stream or not r.generated_tokens:
                 output_tokens = []
             else:
-                output_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens],
-                                          dim=0)
+                output_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens], dim=0)
             outputs.append((
                 output_tokens,
                 r.prompt_length,
@@ -554,13 +528,9 @@ class RaggedBatchBase:
             raise RuntimeError("Deadlock detected: No requests were scheduled.")
 
         scheduled_requests_ids = set(id(r) for r in self.scheduled_requests)
-        self.buffer = deque(
-            [r for r in self.buffer if id(r) not in scheduled_requests_ids])
+        self.buffer = deque([r for r in self.buffer if id(r) not in scheduled_requests_ids])
 
-    def make_request(self,
-                     uid: int,
-                     input_tokens: torch.Tensor,
-                     kwargs: Dict) -> List[RaggedRequest]:
+    def make_request(self, uid: int, input_tokens: torch.Tensor, kwargs: Dict) -> List[RaggedRequest]:
         prompt_length = len(input_tokens)
         max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
         assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
@@ -590,8 +560,7 @@ class RaggedBatchBase:
         if temp is not None:
             temp_name = "_".join((TEMP_NAME, str(temp)))
             if temp_name not in self._post_processors:
-                self._post_processors[temp_name] = TemperatureLogitProcessor(
-                    temperature=temp)
+                self._post_processors[temp_name] = TemperatureLogitProcessor(temperature=temp)
             post_processing.append(temp_name)
 
         if SAMPLER_NAME not in self._post_processors:
@@ -599,8 +568,7 @@ class RaggedBatchBase:
         post_processing.append(SAMPLER_NAME)
 
         if STOP_NAME not in self._post_processors:
-            self._post_processors[STOP_NAME] = EosGenerationStopCriterion(
-                tokenizer=self.tokenizer)
+            self._post_processors[STOP_NAME] = EosGenerationStopCriterion(tokenizer=self.tokenizer)
         post_processing.append(STOP_NAME)
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
@@ -620,10 +588,7 @@ class RaggedBatchBase:
             )
         ]
 
-    def make_response(self,
-                      generated_text: str,
-                      prompt_length: int,
-                      generated_length: int,
+    def make_response(self, generated_text: str, prompt_length: int, generated_length: int,
                       finish_reason: GenerationFinishReason) -> Response:
         return Response(generated_text=generated_text,
                         prompt_length=prompt_length,
@@ -639,6 +604,7 @@ class RaggedBatchBase:
 
 
 class MIIPipeline(RaggedBatchBase):
+
     def __call__(self, inputs: Union[str, List[str]], **kwargs) -> ResponseBatch:
         if isinstance(inputs, str):
             inputs = [inputs]
@@ -707,6 +673,7 @@ class MIIPipeline(RaggedBatchBase):
 
 
 class MIIAsyncPipeline(RaggedBatchBase):
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uids = set()
@@ -744,11 +711,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
 
         return uid
 
-    def put_request(self,
-                    args: Tuple,
-                    kwargs: Dict,
-                    session_id: Union[str,
-                                      None] = None) -> int:
+    def put_request(self, args: Tuple, kwargs: Dict, session_id: Union[str, None] = None) -> int:
         # TODO: We should avoid any request/response work with non-rank 0, but
         # this requires some refactoring how we do the put and request in
         # `ModelResponse`
@@ -780,12 +743,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
         # this requires some refactoring how we do the put and request in
         # `ModelResponse`
         if not self.is_rank_0:
-            return [
-                Response(generated_text="",
-                         prompt_length=None,
-                         generated_length=None,
-                         finish_reason=None)
-            ]
+            return [Response(generated_text="", prompt_length=None, generated_length=None, finish_reason=None)]
         result = self.result_queues[uid].get()
         generated_token_ids = result[0]
         if len(generated_token_ids) == 0:
@@ -807,11 +765,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
     def is_shutdown(self) -> bool:
         return self._is_shutdown
 
-    def destroy_session(self,
-                        session_id: Union[str,
-                                          None],
-                        uid: Union[int,
-                                   None] = None) -> None:
+    def destroy_session(self, session_id: Union[str, None], uid: Union[int, None] = None) -> None:
         with self.lock:
             if session_id in self.session_to_uid:
                 uid = self.session_to_uid[session_id]

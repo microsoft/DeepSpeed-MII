@@ -101,6 +101,7 @@ class ModelConfig(DeepSpeedConfigModel):
     """
     Log performance information about model inference with very little overhead.
     """
+
     @property
     def provider(self) -> ModelProvider:
         return ModelProvider.HUGGING_FACE
@@ -176,14 +177,13 @@ class MIIConfig(DeepSpeedConfigModel):
     """
     AML instance type to use when create AML deployment assets.
     """
+
     @root_validator(skip_on_failure=True)
     def AML_name_valid(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if values.get("deployment_type") == DeploymentType.AML:
-            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
-                                string.digits + "-")
-            assert (
-                set(values.get("deployment_name")) <= allowed_chars
-            ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
+            allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase + string.digits + "-")
+            assert (set(values.get("deployment_name")) <=
+                    allowed_chars), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
         return values
 
     @root_validator(skip_on_failure=True)
@@ -191,8 +191,7 @@ class MIIConfig(DeepSpeedConfigModel):
         deployment_name = values.get("deployment_name")
         if not deployment_name:
             model_name_or_path = values.get("model_config").model_name_or_path
-            deployment_name = generate_deployment_name(
-                model_name_or_path=model_name_or_path)
+            deployment_name = generate_deployment_name(model_name_or_path=model_name_or_path)
             values["deployment_name"] = deployment_name
         return values
 
@@ -228,9 +227,7 @@ class MIIConfig(DeepSpeedConfigModel):
 
 def _allocate_processes(hostfile_path: str, tensor_parallel: int, replica_num: int):
     resource_pool = fetch_hostfile(hostfile_path)
-    assert (
-        resource_pool is not None and len(resource_pool) > 0
-    ), f"No hosts found in {hostfile_path}"
+    assert (resource_pool is not None and len(resource_pool) > 0), f"No hosts found in {hostfile_path}"
 
     replica_pool = []
     allocated_num = 0
@@ -240,19 +237,15 @@ def _allocate_processes(hostfile_path: str, tensor_parallel: int, replica_num: i
             if allocated_num >= replica_num:
                 break
             if slots < tensor_parallel:
-                raise ValueError(
-                    f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required"
-                )
+                raise ValueError(f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required")
 
             allocated_num_on_host = slots - available_on_host
             replica_pool.append((
                 host,
-                [
-                    i for i in range(
-                        allocated_num_on_host,
-                        allocated_num_on_host + tensor_parallel,
-                    )
-                ],
+                [i for i in range(
+                    allocated_num_on_host,
+                    allocated_num_on_host + tensor_parallel,
+                )],
             ))
             allocated_num += 1
 
@@ -260,8 +253,7 @@ def _allocate_processes(hostfile_path: str, tensor_parallel: int, replica_num: i
 
     if allocated_num < replica_num:
         raise ValueError(
-            f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
-        )
+            f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed")
 
     return replica_pool
 
@@ -272,12 +264,9 @@ def get_mii_config(model_or_deployment_name: str) -> MIIConfig:
         mii_config = import_score_file(deployment_name, DeploymentType.LOCAL).mii_config
     except:
         try:
-            deployment_name = generate_deployment_name(
-                model_name_or_path=model_or_deployment_name)
-            mii_config = import_score_file(deployment_name,
-                                           DeploymentType.LOCAL).mii_config
+            deployment_name = generate_deployment_name(model_name_or_path=model_or_deployment_name)
+            mii_config = import_score_file(deployment_name, DeploymentType.LOCAL).mii_config
         except:
             raise DeploymentNotFoundError(
-                f"Could not find a deployment named {model_or_deployment_name} or {deployment_name}"
-            )
+                f"Could not find a deployment named {model_or_deployment_name} or {deployment_name}")
     return MIIConfig(**mii_config)

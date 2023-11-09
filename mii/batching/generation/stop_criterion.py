@@ -12,6 +12,7 @@ import torch
 
 
 class BaseGenerationStopCriterion(abc.ABC):
+
     def __init__(self, tokenizer):
         self.tokenizer = tokenizer
 
@@ -27,6 +28,7 @@ class BaseGenerationStopCriterion(abc.ABC):
 
 
 class TokenStopCriterion(BaseGenerationStopCriterion):
+
     def __init__(self, token: Union[str, int], tokenizer) -> None:
         super().__init__(tokenizer=tokenizer)
         if isinstance(token, str):
@@ -45,6 +47,7 @@ class TokenStopCriterion(BaseGenerationStopCriterion):
 
 
 class EosGenerationStopCriterion(BaseGenerationStopCriterion):
+
     def __init__(self, tokenizer):
         super().__init__(tokenizer=tokenizer)
         if hasattr(self.tokenizer, "eod"):
@@ -54,21 +57,17 @@ class EosGenerationStopCriterion(BaseGenerationStopCriterion):
         elif hasattr(self.tokenizer, "eos_token"):
             self.eos_id = self.tokenizer.eos_token
         else:
-            raise ValueError(
-                "Tokenizer must have either an `eod` or `eos_token` attribute.")
+            raise ValueError("Tokenizer must have either an `eod` or `eos_token` attribute.")
 
     def forward(self, tokens: torch.LongTensor) -> torch.BoolTensor:
         return tokens == self.eos_id
 
 
 class NewLineDelimitedStopCriterion(BaseGenerationStopCriterion):
+
     def __init__(self, tokenizer):
         super().__init__(tokenizer=tokenizer)
-        self.stop_token_ids = list(
-            set([self.tokenizer.tokenize(x)[0] for x in ["\n",
-                                                         "\r\n",
-                                                         "\n\n",
-                                                         ".\n\n"]]))
+        self.stop_token_ids = list(set([self.tokenizer.tokenize(x)[0] for x in ["\n", "\r\n", "\n\n", ".\n\n"]]))
 
     def forward(self, tokens: torch.LongTensor) -> torch.BoolTensor:
         retval = torch.zeros_like(tokens, dtype=torch.bool)
@@ -78,6 +77,7 @@ class NewLineDelimitedStopCriterion(BaseGenerationStopCriterion):
 
 
 class PipelinedCriterion(BaseGenerationStopCriterion):
+
     def __init__(
         self,
         criteria: List[BaseGenerationStopCriterion],
@@ -93,5 +93,4 @@ class PipelinedCriterion(BaseGenerationStopCriterion):
         return retval
 
     def get_key(self) -> str:
-        return super().get_key(
-        ) + f"_{'_'.join(criterion.get_key() for criterion in self.criteria)}"
+        return super().get_key() + f"_{'_'.join(criterion.get_key() for criterion in self.criteria)}"

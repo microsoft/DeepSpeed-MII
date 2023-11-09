@@ -10,6 +10,7 @@ from mii.logging import logger
 
 
 def sync_debug(func):
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         if self.sync_debug:
@@ -25,6 +26,7 @@ def sync_debug(func):
 
 
 def profiler(func):
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         if not self.profile_model_time:
@@ -33,8 +35,7 @@ def profiler(func):
         self._timers(func.__name__).start()
         result = func(self, *args, **kwargs)
         self._timers(func.__name__).stop()
-        self._profiled_times[func.__name__].append(
-            self._timers(func.__name__).elapsed(reset=True))
+        self._profiled_times[func.__name__].append(self._timers(func.__name__).elapsed(reset=True))
         return result
 
     return wrapper

@@ -38,8 +38,7 @@ class ModelInfo:
 
 def _hf_model_list() -> List[ModelInfo]:
     cache_file_path = os.path.join(mii_cache_path(), "MII_model_cache.pkl")
-    cache_expiration_seconds = os.getenv(MII_HF_CACHE_EXPIRATION,
-                                         MII_HF_CACHE_EXPIRATION_DEFAULT)
+    cache_expiration_seconds = os.getenv(MII_HF_CACHE_EXPIRATION, MII_HF_CACHE_EXPIRATION_DEFAULT)
 
     # Load or initialize the cache
     model_data = {"cache_time": 0, "model_list": []}
@@ -53,9 +52,7 @@ def _hf_model_list() -> List[ModelInfo]:
     if (model_data["cache_time"] + cache_expiration_seconds) < current_time:
         api = HfApi()
         model_data["model_list"] = [
-            ModelInfo(modelId=m.modelId,
-                      pipeline_tag=m.pipeline_tag,
-                      tags=m.tags) for m in api.list_models()
+            ModelInfo(modelId=m.modelId, pipeline_tag=m.pipeline_tag, tags=m.tags) for m in api.list_models()
         ]
         model_data["cache_time"] = current_time
 
@@ -86,8 +83,7 @@ def get_model_name(model_name_or_path: str) -> str:
         except:
             model_name = os.path.basename(model_name_or_path)
             logger.warning(
-                f"Could not deduce model name from {model_name_or_path}. Trying with {model_name=} instead."
-            )
+                f"Could not deduce model name from {model_name_or_path}. Trying with {model_name=} instead.")
     else:
         model_name = model_name_or_path
     return model_name
@@ -122,6 +118,7 @@ dtype_proto_field = {
 
 
 def kwarg_dict_to_proto(kwarg_dict):
+
     def get_proto_value(value):
         proto_value = mii.grpc_related.proto.modelresponse_pb2.Value()
 
@@ -139,15 +136,12 @@ def kwarg_dict_to_proto(kwarg_dict):
 
 
 def unpack_proto_query_kwargs(query_kwargs):
+
     def extract_proto_value(proto_value):
         field_name = proto_value.WhichOneof("oneof_values")
 
         if field_name == "mvalue":
-            return {
-                k: extract_proto_value(v)
-                for k,
-                v in proto_value.mvalue.values.items()
-            }
+            return {k: extract_proto_value(v) for k, v in proto_value.mvalue.values.items()}
         else:
             return getattr(proto_value, field_name)
 

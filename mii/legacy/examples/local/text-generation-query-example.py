@@ -6,11 +6,7 @@ import mii
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--deployment',
-                    '-d',
-                    type=str,
-                    required=True,
-                    help="deployment_name set in the MII deployment")
+parser.add_argument('--deployment', '-d', type=str, required=True, help="deployment_name set in the MII deployment")
 args = parser.parse_args()
 
 generator = mii.mii_query_handle(args.deployment)

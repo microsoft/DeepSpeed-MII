@@ -42,6 +42,7 @@ def download_model_and_get_path(task, model_name):
 
 
 class ImageResponse:
+
     def __init__(self, response):
         self._response = response
         self.nsfw_content_detected = response.nsfw_content_detected

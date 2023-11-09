@@ -26,6 +26,7 @@ def config_to_b64_str(config):
 
 class MIIServer:
     """Initialize the model, setup the server for the model under model_path"""
+
     def __init__(self, mii_config):
 
         self.task = mii_config.model_config.task
@@ -44,25 +45,20 @@ class MIIServer:
         mii_config.generate_replica_configs()
 
         processes = self._initialize_service(mii_config)
-        self._wait_until_server_is_live(processes,
-                                        mii_config.model_config.replica_configs)
+        self._wait_until_server_is_live(processes, mii_config.model_config.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):
             sockets_open = False
             while not sockets_open:
                 sockets_open = all(
-                    self._is_socket_open(repl_config.hostname,
-                                         port)
-                    for port in repl_config.tensor_parallel_ports)
+                    self._is_socket_open(repl_config.hostname, port) for port in repl_config.tensor_parallel_ports)
                 process_alive = self._is_server_process_alive(process)
                 if not process_alive:
-                    raise RuntimeError(
-                        "server crashed for some reason, unable to proceed")
+                    raise RuntimeError("server crashed for some reason, unable to proceed")
                 time.sleep(4)
                 logger.info("waiting for server to start...")
-            logger.info(
-                f"server has started on ports {repl_config.tensor_parallel_ports}")
+            logger.info(f"server has started on ports {repl_config.tensor_parallel_ports}")
 
     def _is_socket_open(self, host, port):
         import socket
@@ -85,11 +81,7 @@ class MIIServer:
             is_alive = False
         return is_alive
 
-    def _launch_server_process(self,
-                               model_config,
-                               msg_server_type,
-                               ds_launch_str="",
-                               server_args=None):
+    def _launch_server_process(self, model_config, msg_server_type, ds_launch_str="", server_args=None):
         launch_str = f"{sys.executable} -m mii.legacy.launch.multi_gpu_server"
         b64_config_str = config_to_b64_str(model_config)
         if server_args is None:
@@ -134,17 +126,14 @@ class MIIServer:
         # Start replica instances
         for repl_config in mii_config.model_config.replica_configs:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
-            hostfile.write(
-                f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
-                .encode())
+            hostfile.write(f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n".encode())
             ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name)
             processes.append(
                 self._launch_server_process(
                     mii_config.model_config,
                     "MII server",
                     ds_launch_str=ds_launch_str,
-                    server_args=server_args +
-                    [f"--server-port {repl_config.tensor_parallel_ports[0]}"],
+                    server_args=server_args + [f"--server-port {repl_config.tensor_parallel_ports[0]}"],
                 ))
             # start load balancer here. We don't use deepspeed launcher for the
             # load balancer because it does not need a GPU. The deepspeed

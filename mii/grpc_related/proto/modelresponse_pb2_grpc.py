@@ -12,6 +12,7 @@ import mii.grpc_related.proto.modelresponse_pb2 as modelresponse__pb2
 
 class ModelResponseStub(object):
     """Missing associated documentation comment in .proto file."""
+
     def __init__(self, channel):
         """Constructor.
 
@@ -20,8 +21,7 @@ class ModelResponseStub(object):
         """
         self.Terminate = channel.unary_unary(
             '/modelresponse.ModelResponse/Terminate',
-            request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
-            SerializeToString,
+            request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
         self.CreateSession = channel.unary_unary(
@@ -153,22 +153,19 @@ def add_ModelResponseServicer_to_server(servicer, server):
         grpc.unary_unary_rpc_method_handler(
             servicer.Terminate,
             request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
-            SerializeToString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         ),
         'CreateSession':
         grpc.unary_unary_rpc_method_handler(
             servicer.CreateSession,
             request_deserializer=modelresponse__pb2.SessionID.FromString,
-            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
-            SerializeToString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         ),
         'DestroySession':
         grpc.unary_unary_rpc_method_handler(
             servicer.DestroySession,
             request_deserializer=modelresponse__pb2.SessionID.FromString,
-            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
-            SerializeToString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
         ),
         'GeneratorReply':
         grpc.unary_unary_rpc_method_handler(
@@ -219,14 +216,14 @@ def add_ModelResponseServicer_to_server(servicer, server):
             response_serializer=modelresponse__pb2.GenerationReply.SerializeToString,
         ),
     }
-    generic_handler = grpc.method_handlers_generic_handler('modelresponse.ModelResponse',
-                                                           rpc_method_handlers)
+    generic_handler = grpc.method_handlers_generic_handler('modelresponse.ModelResponse', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler, ))
 
 
 # This class is part of an EXPERIMENTAL API.
 class ModelResponse(object):
     """Missing associated documentation comment in .proto file."""
+
     @staticmethod
     def Terminate(request,
                   target,
@@ -238,20 +235,11 @@ class ModelResponse(object):
                   wait_for_ready=None,
                   timeout=None,
                   metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/Terminate',
-            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/Terminate',
+                                             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                                             google_dot_protobuf_dot_empty__pb2.Empty.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def CreateSession(request,
@@ -264,20 +252,11 @@ class ModelResponse(object):
                       wait_for_ready=None,
                       timeout=None,
                       metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/CreateSession',
-            modelresponse__pb2.SessionID.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/CreateSession',
+                                             modelresponse__pb2.SessionID.SerializeToString,
+                                             google_dot_protobuf_dot_empty__pb2.Empty.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def DestroySession(request,
@@ -290,20 +269,11 @@ class ModelResponse(object):
                        wait_for_ready=None,
                        timeout=None,
                        metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/DestroySession',
-            modelresponse__pb2.SessionID.SerializeToString,
-            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/DestroySession',
+                                             modelresponse__pb2.SessionID.SerializeToString,
+                                             google_dot_protobuf_dot_empty__pb2.Empty.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def GeneratorReply(request,
@@ -316,20 +286,11 @@ class ModelResponse(object):
                        wait_for_ready=None,
                        timeout=None,
                        metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/GeneratorReply',
-            modelresponse__pb2.MultiStringRequest.SerializeToString,
-            modelresponse__pb2.MultiStringReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/GeneratorReply',
+                                             modelresponse__pb2.MultiStringRequest.SerializeToString,
+                                             modelresponse__pb2.MultiStringReply.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def ClassificationReply(request,
@@ -342,20 +303,11 @@ class ModelResponse(object):
                             wait_for_ready=None,
                             timeout=None,
                             metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/ClassificationReply',
-            modelresponse__pb2.SingleStringRequest.SerializeToString,
-            modelresponse__pb2.SingleStringReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/ClassificationReply',
+                                             modelresponse__pb2.SingleStringRequest.SerializeToString,
+                                             modelresponse__pb2.SingleStringReply.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def QuestionAndAnswerReply(request,
@@ -368,20 +320,11 @@ class ModelResponse(object):
                                wait_for_ready=None,
                                timeout=None,
                                metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/QuestionAndAnswerReply',
-            modelresponse__pb2.QARequest.SerializeToString,
-            modelresponse__pb2.SingleStringReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/QuestionAndAnswerReply',
+                                             modelresponse__pb2.QARequest.SerializeToString,
+                                             modelresponse__pb2.SingleStringReply.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def FillMaskReply(request,
@@ -394,20 +337,11 @@ class ModelResponse(object):
                       wait_for_ready=None,
                       timeout=None,
                       metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/FillMaskReply',
-            modelresponse__pb2.SingleStringRequest.SerializeToString,
-            modelresponse__pb2.SingleStringReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/FillMaskReply',
+                                             modelresponse__pb2.SingleStringRequest.SerializeToString,
+                                             modelresponse__pb2.SingleStringReply.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def TokenClassificationReply(request,
@@ -420,20 +354,11 @@ class ModelResponse(object):
                                  wait_for_ready=None,
                                  timeout=None,
                                  metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/TokenClassificationReply',
-            modelresponse__pb2.SingleStringRequest.SerializeToString,
-            modelresponse__pb2.SingleStringReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/TokenClassificationReply',
+                                             modelresponse__pb2.SingleStringRequest.SerializeToString,
+                                             modelresponse__pb2.SingleStringReply.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def ConversationalReply(request,
@@ -446,20 +371,11 @@ class ModelResponse(object):
                             wait_for_ready=None,
                             timeout=None,
                             metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/ConversationalReply',
-            modelresponse__pb2.ConversationRequest.SerializeToString,
-            modelresponse__pb2.ConversationReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/ConversationalReply',
+                                             modelresponse__pb2.ConversationRequest.SerializeToString,
+                                             modelresponse__pb2.ConversationReply.FromString, options,
+                                             channel_credentials, insecure, call_credentials, compression,
+                                             wait_for_ready, timeout, metadata)
 
     @staticmethod
     def Txt2ImgReply(request,
@@ -472,20 +388,11 @@ class ModelResponse(object):
                      wait_for_ready=None,
                      timeout=None,
                      metadata=None):
-        return grpc.experimental.unary_unary(
-            request,
-            target,
-            '/modelresponse.ModelResponse/Txt2ImgReply',
-            modelresponse__pb2.MultiStringRequest.SerializeToString,
-            modelresponse__pb2.ImageReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_unary(request, target, '/modelresponse.ModelResponse/Txt2ImgReply',
+                                             modelresponse__pb2.MultiStringRequest.SerializeToString,
+                                             modelresponse__pb2.ImageReply.FromString, options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout,
+                                             metadata)
 
     @staticmethod
     def GeneratorReplyStream(request,
@@ -498,17 +405,8 @@ class ModelResponse(object):
                              wait_for_ready=None,
                              timeout=None,
                              metadata=None):
-        return grpc.experimental.unary_stream(
-            request,
-            target,
-            '/modelresponse.ModelResponse/GeneratorReplyStream',
-            modelresponse__pb2.MultiStringRequest.SerializeToString,
-            modelresponse__pb2.GenerationReply.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata)
+        return grpc.experimental.unary_stream(request, target, '/modelresponse.ModelResponse/GeneratorReplyStream',
+                                              modelresponse__pb2.MultiStringRequest.SerializeToString,
+                                              modelresponse__pb2.GenerationReply.FromString, options,
+                                              channel_credentials, insecure, call_credentials, compression,
+                                              wait_for_ready, timeout, metadata)

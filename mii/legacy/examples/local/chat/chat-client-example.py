@@ -20,9 +20,7 @@ while True:
         break
 
     # A session ID is given as a keyword argument
-    result = generator.query({"query": query_template.format(user_input)},
-                             session_id=session_id,
-                             max_new_tokens=128)
+    result = generator.query({"query": query_template.format(user_input)}, session_id=session_id, max_new_tokens=128)
     print(f"Bot: {result.response[0].replace('</s>', '').strip()}")
 
 # You need to destroy the session after finishing the conversation

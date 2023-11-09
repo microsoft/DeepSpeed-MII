@@ -10,21 +10,13 @@ import mii.legacy as mii
 
 def get_acr_name():
     try:
-        acr_name = subprocess.check_output(
-            ["az",
-             "ml",
-             "workspace",
-             "show",
-             "--query",
-             "container_registry"],
-            text=True)
+        acr_name = subprocess.check_output(["az", "ml", "workspace", "show", "--query", "container_registry"],
+                                           text=True)
         return acr_name.strip().replace('"', '').rsplit('/', 1)[-1]
     except subprocess.CalledProcessError as e:
         print("\n", "-" * 30, "\n")
         print("Unable to obtain ACR name from Azure-CLI. Please verify that you:")
-        print(
-            "\t- Have Azure-CLI installed (https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)"
-        )
+        print("\t- Have Azure-CLI installed (https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)")
         print("\t- Are logged in to an active account on Azure-CLI ($az login)")
         print("\t- Have Azure-CLI ML plugin installed ($az extension add --name ml)")
         print("\t- You have the default subscription, resource group, and workspace set")
@@ -61,13 +53,7 @@ def write_out_yaml(output_file, yaml_data):
         yaml.dump(yaml.safe_load(yaml_data), f)
 
 
-def generate_aml_scripts(acr_name,
-                         deployment_name,
-                         model_name,
-                         task_name,
-                         replica_num,
-                         instance_type,
-                         version):
+def generate_aml_scripts(acr_name, deployment_name, model_name, task_name, replica_num, instance_type, version):
     output_dir = aml_output_path(deployment_name)
     code_path = os.path.join(output_dir, "code")
     model_path = os.path.join(output_dir, "model")
@@ -92,60 +78,29 @@ def generate_aml_scripts(acr_name,
     }
 
     # Docker files
-    write_out_script(os.path.join(output_dir,
-                                  "build",
-                                  "Dockerfile"),
-                     fill_template(mii.aml_related.templates.dockerfile,
-                                   replace_dict))
-    write_out_script(os.path.join(output_dir,
-                                  "build",
-                                  "gunicorn_app"),
-                     fill_template(mii.aml_related.templates.gunicorn,
-                                   replace_dict))
-    write_out_script(os.path.join(output_dir,
-                                  "build",
-                                  "runit",
-                                  "gunicorn",
-                                  "run"),
-                     fill_template(mii.aml_related.templates.gunicorn_run,
-                                   replace_dict))
-    write_out_script(
-        os.path.join(output_dir,
-                     "build",
-                     "runit",
-                     "gunicorn",
-                     "finish"),
-        fill_template(mii.aml_related.templates.gunicorn_finish,
-                      replace_dict))
-    write_out_script(os.path.join(output_dir,
-                                  "build",
-                                  "requirements.txt"),
-                     fill_template(mii.aml_related.templates.requirements,
-                                   replace_dict))
+    write_out_script(os.path.join(output_dir, "build", "Dockerfile"),
+                     fill_template(mii.aml_related.templates.dockerfile, replace_dict))
+    write_out_script(os.path.join(output_dir, "build", "gunicorn_app"),
+                     fill_template(mii.aml_related.templates.gunicorn, replace_dict))
+    write_out_script(os.path.join(output_dir, "build", "runit", "gunicorn", "run"),
+                     fill_template(mii.aml_related.templates.gunicorn_run, replace_dict))
+    write_out_script(os.path.join(output_dir, "build", "runit", "gunicorn", "finish"),
+                     fill_template(mii.aml_related.templates.gunicorn_finish, replace_dict))
+    write_out_script(os.path.join(output_dir, "build", "requirements.txt"),
+                     fill_template(mii.aml_related.templates.requirements, replace_dict))
 
     # Model download script
-    write_out_script(
-        os.path.join(output_dir,
-                     "model_download.py"),
-        fill_template(mii.aml_related.templates.model_download,
-                      replace_dict))
+    write_out_script(os.path.join(output_dir, "model_download.py"),
+                     fill_template(mii.aml_related.templates.model_download, replace_dict))
 
     # Deployment script
-    write_out_script(os.path.join(output_dir,
-                                  "deploy.sh"),
-                     fill_template(mii.aml_related.templates.deploy,
-                                   replace_dict))
+    write_out_script(os.path.join(output_dir, "deploy.sh"),
+                     fill_template(mii.aml_related.templates.deploy, replace_dict))
 
     # Yaml configs
-    write_out_yaml(os.path.join(output_dir,
-                                "deployment.yml"),
-                   fill_template(mii.aml_related.templates.deployment,
-                                 replace_dict))
-    write_out_yaml(os.path.join(output_dir,
-                                "endpoint.yml"),
-                   fill_template(mii.aml_related.templates.endpoint,
-                                 replace_dict))
-    write_out_yaml(os.path.join(output_dir,
-                                "environment.yml"),
-                   fill_template(mii.aml_related.templates.environment,
-                                 replace_dict))
+    write_out_yaml(os.path.join(output_dir, "deployment.yml"),
+                   fill_template(mii.aml_related.templates.deployment, replace_dict))
+    write_out_yaml(os.path.join(output_dir, "endpoint.yml"),
+                   fill_template(mii.aml_related.templates.endpoint, replace_dict))
+    write_out_yaml(os.path.join(output_dir, "environment.yml"),
+                   fill_template(mii.aml_related.templates.environment, replace_dict))

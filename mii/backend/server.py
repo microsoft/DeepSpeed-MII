@@ -29,6 +29,7 @@ def config_to_b64_str(config: DeepSpeedConfigModel) -> str:
 
 class MIIServer:
     """Initialize the model, setup the server for the model"""
+
     def __init__(self, mii_config: MIIConfig) -> None:
 
         self.task = mii_config.model_config.task
@@ -44,31 +45,24 @@ class MIIServer:
         mii_config.generate_replica_configs()
 
         processes = self._initialize_service(mii_config)
-        self._wait_until_server_is_live(processes,
-                                        mii_config.model_config.replica_configs)
+        self._wait_until_server_is_live(processes, mii_config.model_config.replica_configs)
 
-    def _wait_until_server_is_live(self,
-                                   processes: List[subprocess.Popen],
-                                   deployment: List[ReplicaConfig]):
+    def _wait_until_server_is_live(self, processes: List[subprocess.Popen], deployment: List[ReplicaConfig]):
         for process, repl_config in zip(processes, deployment):
             sockets_open = False
             while not sockets_open:
                 sockets_open = all(
-                    self._is_socket_open(repl_config.hostname,
-                                         port)
-                    for port in repl_config.tensor_parallel_ports)
+                    self._is_socket_open(repl_config.hostname, port) for port in repl_config.tensor_parallel_ports)
                 process_alive = self._is_server_process_alive(process)
                 if not process_alive:
-                    raise RuntimeError(
-                        "server crashed for some reason, unable to proceed")
+                    raise RuntimeError("server crashed for some reason, unable to proceed")
                 time.sleep(4)
                 logger.info("waiting for server to start...")
             # TODO: Fix displaying outputs from logger
             # When we launch processes on multiple nodes using " --force_multi",
             # all the outputs from logger to stdout is displayed when the process is stopped.
             # This is confusing because you see the message "server has started ..." when you stop the process.
-            logger.info(
-                f"server has started on ports {repl_config.tensor_parallel_ports}")
+            logger.info(f"server has started on ports {repl_config.tensor_parallel_ports}")
 
     def _is_socket_open(self, host: str, port: int) -> bool:
         import socket
@@ -107,10 +101,7 @@ class MIIServer:
         logger.info(f"msg_server launch: {cmd}")
         return subprocess.Popen(cmd)
 
-    def _generate_ds_launch_str(self,
-                                replica_config: ReplicaConfig,
-                                hostfile: str,
-                                use_multiple_hosts) -> str:
+    def _generate_ds_launch_str(self, replica_config: ReplicaConfig, hostfile: str, use_multiple_hosts) -> str:
         # use different hostfiles for replica instances
         # pass /dev/null when no replica is used
         #worker_str = f"-H {hostfile} "
@@ -141,27 +132,21 @@ class MIIServer:
         for repl_config in mii_config.model_config.replica_configs:
             host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
-        use_multiple_hosts = len(
-            set(repl_config.hostname
-                for repl_config in mii_config.model_config.replica_configs)) > 1
+        use_multiple_hosts = len(set(repl_config.hostname
+                                     for repl_config in mii_config.model_config.replica_configs)) > 1
 
         # Start replica instances
         for repl_config in mii_config.model_config.replica_configs:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
-            hostfile.write(
-                f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
-                .encode())
-            ds_launch_str = self._generate_ds_launch_str(repl_config,
-                                                         hostfile.name,
-                                                         use_multiple_hosts)
+            hostfile.write(f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n".encode())
+            ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name, use_multiple_hosts)
             processes.append(
                 self._launch_server_process(
                     mii_config.model_config,
                     "MII server",
                     ds_launch_str=ds_launch_str,
-                    server_args=server_args + [
-                        f"--server-port {repl_config.tensor_parallel_ports[0]} --zmq-port {repl_config.zmq_port}"
-                    ],
+                    server_args=server_args +
+                    [f"--server-port {repl_config.tensor_parallel_ports[0]} --zmq-port {repl_config.zmq_port}"],
                 ))
         # start load balancer here. We don't use deepspeed launcher for the
         # load balancer because it does not need a GPU. The deepspeed

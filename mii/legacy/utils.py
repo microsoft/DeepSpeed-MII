@@ -27,8 +27,7 @@ from mii.legacy.config import TaskType
 
 def _get_hf_models_by_type(model_type=None, task=None):
     cache_file_path = os.path.join(mii_cache_path(), "HF_model_cache.pkl")
-    cache_expiration_seconds = os.getenv(MII_HF_CACHE_EXPIRATION,
-                                         MII_HF_CACHE_EXPIRATION_DEFAULT)
+    cache_expiration_seconds = os.getenv(MII_HF_CACHE_EXPIRATION, MII_HF_CACHE_EXPIRATION_DEFAULT)
 
     # Load or initialize the cache
     model_data = {"cache_time": 0, "model_list": []}
@@ -42,9 +41,7 @@ def _get_hf_models_by_type(model_type=None, task=None):
     if (model_data["cache_time"] + cache_expiration_seconds) < current_time:
         api = HfApi()
         model_data["model_list"] = [
-            SimpleNamespace(modelId=m.modelId,
-                            pipeline_tag=m.pipeline_tag,
-                            tags=m.tags) for m in api.list_models()
+            SimpleNamespace(modelId=m.modelId, pipeline_tag=m.pipeline_tag, tags=m.tags) for m in api.list_models()
         ]
         model_data["cache_time"] = current_time
 
@@ -65,8 +62,7 @@ def _get_hf_models_by_type(model_type=None, task=None):
     if task == TaskType.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
         model_ids.extend([
-            "microsoft/bloom-deepspeed-inference-fp16",
-            "microsoft/bloom-deepspeed-inference-int8",
+            "microsoft/bloom-deepspeed-inference-fp16", "microsoft/bloom-deepspeed-inference-int8",
             "EleutherAI/gpt-neox-20b"
         ])
 
@@ -149,6 +145,7 @@ dtype_proto_field = {
 
 
 def kwarg_dict_to_proto(kwarg_dict):
+
     def get_proto_value(value):
         proto_value = mii.grpc_related.proto.legacymodelresponse_pb2.Value()
         setattr(proto_value, dtype_proto_field[type(value)], value)
@@ -158,12 +155,7 @@ def kwarg_dict_to_proto(kwarg_dict):
 
 
 def unpack_proto_query_kwargs(query_kwargs):
-    query_kwargs = {
-        k: getattr(v,
-                   v.WhichOneof("oneof_values"))
-        for k,
-        v in query_kwargs.items()
-    }
+    query_kwargs = {k: getattr(v, v.WhichOneof("oneof_values")) for k, v in query_kwargs.items()}
     return query_kwargs
 
 
@@ -181,9 +173,8 @@ def extract_query_dict(task, request_dict):
 def get_num_gpus(mii_config):
     num_gpus = mii_config.model_config.tensor_parallel
 
-    assert (
-        torch.cuda.device_count() >= num_gpus
-    ), f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
+    assert (torch.cuda.device_count() >= num_gpus
+            ), f"Available GPU count: {torch.cuda.device_count()} does not meet the required gpu count: {num_gpus}"
     return num_gpus
 
 

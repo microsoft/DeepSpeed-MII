@@ -39,9 +39,7 @@ def main() -> None:
         help="Port to user for DeepSpeed inference server.",
     )
     parser.add_argument("--zmq-port", type=int, default=0, help="Port to use for ZMQ.")
-    parser.add_argument("--load-balancer",
-                        action="store_true",
-                        help="Launch load balancer process.")
+    parser.add_argument("--load-balancer", action="store_true", help="Launch load balancer process.")
     parser.add_argument(
         "--load-balancer-port",
         type=int,
@@ -60,9 +58,7 @@ def main() -> None:
         help="Port to use for restful gateway.",
     )
     args = parser.parse_args()
-    assert not (
-        args.load_balancer and args.restful_gateway
-    ), "Select only load-balancer OR restful-gateway."
+    assert not (args.load_balancer and args.restful_gateway), "Select only load-balancer OR restful-gateway."
 
     if args.restful_gateway:
         assert args.restful_gateway_port, "--restful-gateway-port must be provided."

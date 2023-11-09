@@ -45,8 +45,7 @@ import mii.legacy as mii
             "text-generation",
             "bigscience/bloom-560m",
             {
-                "query": ["DeepSpeed is the greatest",
-                          "Seattle is"]
+                "query": ["DeepSpeed is the greatest", "Seattle is"]
             },
         ),
         (
@@ -78,8 +77,7 @@ def test_single_GPU(deployment, query):
             "text-generation",
             "bigscience/bloom-560m",
             {
-                "query": ["DeepSpeed is the greatest",
-                          "Seattle is"]
+                "query": ["DeepSpeed is the greatest", "Seattle is"]
             },
         ),
     ],
@@ -97,8 +95,7 @@ def test_multi_GPU(deployment, query):
             "text-generation",
             "bigscience/bloom-560m",
             {
-                "query": ["DeepSpeed is the greatest",
-                          'Seattle is']
+                "query": ["DeepSpeed is the greatest", 'Seattle is']
             },
         ),
     ],

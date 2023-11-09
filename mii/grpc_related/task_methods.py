@@ -11,9 +11,8 @@ from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
-    return modelresponse_pb2.SingleStringRequest(
-        request=request_dict["query"],
-        query_kwargs=kwarg_dict_to_proto(query_kwargs))
+    return modelresponse_pb2.SingleStringRequest(request=request_dict["query"],
+                                                 query_kwargs=kwarg_dict_to_proto(query_kwargs))
 
 
 def single_string_response_to_proto(self, response, time_taken, model_time_taken):
@@ -24,8 +23,7 @@ def single_string_response_to_proto(self, response, time_taken, model_time_taken
 
 def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     return modelresponse_pb2.MultiStringRequest(
-        request=request_dict["query"] if isinstance(request_dict["query"],
-                                                    list) else [request_dict["query"]],
+        request=request_dict["query"] if isinstance(request_dict["query"], list) else [request_dict["query"]],
         query_kwargs=kwarg_dict_to_proto(query_kwargs),
     )
 
@@ -43,6 +41,7 @@ def proto_request_to_list(self, request):
 
 
 class TaskMethods(ABC):
+
     @property
     @abstractmethod
     def method(self):
@@ -95,10 +94,9 @@ class TextGenerationMethods(TaskMethods):
             text = response.generated_text
             text_responses.append(text)
             details.append(
-                modelresponse_pb2.GenerationDetails(
-                    finish_reason=str(response.finish_reason),
-                    prompt_tokens=response.prompt_length,
-                    generated_tokens=response.generated_length))
+                modelresponse_pb2.GenerationDetails(finish_reason=str(response.finish_reason),
+                                                    prompt_tokens=response.prompt_length,
+                                                    generated_tokens=response.generated_length))
 
         return modelresponse_pb2.GenerationReply(
             response=text_responses,

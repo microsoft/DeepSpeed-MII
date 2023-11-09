@@ -90,11 +90,8 @@ setup(name="deepspeed-mii",
       },
       install_requires=install_requires,
       extras_require=extras_require,
-      packages=find_packages(exclude=("tests",
-                                      )),
+      packages=find_packages(exclude=("tests", )),
       classifiers=[
-          'Programming Language :: Python :: 3.7',
-          'Programming Language :: Python :: 3.8',
-          'Programming Language :: Python :: 3.9',
-          'Programming Language :: Python :: 3.10'
+          'Programming Language :: Python :: 3.7', 'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9', 'Programming Language :: Python :: 3.10'
       ])

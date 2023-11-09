@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 
 class MIITokenizerWrapper(ABC):
+
     def __init__(self, tokenizer: object) -> None:
         self.tokenizer = tokenizer
 
@@ -39,6 +40,7 @@ class MIITokenizerWrapper(ABC):
 
 
 class HFTokenizer(MIITokenizerWrapper):
+
     def __init__(self, tokenizer: Union[str, object]) -> None:
         if isinstance(tokenizer, str):
             tokenizer = AutoTokenizer.from_pretrained(tokenizer)

@@ -10,10 +10,8 @@ if TYPE_CHECKING:
     from mii.batching.ragged_batching import RaggedRequestBatch
 
 
-def run_batch_processing(input_tensor: torch.Tensor,
-                         requests: "RaggedRequestBatch",
-                         processor_fns: Dict[str,
-                                             Any]) -> torch.Tensor:
+def run_batch_processing(input_tensor: torch.Tensor, requests: "RaggedRequestBatch",
+                         processor_fns: Dict[str, Any]) -> torch.Tensor:
     idx_list: List[int] = []
     output_list: List[torch.Tensor] = []
 
@@ -46,10 +44,8 @@ def run_batch_processing(input_tensor: torch.Tensor,
     return output[torch.argsort(torch.tensor(idx_list))]
 
 
-def run_batch_logit_processing(input_logits: torch.Tensor,
-                               requests: "RaggedRequestBatch",
-                               processor_map: Dict[str,
-                                                   Any]) -> torch.Tensor:
+def run_batch_logit_processing(input_logits: torch.Tensor, requests: "RaggedRequestBatch",
+                               processor_map: Dict[str, Any]) -> torch.Tensor:
     top_k_fns = {k: v for k, v in processor_map.items() if "TopK" in k}
     top_p_fns = {k: v for k, v in processor_map.items() if "TopP" in k}
     temp_fns = {k: v for k, v in processor_map.items() if "Temp" in k}
@@ -61,19 +57,15 @@ def run_batch_logit_processing(input_logits: torch.Tensor,
     return output_logits
 
 
-def run_batch_sampler(input_logits: torch.Tensor,
-                      requests: "RaggedRequestBatch",
-                      processor_map: Dict[str,
-                                          Any]) -> torch.Tensor:
+def run_batch_sampler(input_logits: torch.Tensor, requests: "RaggedRequestBatch",
+                      processor_map: Dict[str, Any]) -> torch.Tensor:
     sampler_fns = {k: v for k, v in processor_map.items() if "Sampler" in k}
     next_tokens = run_batch_processing(input_logits, requests, sampler_fns)
     return next_tokens
 
 
-def run_batch_stop_criterion(next_tokens: torch.Tensor,
-                             requests: "RaggedRequestBatch",
-                             processor_map: Dict[str,
-                                                 Any]) -> torch.Tensor:
+def run_batch_stop_criterion(next_tokens: torch.Tensor, requests: "RaggedRequestBatch",
+                             processor_map: Dict[str, Any]) -> torch.Tensor:
     stop_fns = {k: v for k, v in processor_map.items() if "Stop" in k}
     done_tokens = run_batch_processing(next_tokens, requests, stop_fns)
     return done_tokens

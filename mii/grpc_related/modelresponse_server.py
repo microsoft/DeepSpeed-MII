@@ -36,6 +36,7 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
     """
     Base class to provide common features of an inference server
     """
+
     def __init__(self):
         self._stop_event = threading.Event()
 
@@ -51,6 +52,7 @@ class ModelResponse(ServiceBase):
     """
     Implementation class of an MII inference server
     """
+
     def __init__(self, async_pipeline=None):
         super().__init__()
         self.inference_pipeline = async_pipeline
@@ -122,6 +124,7 @@ class ModelResponse(ServiceBase):
 
 
 class AtomicCounter:
+
     def __init__(self, initial_value=0):
         self.value = initial_value
         self.lock = threading.Lock()
@@ -147,6 +150,7 @@ class ParallelStubInvoker:
     This class aims to call gRPC methods without conversions between proto and python object.
     TensorParallelClient can be used for invocation with the conversions.
     """
+
     def __init__(self, host, ports):
         # Assumption: target services are all on the same host
         self.stubs = []
@@ -166,12 +170,11 @@ class ParallelStubInvoker:
 
     def invoke(self, method_name, proto_request):
         # This is needed because gRPC calls from interceptor are launched from
-        return asyncio.run_coroutine_threadsafe(
-            self._invoke_async(method_name,
-                               proto_request),
-            self.asyncio_loop).result()
+        return asyncio.run_coroutine_threadsafe(self._invoke_async(method_name, proto_request),
+                                                self.asyncio_loop).result()
 
     def invoke_stream(self, method_name, proto_request, result_queue):
+
         async def invoke_stream_async():
             stub = self.stubs[0]  # Only the first stub is used for streaming
             method = getattr(stub, method_name)
@@ -180,18 +183,17 @@ class ParallelStubInvoker:
             async for r in response:
                 result_queue.put(r)
 
-        return asyncio.run_coroutine_threadsafe(invoke_stream_async(),
-                                                self.asyncio_loop).result()
+        return asyncio.run_coroutine_threadsafe(invoke_stream_async(), self.asyncio_loop).result()
 
 
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
+
     def __init__(self, model_config):
         super().__init__()
         self.asyncio_loop = asyncio.get_event_loop()
 
         self.stubs = [
-            ParallelStubInvoker(replica.hostname,
-                                replica.tensor_parallel_ports)
+            ParallelStubInvoker(replica.hostname, replica.tensor_parallel_ports)
             for replica in model_config.replica_configs
         ]
         self.counter = AtomicCounter()
@@ -219,8 +221,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
             if method_name == TERMINATE_METHOD:
                 for stub in self.stubs:
-                    stub.invoke(TERMINATE_METHOD,
-                                google_dot_protobuf_dot_empty__pb2.Empty())
+                    stub.invoke(TERMINATE_METHOD, google_dot_protobuf_dot_empty__pb2.Empty())
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_loop.stop)
                 return next_handler.unary_unary(request_proto, context)
 
@@ -229,8 +230,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
             if method_name == CREATE_SESSION_METHOD:
                 if request_proto.session_id in self.replica_sessions:
-                    raise ValueError(
-                        f"session {request_proto.session_id} already exists")
+                    raise ValueError(f"session {request_proto.session_id} already exists")
                 self.replica_sessions[request_proto.session_id] = replica_index
                 self.stubs[replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
                 return google_dot_protobuf_dot_empty__pb2.Empty()
@@ -251,41 +251,31 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
             return ret
 
         if next_handler.unary_unary is not None:
-            return grpc.unary_unary_rpc_method_handler(
-                invoke_intercept_method,
-                request_deserializer=next_handler.request_deserializer,
-                response_serializer=next_handler.response_serializer)
+            return grpc.unary_unary_rpc_method_handler(invoke_intercept_method,
+                                                       request_deserializer=next_handler.request_deserializer,
+                                                       response_serializer=next_handler.response_serializer)
         else:
             method_name = _get_grpc_method_name(handler_call_details.method)
             result_queue = queue.Queue()
 
             def call_invoker(request_proto, context):
-                self.stubs[replica_index].invoke_stream(method_name,
-                                                        request_proto,
-                                                        result_queue)
+                self.stubs[replica_index].invoke_stream(method_name, request_proto, result_queue)
 
             def invoke_intercept_method_stream(request_proto, context):
-                threading.Thread(target=call_invoker,
-                                 args=(request_proto,
-                                       context)).start()
+                threading.Thread(target=call_invoker, args=(request_proto, context)).start()
                 while True:
                     try:
-                        response_proto = result_queue.get(
-                            timeout=STREAM_RESPONSE_QUEUE_TIMEOUT)
+                        response_proto = result_queue.get(timeout=STREAM_RESPONSE_QUEUE_TIMEOUT)
                         yield response_proto
-                        if response_proto.details[0].finish_reason != str(
-                                GenerationFinishReason.NONE):
+                        if response_proto.details[0].finish_reason != str(GenerationFinishReason.NONE):
                             break
                     except queue.Empty:
-                        print(
-                            f"Haven't received a streaming response in {STREAM_RESPONSE_QUEUE_TIMEOUT} second(s)"
-                        )
+                        print(f"Haven't received a streaming response in {STREAM_RESPONSE_QUEUE_TIMEOUT} second(s)")
                         break
 
-            return grpc.unary_stream_rpc_method_handler(
-                invoke_intercept_method_stream,
-                request_deserializer=next_handler.request_deserializer,
-                response_serializer=next_handler.response_serializer)
+            return grpc.unary_stream_rpc_method_handler(invoke_intercept_method_stream,
+                                                        request_deserializer=next_handler.request_deserializer,
+                                                        response_serializer=next_handler.response_serializer)
 
 
 def _do_serve(service_impl, port, interceptors=[]):
@@ -293,10 +283,8 @@ def _do_serve(service_impl, port, interceptors=[]):
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=LB_MAX_WORKER_THREADS),
                          interceptors=interceptors,
-                         options=[("grpc.max_send_message_length",
-                                   GRPC_MAX_MSG_SIZE),
-                                  ("grpc.max_receive_message_length",
-                                   GRPC_MAX_MSG_SIZE)])
+                         options=[("grpc.max_send_message_length", GRPC_MAX_MSG_SIZE),
+                                  ("grpc.max_receive_message_length", GRPC_MAX_MSG_SIZE)])
     modelresponse_pb2_grpc.add_ModelResponseServicer_to_server(service_impl, server)
     server.add_insecure_port(f"[::]:{port}")
     print(f"About to start server")
