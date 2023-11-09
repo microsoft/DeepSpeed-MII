@@ -657,6 +657,7 @@ class MIIPipeline(RaggedBatchBase):
         self.schedule_requests()
 
         if self.is_rank_0:
+            # Rank 0 runs generate() until all responses are returned
             while uids_running:
                 self.generate()
                 while not self.result_queues[self.tid].empty():
@@ -665,9 +666,11 @@ class MIIPipeline(RaggedBatchBase):
                     self._flush_uid(uid)
                     uids_complete_order.append(uids_running.index(uid))
                     uids_running.remove(uid)
-            # To kick ranks 1 -> n out of the while loop
+            # Ensure final flush requests broadcast and
+            # kick ranks 1 -> n out of the while loop
             self._bcast_requests(force=True)
         else:
+            # Ranks 1 -> n just run generate() until there are no more requests
             while self.scheduled_requests:
                 self.generate()
 
@@ -708,20 +711,19 @@ class MIIPipeline(RaggedBatchBase):
         return responses
 
     def _flush_uid(self, uid: int) -> None:
-        if self.is_rank_0:
-            self.request_queue.put_nowait(
-                RaggedRequest(
-                    tid=None,
-                    uid=uid,
-                    input_tokens=None,
-                    prompt_length=None,
-                    seq_length=None,
-                    max_length=None,
-                    max_new_tokens=None,
-                    last_in_prompt=None,
-                    post_processing=None,
-                    stream=None,
-                ))
+        self.request_queue.put_nowait(
+            RaggedRequest(
+                tid=None,
+                uid=uid,
+                input_tokens=None,
+                prompt_length=None,
+                seq_length=None,
+                max_length=None,
+                max_new_tokens=None,
+                last_in_prompt=None,
+                post_processing=None,
+                stream=None,
+            ))
 
 
 class MIIAsyncPipeline(RaggedBatchBase):
