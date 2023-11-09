@@ -143,6 +143,10 @@ Users can also control the generation characteristics for individual prompts (i.
 
 - `max_length: int` Sets the per-prompt maximum token length for prompt + response.
 - `max_new_tokens: int` Sets the maximum number of tokens generated in the response.
+- `ignore_eos: bool` (Defaults to `False`) Setting to `True` prevents generation from ending when the EOS token is encountered.
+- `top_p: float` (Defaults to `0.9`) When set below `1.0`, filter tokens and keep only the most probable, where token probabilities sum to &ge;`top_p`.
+- `top_k: int` (Defaults to `None`) When `None`, top-k filtering is disabled. When set, the number of highest probability tokens to keep.
+- `temperature: float` (Defaults to `None`) When `None`, temperature is disabled. When set, modulates token probabilities.
 
 ## Persistent Deployment
 
@@ -231,6 +235,10 @@ Users can also control the generation characteristics for individual prompts (i.
 
 - `max_length: int` Sets the per-prompt maximum token length for prompt + response.
 - `max_new_tokens: int` Sets the maximum number of tokens generated in the response.
+- `ignore_eos: bool` (Defaults to `False`) Setting to `True` prevents generation from ending when the EOS token is encountered.
+- `top_p: float` (Defaults to `0.9`) When set below `1.0`, filter tokens and keep only the most probable, where token probabilities sum to &ge;`top_p`.
+- `top_k: int` (Defaults to `None`) When `None`, top-k filtering is disabled. When set, the number of highest probability tokens to keep.
+- `temperature: float` (Defaults to `None`) When `None`, temperature is disabled. When set, modulates token probabilities.
 
 
 # Contributing

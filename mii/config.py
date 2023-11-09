@@ -12,8 +12,8 @@ from deepspeed.inference import RaggedInferenceEngineConfig
 
 from mii.constants import DeploymentType, TaskType, ModelProvider
 from mii.errors import DeploymentNotFoundError
+from mii.modeling.tokenizers import MIITokenizerWrapper
 from mii.pydantic_v1 import Field, root_validator
-from mii.tokenizers import MIITokenizerWrapper
 from mii.utils import generate_deployment_name, get_default_task, import_score_file
 
 
