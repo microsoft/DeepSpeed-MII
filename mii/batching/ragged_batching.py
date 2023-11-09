@@ -705,7 +705,6 @@ class MIIAsyncPipeline(RaggedBatchBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uids = set()
-        self.session_to_uid: Dict[str, int] = {}
         self.lock = threading.Lock()
         self.thread = None
         self.stop_thread = False
@@ -723,27 +722,16 @@ class MIIAsyncPipeline(RaggedBatchBase):
                     and all(q.empty() for q in self.result_queues.values())):
                 break
 
-    def _get_uid(self, session_id: Union[str, None]):
-        if session_id in self.session_to_uid:
-            return self.session_to_uid[session_id]
-
-        # Create a new uid
+    def _get_uid(self) -> int:
         with self.lock:
             uid = random.randrange(self.UID_RANGE_LB, self.UID_RANGE_UB)
             while uid in self.uids:
                 uid = random.randrange(self.UID_RANGE_LB, self.UID_RANGE_UB)
             self.uids.add(uid)
 
-        if session_id is not None:
-            self.session_to_uid[session_id] = uid
-
         return uid
 
-    def put_request(self,
-                    prompt: str,
-                    kwargs: Dict,
-                    session_id: Union[str,
-                                      None] = None) -> int:
+    def put_request(self, prompt: str, kwargs: Dict) -> int:
         # TODO: We should avoid any request/response work with non-rank 0, but
         # this requires some refactoring how we do the put and request in
         # `ModelResponse`
@@ -752,7 +740,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
         if self.stop_thread:
             raise RuntimeError("The request queue was shutdown.")
 
-        uid = self._get_uid(session_id)
+        uid = self._get_uid()
 
         with self.lock:
             if uid not in self.result_queues:
@@ -820,12 +808,3 @@ class MIIAsyncPipeline(RaggedBatchBase):
                         stream=None,
                     ))
             self.uids.remove(uid)
-
-    def destroy_session(self, session_id: str) -> None:
-        with self.lock:
-            assert session_id in self.session_to_uid, f"Session {session_id} does not exist."
-            uid = self.session_to_uid[session_id]
-            del self.session_to_uid[session_id]
-            if uid in self.result_queues:
-                del self.result_queues[uid]
-        self.flush_uid(uid)

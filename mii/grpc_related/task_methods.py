@@ -56,8 +56,6 @@ class TaskMethods(ABC):
 
 
 class TextGenerationMethods(TaskMethods):
-    session_context = {}
-
     @property
     def method(self):
         return "GeneratorReply"
@@ -68,16 +66,6 @@ class TextGenerationMethods(TaskMethods):
 
     pack_request_to_proto = multi_string_request_to_proto
     unpack_request_from_proto = proto_request_to_list
-
-    def create_session(self, session_id):
-        if session_id in self.session_context:
-            raise ValueError(f"session {session_id} already exists")
-        self.session_context[session_id] = None
-
-    def destroy_session(self, session_id):
-        if session_id not in self.session_context:
-            raise ValueError(f"session {session_id} does not exist")
-        del self.session_context[session_id]
 
     def pack_response_to_proto(self, responses, time_taken, model_time_taken):
         text_responses = []

@@ -8,7 +8,7 @@ import requests
 from typing import Dict, Any, Callable, List, Union
 
 from mii.config import MIIConfig
-from mii.constants import GRPC_MAX_MSG_SIZE, TaskType
+from mii.constants import GRPC_MAX_MSG_SIZE
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
 from mii.grpc_related.task_methods import TASK_METHODS_DICT
 
@@ -103,24 +103,3 @@ class MIIClient:
         if self.mii_config.enable_restful_api:
             requests.get(
                 f"http://localhost:{self.mii_config.restful_api_port}/terminate")
-
-    async def create_session_async(self, session_id):
-        return await self.stub.CreateSession(
-            modelresponse_pb2.SessionID(session_id=session_id))
-
-    def create_session(self, session_id):
-        assert (
-            self.task == TaskType.TEXT_GENERATION
-        ), f"Session creation only available for task '{TaskType.TEXT_GENERATION}'."
-        return self.asyncio_loop.run_until_complete(
-            self.create_session_async(session_id))
-
-    async def destroy_session_async(self, session_id):
-        await self.stub.DestroySession(modelresponse_pb2.SessionID(session_id=session_id)
-                                       )
-
-    def destroy_session(self, session_id):
-        assert (
-            self.task == TaskType.TEXT_GENERATION
-        ), f"Session deletion only available for task '{TaskType.TEXT_GENERATION}'."
-        self.asyncio_loop.run_until_complete(self.destroy_session_async(session_id))
