@@ -7,7 +7,7 @@ import os
 import string
 from typing import List, Optional, Dict, Any
 import mii.legacy as mii
-from .constants import DeploymentType, TaskType, MII_MODEL_PATH_DEFAULT
+from .constants import DeploymentType, TaskType, ModelProvider, MII_MODEL_PATH_DEFAULT
 from .pydantic_v1 import validator, root_validator, Field
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
@@ -267,6 +267,14 @@ class ModelConfig(DeepSpeedConfigModel):
             raise ValueError(
                 "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
             )
+        return values
+
+    @root_validator
+    def sys_mem_and_diffusers(cls, values):
+        if values.get("load_with_sys_mem"):
+            model = values.get("model")
+            task = values.get("task")
+            assert not (mii.utils.get_provider(model, task) == ModelProvider.DIFFUSERS), "`load_with_sys_mem` is not support with Stable Diffusion"
         return values
 
     @root_validator
