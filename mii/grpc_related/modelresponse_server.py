@@ -77,22 +77,49 @@ class ModelResponse(ServiceBase):
         task_methods = TASK_METHODS_DICT[task]
         prompts, kwargs = task_methods.unpack_request_from_proto(request_proto)
 
+        # Get list of session ids
         session_id = kwargs.pop("session_id", None)
+        if session_id is None:
+            session_id = [None for _ in prompts]
+        if not isinstance(session_id, list):
+            session_id = [session_id]
+        non_none_sid = [s_id for s_id in session_id if s_id is not None]
+        assert len(non_none_sid) == len(set(non_none_sid)), "session_id must be unique"
 
         start = time.time()
         uids = []
         responses = []
-        for p in prompts:
-            uid = self.inference_pipeline.put_request(p, kwargs, session_id)
+        # Put requests for all prompts into the pipeline
+        for p, s_id in zip(prompts, session_id):
+            request_kwargs = kwargs.copy()
+            uid = self.inference_pipeline.put_request(p, request_kwargs, s_id)
             uids.append(uid)
-        for uid in uids:
-            response = self.inference_pipeline.get_response(uid)
-            responses.append(response)
+
+        # Get responses from the pipeline as they are ready, flush finished uids
+        # so new requests can be processed
+        uid_completed_order = []
+        while uids:
+            for uid, s_id in zip(uids, session_id):
+                if not self.inference_pipeline.is_response_ready(uid):
+                    continue
+                response = self.inference_pipeline.get_response(uid)
+                responses.append(response)
+                if s_id is None:
+                    self.inference_pipeline.flush_uid(uid)
+                    uid_idx = uids.index(uid)
+                    uid_completed_order.append(uid_idx)
+                    del session_id[uid_idx]
+                    uids.remove(uid)
+            time.sleep(.001)  # So we don't spin too much
         end = time.time()
 
-        if session_id is None:
-            for uid in uids:
-                self.inference_pipeline.flush_uid(uid)
+        # Sort responses in the order of prompts
+        responses = [
+            r for idx,
+            r in sorted(zip(uid_completed_order,
+                            responses),
+                        key=lambda pair: pair[0])
+        ]
 
         return task_methods.pack_response_to_proto(responses, end - start, -1)
 
