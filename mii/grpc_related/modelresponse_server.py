@@ -75,19 +75,26 @@ class ModelResponse(ServiceBase):
             raise ValueError(f"unknown task: {task}")
 
         task_methods = TASK_METHODS_DICT[task]
-        args, kwargs = task_methods.unpack_request_from_proto(request_proto)
+        prompts, kwargs = task_methods.unpack_request_from_proto(request_proto)
 
         session_id = kwargs.pop("session_id", None)
 
         start = time.time()
-        uid = self.inference_pipeline.put_request(args, kwargs, session_id)
-        response = self.inference_pipeline.get_response(uid)
+        uids = []
+        responses = []
+        for p in prompts:
+            uid = self.inference_pipeline.put_request(p, kwargs, session_id)
+            uids.append(uid)
+        for uid in uids:
+            response = self.inference_pipeline.get_response(uid)
+            responses.append(response)
         end = time.time()
 
         if session_id is None:
-            self.inference_pipeline.destroy_session(session_id, uid)
+            for uid in uids:
+                self.inference_pipeline.destroy_session(session_id, uid)
 
-        return task_methods.pack_response_to_proto(response, end - start, -1)
+        return task_methods.pack_response_to_proto(responses, end - start, -1)
 
     def GeneratorReply(self, request, context):
         return self._run_inference("GeneratorReply", request)

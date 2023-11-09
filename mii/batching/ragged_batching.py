@@ -560,16 +560,13 @@ class RaggedBatchBase:
     def make_request(self,
                      uid: int,
                      input_tokens: torch.Tensor,
-                     kwargs: Dict) -> List[RaggedRequest]:
+                     kwargs: Dict) -> RaggedRequest:
         prompt_length = len(input_tokens)
         max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
         assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
         max_new_tokens = kwargs.pop(MAX_NEW_TOKENS_KWARG, max_length - prompt_length)
         stream = kwargs.pop(STREAM_KWARG, STREAM_DEFAULT)
         ignore_eos = kwargs.pop(IGNORE_EOS_KWARG, IGNORE_EOS_DEFAULT)
-        # TODO: Add back this check
-        # if self.policy.get_length(uid) + len(token_ids) >= max_length:
-        #    raise ValueError(f"Session {uid} has reached max length {max_length}.")
 
         post_processing = []
 
@@ -605,20 +602,18 @@ class RaggedBatchBase:
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
 
-        return [
-            RaggedRequest(
-                uid=uid,
-                input_tokens=input_tokens,
-                prompt_length=prompt_length,
-                seq_length=0,
-                max_length=max_length,
-                max_new_tokens=max_new_tokens,
-                last_in_prompt=True,
-                post_processing=post_processing,
-                stream=stream,
-                ignore_eos=ignore_eos,
-            )
-        ]
+        return RaggedRequest(
+            uid=uid,
+            input_tokens=input_tokens,
+            prompt_length=prompt_length,
+            seq_length=0,
+            max_length=max_length,
+            max_new_tokens=max_new_tokens,
+            last_in_prompt=True,
+            post_processing=post_processing,
+            stream=stream,
+            ignore_eos=ignore_eos,
+        )
 
     def make_response(self,
                       generated_text: str,
@@ -649,6 +644,7 @@ class MIIPipeline(RaggedBatchBase):
         for uid, input in zip(uids, inputs):
             request_kwargs = kwargs.copy()
             self._enqueue_request(uid, input, request_kwargs)
+        self.schedule_requests()
 
         while self.scheduled_requests:
             self.generate()
@@ -684,9 +680,8 @@ class MIIPipeline(RaggedBatchBase):
     def _enqueue_request(self, uid: int, input: str, kwargs: Dict[str, Any]) -> None:
         self.result_queues[uid] = queue.Queue()
         input_tokens = self.tokenizer.encode(input)
-        for r in self.make_request(uid, input_tokens, kwargs):
-            self.request_queue.put(r)
-        self.schedule_requests()
+        request = self.make_request(uid, input_tokens, kwargs)
+        self.request_queue.put(request)
 
     def _dequeue_response(self, uid: int) -> Response:
         result = self.result_queues[uid].get()
@@ -745,7 +740,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
         return uid
 
     def put_request(self,
-                    args: Tuple,
+                    prompt: str,
                     kwargs: Dict,
                     session_id: Union[str,
                                       None] = None) -> int:
@@ -768,10 +763,9 @@ class MIIAsyncPipeline(RaggedBatchBase):
         if not self.is_rank_0:
             return uid
 
-        for input in args[0]:
-            input_tokens = self.tokenizer.encode(input)
-            for r in self.make_request(uid, input_tokens, kwargs):
-                self.request_queue.put(r)
+        input_tokens = self.tokenizer.encode(prompt)
+        request = self.make_request(uid, input_tokens, kwargs)
+        self.request_queue.put(request)
 
         return uid
 
@@ -780,12 +774,10 @@ class MIIAsyncPipeline(RaggedBatchBase):
         # this requires some refactoring how we do the put and request in
         # `ModelResponse`
         if not self.is_rank_0:
-            return [
-                Response(generated_text="",
-                         prompt_length=None,
-                         generated_length=None,
-                         finish_reason=None)
-            ]
+            return Response(generated_text="",
+                            prompt_length=None,
+                            generated_length=None,
+                            finish_reason=None)
         result = self.result_queues[uid].get()
         generated_token_ids = result[0]
         if len(generated_token_ids) == 0:
@@ -793,7 +785,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
         else:
             generated_text = self.tokenizer.decode(generated_token_ids)
         response = self.make_response(generated_text, result[1], result[2], result[3])
-        return [response]
+        return response
 
     def start(self) -> None:
         self.thread = threading.Thread(target=self, daemon=True)

@@ -5,7 +5,7 @@
 import asyncio
 import grpc
 import requests
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, List, Union
 
 from mii.config import MIIConfig
 from mii.constants import GRPC_MAX_MSG_SIZE, TaskType
@@ -55,18 +55,21 @@ class MIIClient:
             yield task_methods.unpack_response_from_proto(response)
 
     def generate(self,
-                 prompt: str,
+                 prompts: Union[str,
+                                List[str]],
                  streaming_fn: Callable = None,
                  **query_kwargs: Dict[str,
                                       Any]):
-        if not isinstance(prompt, str):
-            raise RuntimeError(
-                "MII client only supports a single query string, multi-string will be added soon"
-            )
-        request_dict = {"query": prompt}
         if streaming_fn is not None:
+            if not isinstance(prompts, str):
+                raise RuntimeError(
+                    "MII client streaming only supports a single prompt input.")
+            request_dict = {"query": prompts}
             return self._generate_stream(streaming_fn, request_dict, **query_kwargs)
 
+        if isinstance(prompts, str):
+            prompts = [prompts]
+        request_dict = {"query": prompts}
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(request_dict,
                                          **query_kwargs))

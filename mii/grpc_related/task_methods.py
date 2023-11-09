@@ -30,16 +30,10 @@ def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     )
 
 
-def proto_request_to_single_input(self, request):
-    args = (request.request, )
-    kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-    return args, kwargs
-
-
 def proto_request_to_list(self, request):
-    args = ([r for r in request.request], )
+    prompts = [r for r in request.request]
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-    return args, kwargs
+    return prompts, kwargs
 
 
 class TaskMethods(ABC):
