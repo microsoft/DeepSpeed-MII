@@ -14,6 +14,12 @@ def test_single_gpu(deployment, query):
     assert output, "output is empty"
 
 
+def test_multi_prompt(deployment, query):
+    output = deployment([query] * 4)
+    for r in output.response:
+        assert r, "output is empty"
+
+
 @pytest.mark.parametrize("tensor_parallel", [2])
 def test_multi_gpu(deployment, query):
     output = deployment(query)
