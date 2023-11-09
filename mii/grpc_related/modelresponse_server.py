@@ -77,20 +77,11 @@ class ModelResponse(ServiceBase):
         # Get responses from the pipeline as they are ready, flush finished uids
         # so new requests can be processed
         while uids_running:
-            for uid in uids_running:
-                # If the response is not ready, move to next uid
-                if not self.inference_pipeline.is_response_ready(uid):
-                    continue
-                if self.inference_pipeline.is_rank_0:
-                    print("RESPONSE READY")
-
-                # If a response is ready, get it and flush the uid so any queued requests can be processed
-                response = self.inference_pipeline.get_response(uid)
-                responses.append(response)
-                self.inference_pipeline.flush_uid(uid)
-                uids_complete_order.append(uids_running.index(uid))
-                uids_running.remove(uid)
-            time.sleep(0.001)  # So we don't spin too much
+            uid, response = self.inference_pipeline.get_response()
+            responses.append(response)
+            self.inference_pipeline.flush_uid(uid)
+            uids_complete_order.append(uids_running.index(uid))
+            uids_running.remove(uid)
         end = time.time()
 
         # Sort responses in the order of prompts
