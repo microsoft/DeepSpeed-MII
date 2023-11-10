@@ -72,10 +72,30 @@ def test_multi_replica(deployment, query):
 
 
 def test_query_kwargs(deployment, query):
+    # test ignore_eos
     output = deployment(query,
                         max_length=128,
+                        min_new_tokens=16,
                         ignore_eos=True,
                         top_p=0.9,
                         top_k=50,
                         temperature=0.9)
     assert output, "output is empty"
+
+
+def test_do_sample(deployment, query):
+    output_0 = deployment(query, do_sample=False, max_length=128)
+    output_1 = deployment(query, do_sample=False, max_length=128)
+    assert output_0.response == output_1.response, "do_sample=False should always return the same output"
+
+
+def test_stop_token(deployment, query):
+    pytest.skip("not working yet")
+    output = deployment(query, stop=".", max_length=512)
+    print(str(output.response))
+    assert str(output.response[0]).endswith("."), "output should end with 'the'"
+
+
+def test_return_full_text(deployment, query):
+    output = deployment(query, max_length=128, return_full_text=True)
+    assert output.response[0].startswith(query), "output should start with the prompt"

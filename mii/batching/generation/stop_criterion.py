@@ -30,7 +30,7 @@ class TokenStopCriterion(BaseGenerationStopCriterion):
     def __init__(self, token: Union[str, int], tokenizer) -> None:
         super().__init__(tokenizer=tokenizer)
         if isinstance(token, str):
-            token_id = self.tokenizer.tokenize(token)[0]
+            token_id = self.tokenizer.encode(token)[0]
         else:
             token_id = token
         self.stop_token_id = token_id

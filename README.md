@@ -142,11 +142,14 @@ While only the model name or path is required to stand up a non-persistent pipel
 Users can also control the generation characteristics for individual prompts (i.e., when calling `pipe()`) with the following options:
 
 - `max_length: int` Sets the per-prompt maximum token length for prompt + response.
+- `min_new_tokens: int` Sets the minimum number of tokens generated in the response. `max_length` will take precedence over this setting.
 - `max_new_tokens: int` Sets the maximum number of tokens generated in the response.
 - `ignore_eos: bool` (Defaults to `False`) Setting to `True` prevents generation from ending when the EOS token is encountered.
 - `top_p: float` (Defaults to `0.9`) When set below `1.0`, filter tokens and keep only the most probable, where token probabilities sum to &ge;`top_p`.
 - `top_k: int` (Defaults to `None`) When `None`, top-k filtering is disabled. When set, the number of highest probability tokens to keep.
 - `temperature: float` (Defaults to `None`) When `None`, temperature is disabled. When set, modulates token probabilities.
+- `do_sample: bool` (Defaults to `True`) When `True`, sample output logits. When `False`, use greedy sampling.
+- `return_full_text: bool` (Defaults to `False`) When `True`, prepends the input prompt to the returned text
 
 ## Persistent Deployment
 
@@ -234,11 +237,14 @@ While only the model name or path is required to stand up a persistent deploymen
 Users can also control the generation characteristics for individual prompts (i.e., when calling `client.generate()`) with the following options:
 
 - `max_length: int` Sets the per-prompt maximum token length for prompt + response.
+- `min_new_tokens: int` Sets the minimum number of tokens generated in the response. `max_length` will take precedence over this setting.
 - `max_new_tokens: int` Sets the maximum number of tokens generated in the response.
 - `ignore_eos: bool` (Defaults to `False`) Setting to `True` prevents generation from ending when the EOS token is encountered.
 - `top_p: float` (Defaults to `0.9`) When set below `1.0`, filter tokens and keep only the most probable, where token probabilities sum to &ge;`top_p`.
 - `top_k: int` (Defaults to `None`) When `None`, top-k filtering is disabled. When set, the number of highest probability tokens to keep.
 - `temperature: float` (Defaults to `None`) When `None`, temperature is disabled. When set, modulates token probabilities.
+- `do_sample: bool` (Defaults to `True`) When `True`, sample output logits. When `False`, use greedy sampling.
+- `return_full_text: bool` (Defaults to `False`) When `True`, prepends the input prompt to the returned text
 
 
 # Contributing
