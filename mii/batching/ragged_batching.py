@@ -145,6 +145,7 @@ class RaggedRequest:
     seq_length: int
     max_length: int
     max_new_tokens: int
+    min_new_tokens: int
     last_in_prompt: bool
     post_processing: List[object]
     stream: bool = False
@@ -485,11 +486,11 @@ class RaggedBatchBase:
             if r.stream or not r.generated_tokens:
                 output_tokens = []
             else:
-                output_token_list = r.generated_tokens
-                if r.return_full_text:
-                    output_token_list = r.input_tokens + output_token_list
-                output_tokens = torch.cat([t.unsqueeze(0) for t in output_token_list],
+                output_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens],
                                           dim=0)
+                if r.return_full_text:
+                    # Avoid returning bos token, refactor this later
+                    output_tokens = torch.cat((r.prompt_tokens[1:], output_tokens))
             outputs.append((
                 r.uid,
                 output_tokens,
@@ -658,24 +659,24 @@ class RaggedBatchBase:
         if do_sample:
             sampler_name = "_".join((SAMPLER_NAME, "logits"))
             if sampler_name not in self._post_processors:
-                self._post_processors[SAMPLER_NAME] = LogitsSampler()
+                self._post_processors[sampler_name] = LogitsSampler()
         else:
             sampler_name = "_".join((SAMPLER_NAME, "greedy"))
             if sampler_name not in self._post_processors:
-                self._post_processors[SAMPLER_NAME] = GreedySampler()
+                self._post_processors[sampler_name] = GreedySampler()
         post_processing.append(sampler_name)
 
         stop = kwargs.pop(STOP_KWARG, None)
         if stop is not None:
             stop_name = "_".join((STOP_NAME, stop))
             if stop_name not in self._post_processors:
-                self._post_processors[STOP_NAME] = TokenStopCriterion(
+                self._post_processors[stop_name] = TokenStopCriterion(
                     token=stop,
                     tokenizer=self.tokenizer)
         else:
             stop_name = STOP_NAME
             if STOP_NAME not in self._post_processors:
-                self._post_processors[STOP_NAME] = EosGenerationStopCriterion(
+                self._post_processors[stop_name] = EosGenerationStopCriterion(
                     tokenizer=self.tokenizer)
         post_processing.append(stop_name)
 
