@@ -30,16 +30,10 @@ def multi_string_request_to_proto(self, request_dict, **query_kwargs):
     )
 
 
-def proto_request_to_single_input(self, request):
-    args = (request.request, )
-    kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-    return args, kwargs
-
-
 def proto_request_to_list(self, request):
-    args = ([r for r in request.request], )
+    prompts = [r for r in request.request]
     kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-    return args, kwargs
+    return prompts, kwargs
 
 
 class TaskMethods(ABC):
@@ -62,8 +56,6 @@ class TaskMethods(ABC):
 
 
 class TextGenerationMethods(TaskMethods):
-    session_context = {}
-
     @property
     def method(self):
         return "GeneratorReply"
@@ -74,16 +66,6 @@ class TextGenerationMethods(TaskMethods):
 
     pack_request_to_proto = multi_string_request_to_proto
     unpack_request_from_proto = proto_request_to_list
-
-    def create_session(self, session_id):
-        if session_id in self.session_context:
-            raise ValueError(f"session {session_id} already exists")
-        self.session_context[session_id] = None
-
-    def destroy_session(self, session_id):
-        if session_id not in self.session_context:
-            raise ValueError(f"session {session_id} does not exist")
-        del self.session_context[session_id]
 
     def pack_response_to_proto(self, responses, time_taken, model_time_taken):
         text_responses = []

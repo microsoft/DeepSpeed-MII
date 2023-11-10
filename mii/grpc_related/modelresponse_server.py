@@ -17,17 +17,13 @@ import queue
 
 from mii.constants import (
     GRPC_MAX_MSG_SIZE,
-    CREATE_SESSION_METHOD,
-    DESTROY_SESSION_METHOD,
     TERMINATE_METHOD,
     LB_MAX_WORKER_THREADS,
     SERVER_SHUTDOWN_TIMEOUT,
     STREAM_RESPONSE_QUEUE_TIMEOUT,
-    TaskType,
 )
 from mii.grpc_related.task_methods import TASK_METHODS_DICT
 from mii.backend.client import create_channel
-from mii.utils import unpack_proto_query_kwargs
 
 from mii.constants import GenerationFinishReason
 
@@ -57,15 +53,6 @@ class ModelResponse(ServiceBase):
         self.method_name_to_task = {m.method: t for t, m in TASK_METHODS_DICT.items()}
         self.lock = threading.Lock()
 
-    def CreateSession(self, request, context):
-        task_methods = TASK_METHODS_DICT[TaskType.TEXT_GENERATION]
-        task_methods.create_session(request.session_id)
-        return google_dot_protobuf_dot_empty__pb2.Empty()
-
-    def DestroySession(self, request, context):
-        self.inference_pipeline.destroy_session(request.session_id)
-        return google_dot_protobuf_dot_empty__pb2.Empty()
-
     def _run_inference(self, method_name, request_proto):
         if method_name not in self.method_name_to_task:
             raise ValueError(f"unknown method: {method_name}")
@@ -75,19 +62,37 @@ class ModelResponse(ServiceBase):
             raise ValueError(f"unknown task: {task}")
 
         task_methods = TASK_METHODS_DICT[task]
-        args, kwargs = task_methods.unpack_request_from_proto(request_proto)
-
-        session_id = kwargs.pop("session_id", None)
+        prompts, kwargs = task_methods.unpack_request_from_proto(request_proto)
 
         start = time.time()
-        uid = self.inference_pipeline.put_request(args, kwargs, session_id)
-        response = self.inference_pipeline.get_response(uid)
+        uids_running = []
+        uids_complete_order = []
+        responses = []
+        # Put requests for all prompts into the pipeline
+        for p in prompts:
+            request_kwargs = kwargs.copy()
+            uid = self.inference_pipeline.put_request(p, request_kwargs)
+            uids_running.append(uid)
+
+        # Get responses from the pipeline as they are ready, flush finished uids
+        # so new requests can be processed
+        while uids_running:
+            uid, response = self.inference_pipeline.get_response()
+            responses.append(response)
+            self.inference_pipeline.flush_uid(uid)
+            uids_complete_order.append(uids_running.index(uid))
+            uids_running.remove(uid)
         end = time.time()
 
-        if session_id is None:
-            self.inference_pipeline.destroy_session(session_id, uid)
+        # Sort responses in the order of prompts
+        responses = [
+            r for idx,
+            r in sorted(zip(uids_complete_order,
+                            responses),
+                        key=lambda pair: pair[0])
+        ]
 
-        return task_methods.pack_response_to_proto(response, end - start, -1)
+        return task_methods.pack_response_to_proto(responses, end - start, -1)
 
     def GeneratorReply(self, request, context):
         return self._run_inference("GeneratorReply", request)
@@ -95,30 +100,28 @@ class ModelResponse(ServiceBase):
     def _run_inference_stream(self, method_name, request_proto) -> int:
         task = self.method_name_to_task[method_name]
         task_methods = TASK_METHODS_DICT[task]
-        args, kwargs = task_methods.unpack_request_from_proto(request_proto)
+        prompts, kwargs = task_methods.unpack_request_from_proto(request_proto)
 
-        session_id = kwargs.pop("session_id", None)
         kwargs["stream"] = True
-        return self.inference_pipeline.put_request(args, kwargs, session_id)
+        # NOTE: Streaming handle only single prompt inputs
+        return self.inference_pipeline.put_request(prompts[0], kwargs)
 
     def GeneratorReplyStream(self, request, context):
         method_name = "GeneratorReply"
         task = self.method_name_to_task[method_name]
         task_methods = TASK_METHODS_DICT[task]
-        _, kwargs = task_methods.unpack_request_from_proto(request)
-        session_id = kwargs.pop("session_id", None)
 
         uid = self._run_inference_stream(method_name, request)
         while True:
-            r = self.inference_pipeline.get_response(uid)
-            done = r[0].finish_reason != GenerationFinishReason.NONE
-            response = task_methods.pack_response_to_proto(r, 0.0, 0.0)
+            response_uid, r = self.inference_pipeline.get_response()
+            assert uid == response_uid, "uid mismatch"
+            done = r.finish_reason != GenerationFinishReason.NONE
+            response = task_methods.pack_response_to_proto([r], 0.0, 0.0)
             yield response
             if done:
                 break
 
-        if session_id is None:
-            self.inference_pipeline.destroy_session(session_id, uid)
+        self.inference_pipeline.flush_uid(uid)
 
 
 class AtomicCounter:
@@ -196,7 +199,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
         ]
         self.counter = AtomicCounter()
         self.task = model_config.task
-        self.replica_sessions = {}
 
         # Start the asyncio loop in a separate thread
         def run_asyncio_loop(loop):
@@ -226,26 +228,6 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
 
             call_count = self.counter.get()
             replica_index = call_count % len(self.stubs)
-
-            if method_name == CREATE_SESSION_METHOD:
-                if request_proto.session_id in self.replica_sessions:
-                    raise ValueError(
-                        f"session {request_proto.session_id} already exists")
-                self.replica_sessions[request_proto.session_id] = replica_index
-                self.stubs[replica_index].invoke(CREATE_SESSION_METHOD, request_proto)
-                return google_dot_protobuf_dot_empty__pb2.Empty()
-
-            if method_name == DESTROY_SESSION_METHOD:
-                replica_index = self.replica_sessions.pop(request_proto.session_id)
-                self.stubs[replica_index].invoke(DESTROY_SESSION_METHOD, request_proto)
-                return google_dot_protobuf_dot_empty__pb2.Empty()
-
-            kwargs = unpack_proto_query_kwargs(request_proto.query_kwargs)
-            if "session_id" in kwargs:
-                session_id = kwargs["session_id"]
-                if session_id not in self.replica_sessions:
-                    raise ValueError(f"session not found")
-                replica_index = self.replica_sessions[session_id]
 
             ret = self.stubs[replica_index].invoke(method_name, request_proto)
             return ret
