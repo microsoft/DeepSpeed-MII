@@ -574,6 +574,7 @@ class RaggedBatchBase:
     def _queue_flush_request(self, uid: int) -> None:
         self.request_queue.put_nowait(
             RaggedRequest(
+                tid=None,
                 uid=uid,
                 input_tokens=None,
                 prompt_tokens=None,
@@ -648,21 +649,19 @@ class RaggedBatchBase:
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
 
-        return [
-            RaggedRequest(
-                tid=tid,
-                uid=uid,
-                input_tokens=input_tokens,
-                prompt_tokens=input_tokens,
-                seq_length=0,
-                max_length=max_length,
-                max_new_tokens=max_new_tokens,
-                last_in_prompt=True,
-                post_processing=post_processing,
-                stream=stream,
-                ignore_eos=ignore_eos,
-            )
-        ]
+        return RaggedRequest(
+            tid=tid,
+            uid=uid,
+            input_tokens=input_tokens,
+            prompt_tokens=input_tokens,
+            seq_length=0,
+            max_length=max_length,
+            max_new_tokens=max_new_tokens,
+            last_in_prompt=True,
+            post_processing=post_processing,
+            stream=stream,
+            ignore_eos=ignore_eos,
+        )
 
     def make_response(self,
                       generated_text: str,
@@ -707,7 +706,7 @@ class MIIPipeline(RaggedBatchBase):
                 while not self.result_queues[self.tid].empty():
                     uid, response = self._get_response()
                     outputs.append(response)
-                    self._flush_uid(uid)
+                    self._queue_flush_request(uid)
                     uids_complete_order.append(uids_running.index(uid))
                     uids_running.remove(uid)
             # Ensure final flush requests broadcast and
@@ -753,21 +752,6 @@ class MIIPipeline(RaggedBatchBase):
             data_dicts = ujson.loads(json_data)
             responses = ResponseBatch([Response.from_msg(msg) for msg in data_dicts])
         return responses
-
-    def _flush_uid(self, uid: int) -> None:
-        self.request_queue.put_nowait(
-            RaggedRequest(
-                tid=None,
-                uid=uid,
-                input_tokens=None,
-                prompt_length=None,
-                seq_length=None,
-                max_length=None,
-                max_new_tokens=None,
-                last_in_prompt=None,
-                post_processing=None,
-                stream=None,
-            ))
 
 
 class MIIAsyncPipeline(RaggedBatchBase):
@@ -867,17 +851,5 @@ class MIIAsyncPipeline(RaggedBatchBase):
     def flush_uid(self, uid: int) -> None:
         with self.lock:
             if self.is_rank_0:
-                self.request_queue.put_nowait(
-                    RaggedRequest(
-                        tid=None,
-                        uid=uid,
-                        input_tokens=None,
-                        prompt_tokens=None,
-                        seq_length=None,
-                        max_length=None,
-                        max_new_tokens=None,
-                        last_in_prompt=None,
-                        post_processing=None,
-                        stream=None,
-                    ))
+                self._queue_flush_request(uid)
             self.uids.remove(uid)
