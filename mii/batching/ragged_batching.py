@@ -22,22 +22,29 @@ from deepspeed.utils.timer import SynchronizedWallClockTimer
 
 from mii.batching.constants import (MAX_LENGTH_KWARG,
                                     MAX_NEW_TOKENS_KWARG,
+                                    MIN_NEW_TOKENS_KWARG,
                                     STREAM_KWARG,
                                     IGNORE_EOS_KWARG,
                                     TOP_P_KWARG,
                                     TOP_K_KWARG,
                                     TEMPERATURE_KWARG,
+                                    RETURN_FULL_TEXT_KWARG,
+                                    DO_SAMPLE_KWARG,
+                                    STOP_KWARG,
+                                    MIN_NEW_TOKENS_DEFAULT,
                                     STREAM_DEFAULT,
                                     IGNORE_EOS_DEFAULT,
                                     TOP_P_DEFAULT,
+                                    RETURN_FULL_TEXT_DEFAULT,
+                                    DO_SAMPLE_DEFAULT,
                                     TOP_K_NAME,
                                     TOP_P_NAME,
                                     TEMP_NAME,
                                     SAMPLER_NAME,
                                     STOP_NAME)
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
-from mii.batching.generation.samplers import LogitsSampler
-from mii.batching.generation.stop_criterion import EosGenerationStopCriterion
+from mii.batching.generation.samplers import LogitsSampler, GreedySampler
+from mii.batching.generation.stop_criterion import EosGenerationStopCriterion, TokenStopCriterion
 from mii.batching.postprocess import (
     run_batch_logit_processing,
     run_batch_sampler,
@@ -142,6 +149,7 @@ class RaggedRequest:
     post_processing: List[object]
     stream: bool = False
     ignore_eos: bool = False
+    return_full_text: bool = False
 
     _next_token: Union[None, torch.Tensor] = None
     _is_done: bool = False
@@ -163,6 +171,8 @@ class RaggedRequest:
     @property
     def is_done(self) -> bool:
         if self.ignore_eos:
+            return False
+        if self.seq_length < self.min_new_tokens:
             return False
         return self._is_done
 
@@ -475,7 +485,10 @@ class RaggedBatchBase:
             if r.stream or not r.generated_tokens:
                 output_tokens = []
             else:
-                output_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens],
+                output_token_list = r.generated_tokens
+                if r.return_full_text:
+                    output_token_list = r.input_tokens + output_token_list
+                output_tokens = torch.cat([t.unsqueeze(0) for t in output_token_list],
                                           dim=0)
             outputs.append((
                 r.uid,
@@ -581,6 +594,7 @@ class RaggedBatchBase:
                 seq_length=None,
                 max_length=None,
                 max_new_tokens=None,
+                min_new_tokens=None,
                 last_in_prompt=None,
                 post_processing=None,
                 stream=None,
@@ -612,8 +626,10 @@ class RaggedBatchBase:
         max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
         assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
         max_new_tokens = kwargs.pop(MAX_NEW_TOKENS_KWARG, max_length - prompt_length)
+        min_new_tokens = kwargs.pop(MIN_NEW_TOKENS_KWARG, MIN_NEW_TOKENS_DEFAULT)
         stream = kwargs.pop(STREAM_KWARG, STREAM_DEFAULT)
         ignore_eos = kwargs.pop(IGNORE_EOS_KWARG, IGNORE_EOS_DEFAULT)
+        return_full_text = kwargs.pop(RETURN_FULL_TEXT_KWARG, RETURN_FULL_TEXT_DEFAULT)
 
         post_processing = []
 
@@ -638,14 +654,30 @@ class RaggedBatchBase:
                     temperature=temp)
             post_processing.append(temp_name)
 
-        if SAMPLER_NAME not in self._post_processors:
-            self._post_processors[SAMPLER_NAME] = LogitsSampler()
-        post_processing.append(SAMPLER_NAME)
+        do_sample = kwargs.pop(DO_SAMPLE_KWARG, DO_SAMPLE_DEFAULT)
+        if do_sample:
+            sampler_name = "_".join((SAMPLER_NAME, "logits"))
+            if sampler_name not in self._post_processors:
+                self._post_processors[SAMPLER_NAME] = LogitsSampler()
+        else:
+            sampler_name = "_".join((SAMPLER_NAME, "greedy"))
+            if sampler_name not in self._post_processors:
+                self._post_processors[SAMPLER_NAME] = GreedySampler()
+        post_processing.append(sampler_name)
 
-        if STOP_NAME not in self._post_processors:
-            self._post_processors[STOP_NAME] = EosGenerationStopCriterion(
-                tokenizer=self.tokenizer)
-        post_processing.append(STOP_NAME)
+        stop = kwargs.pop(STOP_KWARG, None)
+        if stop is not None:
+            stop_name = "_".join((STOP_NAME, stop))
+            if stop_name not in self._post_processors:
+                self._post_processors[STOP_NAME] = TokenStopCriterion(
+                    token=stop,
+                    tokenizer=self.tokenizer)
+        else:
+            stop_name = STOP_NAME
+            if STOP_NAME not in self._post_processors:
+                self._post_processors[STOP_NAME] = EosGenerationStopCriterion(
+                    tokenizer=self.tokenizer)
+        post_processing.append(stop_name)
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
 
@@ -657,10 +689,12 @@ class RaggedBatchBase:
             seq_length=0,
             max_length=max_length,
             max_new_tokens=max_new_tokens,
+            min_new_tokens=min_new_tokens,
             last_in_prompt=True,
             post_processing=post_processing,
             stream=stream,
             ignore_eos=ignore_eos,
+            return_full_text=return_full_text,
         )
 
     def make_response(self,
