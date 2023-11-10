@@ -78,6 +78,9 @@ class ModelResponse(ServiceBase):
         # so new requests can be processed
         while uids_running:
             uid, response = self.inference_pipeline.get_response()
+            # TODO: Ugly hack for multi-threading. Will be fixed when we refactor these methods
+            if uid == -1:
+                uid = uids_running[0]
             responses.append(response)
             self.inference_pipeline.flush_uid(uid)
             uids_complete_order.append(uids_running.index(uid))

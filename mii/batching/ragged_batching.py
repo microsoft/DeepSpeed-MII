@@ -856,7 +856,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
         # this requires some refactoring how we do the put and request in
         # `ModelResponse`
         if not self.is_rank_0:
-            return Response(generated_text="",
+            return -1, Response(generated_text="",
                             prompt_length=None,
                             generated_length=None,
                             finish_reason=None)
