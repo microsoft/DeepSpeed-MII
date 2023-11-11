@@ -331,7 +331,9 @@ class RaggedBatchBase:
         self.buffer = deque()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks = 0
+        self.scheduled_req_blocks = torch.zeros(inference_engine.n_kv_cache_groups,
+                                                dtype=torch.int32,
+                                                device="cpu")
 
         # TODO: we will need to prune self._post_processors for long running deployments
         self._post_processors = {}
@@ -450,7 +452,7 @@ class RaggedBatchBase:
         self.scheduled_requests = RaggedRequestBatch([])
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks = 0
+        self.scheduled_req_blocks.zero_()
 
     @sync_debug
     def _process_logits(
@@ -503,9 +505,12 @@ class RaggedBatchBase:
 
     def _do_schedule_requests(self, requests: List[RaggedRequest]) -> None:
 
-        free_blocks = self.inference_engine._state_manager.free_blocks
+        free_blocks = self.inference_engine.free_blocks
         conf_manager = self.inference_engine._config.state_manager
         for r in requests:
+            if free_blocks.min().item() == 0:
+                break
+
             if r.max_length <= r.seq_length:
                 continue
 
