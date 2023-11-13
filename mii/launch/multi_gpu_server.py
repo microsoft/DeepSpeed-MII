@@ -69,8 +69,6 @@ def main() -> None:
         print(f"Starting RESTful API gateway on port: {args.restful_gateway_port}")
         gateway_thread = RestfulGatewayThread(
             deployment_name=args.deployment_name,
-            task=args.model_config.task,
-            lb_port=args.load_balancer_port,
             rest_port=args.restful_gateway_port,
         )
         stop_event = gateway_thread.get_stop_event()

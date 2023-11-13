@@ -203,6 +203,43 @@ client = mii.serve("mistralai/Mistral-7B-v0.1", tensor_parallel=2, replica_num=2
 
 The choice between model parallelism and model replicas for maximum performance will depend on the nature of the hardware, model, and workload. For example, with small models users may find that model replicas provide the lowest average latency for requests. Meanwhile, large models may achieve greater overall throughput when using only model parallelism.
 
+### RESTful API
+
+MII makes it easy to setup and run model inference via RESTful APIs by setting `enable_restful_api=True` when creating a persistent MII deployment. The RESTful API can receive requests at `http://{HOST}:{RESTFUL_API_PORT}/mii/{DEPLOYMENT_NAME}`. A full example is provided below:
+
+```python
+client = mii.serve(
+    "mistralai/Mistral-7B-v0.1",
+    deployment_name="mistral-deployment",
+    enable_restful_api=True,
+    restful_api_port=28080,
+)
+```
+
+---
+📌 **Note:** While providing a `deployment_name` is not necessary (MII will autogenerate one for you), it is good practice to provide a `deployment_name` so that you can ensure you are interfacing with the correct RESTful API.
+
+---
+
+You can then send prompts to the RESTful gateway with any HTTP client, such as `curl`:
+
+```bash
+curl --header "Content-Type: application/json" --request POST  -d '{"prompts": ["DeepSpeed is", "Seattle is"], "max_length": 128}' http://localhost:28080/mii/mistral-deployment
+```
+
+or `python`:
+
+```python
+import json
+import requests
+url = f"http://localhost:28080/mii/mistral-deployment"
+params = {"prompts": ["DeepSpeed is", "Seattle is"], "max_length": 128}
+json_params = json.dumps(params)
+output = requests.post(
+    url, data=json_params, headers={"Content-Type": "application/json"}
+)
+```
+
 <!--
 ### Token Streaming
 With a persistent deployment, the resulting response text can be streamed back to the client as it is generated. This functionality is useful for chatbot style applications. A simple example of streaming tokens is below:
@@ -225,11 +262,13 @@ To enable streaming output, we must provide `streaming_fn` with the prompt. This
 While only the model name or path is required to stand up a persistent deployment, we offer customization options to our users.
 
 **`mii.serve()` Options**:
-- `model_name_or_path: str` Name or local path to a [HuggingFace](https://huggingface.co/) model.
-- `max_length: int` Sets the default maximum token length for the prompt + response.
-- `deployment_name: str` A unique identifying string for the persistent model. If provided, client objects should be retrieved with `client = mii.client(deployment_name)`.
-- `tensor_parallel: int` Number of GPUs to split the model across.
-- `replica_num: int` The number of model replicas to stand up.
+- `model_name_or_path: str` (Required) Name or local path to a [HuggingFace](https://huggingface.co/) model.
+- `max_length: int` (Defaults to maximum sequence length in model config) Sets the default maximum token length for the prompt + response.
+- `deployment_name: str` (Defaults to `f"{model_name_or_path}-mii-deployment"`) A unique identifying string for the persistent model. If provided, client objects should be retrieved with `client = mii.client(deployment_name)`.
+- `tensor_parallel: int` (Defaults to `1`) Number of GPUs to split the model across.
+- `replica_num: int` (Defaults to `1`) The number of model replicas to stand up.
+- `enable_restful_api: bool` (Defaults to `False`) When enabled, a RESTful API gateway process is launched that can be queried at `http://{host}:{restful_api_port}/mii/{deployment_name}`. See the [section on RESTful APIs](#restful-api) for more details.
+- `restful_api_port: int` (Defaults to `28080`) The port number used to interface with the RESTful API when `enable_restful_api` is set to `True`.
 
 **`mii.client()` Options**:
 - `model_or_deployment_name: str` Name of the model or `deployment_name` passed to `mii.serve()`
