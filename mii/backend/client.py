@@ -7,6 +7,7 @@ import grpc
 import requests
 from typing import Dict, Any, Callable, List, Union
 
+from mii.batching.data_classes import ResponseBatch
 from mii.config import MIIConfig
 from mii.constants import GRPC_MAX_MSG_SIZE
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
@@ -37,7 +38,7 @@ class MIIClient:
         channel = create_channel(host, self.port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> ResponseBatch:
         return self.generate(*args, **kwargs)
 
     async def _request_async_response(self, request_dict, **query_kwargs):
@@ -59,7 +60,7 @@ class MIIClient:
                                 List[str]],
                  streaming_fn: Callable = None,
                  **query_kwargs: Dict[str,
-                                      Any]):
+                                      Any]) -> ResponseBatch:
         if isinstance(prompts, str):
             prompts = [prompts]
         if streaming_fn is not None:

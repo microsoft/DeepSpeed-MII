@@ -3,7 +3,7 @@
 
 # DeepSpeed Team
 from dataclasses import dataclass, field
-from typing import Dict, List, Iterator, Union
+from typing import Any, Dict, List, Iterator, Union
 from typing_extensions import Self
 
 import torch
@@ -27,7 +27,7 @@ class Response:
             finish_reason=GenerationFinishReason(msg["finish_reason"]),
         )
 
-    def get_msg(self) -> Dict[str, Union[str, int]]:
+    def to_msg(self) -> Dict[str, Union[str, int]]:
         return {
             "generated_text": self.generated_text,
             "prompt_length": self.prompt_length,
@@ -42,38 +42,8 @@ class Response:
         return self.generated_text
 
 
-class ResponseBatch:
-    def __init__(self, responses: List[Response]) -> None:
-        self.responses = responses
-
-    def __iter__(self) -> Iterator[Response]:
-        return iter(self.responses)
-
-    def __repr__(self) -> str:
-        return "\n\n".join(str(r) for r in self.responses)
-
-    @property
-    def generated_texts(self) -> List[str]:
-        return [r.generated_text for r in self.responses]
-
-    @property
-    def prompt_lengths(self) -> List[int]:
-        return [r.prompt_length for r in self.responses]
-
-    @property
-    def generated_lengths(self) -> List[int]:
-        return [r.generated_length for r in self.responses]
-
-    @property
-    def finish_reasons(self) -> List[GenerationFinishReason]:
-        return [r.finish_reason for r in self.responses]
-
-    def append(self, response: Response) -> None:
-        self.responses.append(response)
-
-
 @dataclass
-class RaggedRequestMsg:
+class RequestMsg:
     uid: int
     input_tokens: Union[torch.Tensor, List[int]]
 
@@ -82,18 +52,17 @@ class RaggedRequestMsg:
         return self.input_tokens is None
 
     @staticmethod
-    def from_msg(msg: Dict[str, int]) -> Self:
-        return RaggedRequestMsg(
-            uid=msg["uid"],
-            input_tokens=None
-            if msg["input_tokens"] is None else torch.tensor(msg["input_tokens"],
-                                                             dtype=torch.int32,
-                                                             device=torch.device("cpu")),
-        )
+    def from_msg_dict(msg: Dict[str, Any]) -> Self:
+        input_tokens = msg["input_tokens"]
+        if input_tokens is not None:
+            input_tokens = torch.tensor(msg["input_tokens"],
+                                        dtype=torch.int32,
+                                        device=torch.device("cpu"))
+        return RequestMsg(uid=msg["uid"], input_tokens=input_tokens)
 
 
 @dataclass
-class RaggedRequest:
+class Request:
     tid: int
     uid: int
     input_tokens: torch.Tensor
@@ -156,6 +125,7 @@ class RaggedRequest:
 
     @property
     def stop_generation(self) -> bool:
+        # Returns whether to stop generation for request
         if self.is_done:
             self._finish_reason = GenerationFinishReason.STOP
             return True
@@ -165,14 +135,15 @@ class RaggedRequest:
             return True
         return False
 
-    def get_msg(self) -> RaggedRequestMsg:
-        return RaggedRequestMsg(
-            uid=self.uid,
-            input_tokens=None
-            if self.input_tokens is None else self.input_tokens.tolist(),
-        )
+    def to_msg_dict(self) -> Dict[str, Any]:
+        # Returns a minimal version of the request of purposes of broadcasting to all ranks
+        input_tokens = self.input_tokens
+        if input_tokens is not None:
+            input_tokens = self.input_tokens.tolist()
+        return {"uid": self.uid, "input_tokens": input_tokens}
 
     def accumulate_generated_token(self) -> None:
+        # Append the latest token to the list of generated tokens
         if not self.is_done:
             self._generated_tokens.append(self.next_token)
 
@@ -180,6 +151,7 @@ class RaggedRequest:
         self._generated_tokens.clear()
 
     def set_next_as_input(self) -> None:
+        # Places the next token into the input token for next round of generation
         if self.next_token is not None:
             self.input_tokens = self.next_token.unsqueeze(0)
         self.last_in_prompt = True
@@ -187,14 +159,44 @@ class RaggedRequest:
         self.is_done = False
 
 
-class RaggedRequestBatch:
-    def __init__(self, requests: List[RaggedRequest]) -> None:
+class ResponseBatch:
+    def __init__(self, responses: List[Response] = []) -> None:
+        self.responses = responses
+
+    def __iter__(self) -> Iterator[Response]:
+        return iter(self.responses)
+
+    def __repr__(self) -> str:
+        return "\n\n".join(str(r) for r in self.responses)
+
+    @property
+    def generated_texts(self) -> List[str]:
+        return [r.generated_text for r in self.responses]
+
+    @property
+    def prompt_lengths(self) -> List[int]:
+        return [r.prompt_length for r in self.responses]
+
+    @property
+    def generated_lengths(self) -> List[int]:
+        return [r.generated_length for r in self.responses]
+
+    @property
+    def finish_reasons(self) -> List[GenerationFinishReason]:
+        return [r.finish_reason for r in self.responses]
+
+    def append(self, response: Response) -> None:
+        self.responses.append(response)
+
+
+class RequestBatch:
+    def __init__(self, requests: List[Request] = []) -> None:
         self.requests = requests
 
     def __len__(self) -> int:
         return len(self.requests)
 
-    def __contains__(self, r: RaggedRequest) -> bool:
+    def __contains__(self, r: Request) -> bool:
         return r in self.requests
 
     def __nonzero__(self) -> bool:
@@ -202,27 +204,27 @@ class RaggedRequestBatch:
             return True
         return False
 
-    def __iter__(self) -> Iterator[RaggedRequest]:
+    def __iter__(self) -> Iterator[Request]:
         return iter(self.requests)
 
     def __repr__(self) -> str:
-        return f"RaggedRequestBatch({self.requests})"
+        return f"RequestBatch({self.requests})"
 
     @property
     def requests_to_run(self) -> Self:
-        return RaggedRequestBatch([r for r in self.requests if not r.is_flush_request])
+        return RequestBatch([r for r in self.requests if not r.is_flush_request])
 
     @property
     def requests_to_flush(self) -> Self:
-        return RaggedRequestBatch([r for r in self.requests if r.is_flush_request])
+        return RequestBatch([r for r in self.requests if r.is_flush_request])
 
     @property
     def last_in_prompt(self) -> Self:
-        return RaggedRequestBatch([r for r in self.requests if r.last_in_prompt])
+        return RequestBatch([r for r in self.requests if r.last_in_prompt])
 
     @property
     def completed(self) -> Self:
-        return RaggedRequestBatch([r for r in self.requests if r.stop_generation])
+        return RequestBatch([r for r in self.requests if r.stop_generation])
 
     @property
     def uids(self) -> List[int]:
@@ -256,10 +258,17 @@ class RaggedRequestBatch:
         for idx, r in enumerate(self.requests):
             r.is_done = done_tokens[idx]
 
+    def to_msg_dicts(self) -> List[Dict[str, Any]]:
+        return [r.to_msg_dict() for r in self.requests]
+
+    @staticmethod
+    def from_msg_dicts(msg_dicts: List[Dict[str, Any]]) -> Self:
+        return RequestBatch([RequestMsg.from_msg_dict(msg) for msg in msg_dicts])
+
     def prune(self, uids: List[int]) -> None:
         self.requests = [r for r in self.requests if r.uid not in uids]
 
-    def append(self, r: RaggedRequest) -> None:
+    def append(self, r: Request) -> None:
         self.requests.append(r)
 
     def update_seq_length(self) -> None:

@@ -9,7 +9,6 @@ import random
 import threading
 import time
 from collections import deque, defaultdict
-from dataclasses import asdict
 from functools import cached_property
 from typing import Dict, Tuple, List, Any, Union, DefaultDict
 
@@ -41,7 +40,7 @@ from mii.batching.constants import (MAX_LENGTH_KWARG,
                                     TEMP_NAME,
                                     SAMPLER_NAME,
                                     STOP_NAME)
-from mii.batching.data_classes import Response, RaggedRequest, ResponseBatch, RaggedRequestBatch, RaggedRequestMsg
+from mii.batching.data_classes import Response, Request, ResponseBatch, RequestBatch
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
 from mii.batching.generation.samplers import LogitsSampler, GreedySampler
 from mii.batching.generation.stop_criterion import EosGenerationStopCriterion, TokenStopCriterion
@@ -71,7 +70,7 @@ class RaggedBatchBase:
 
         self.request_queue: queue.Queue = queue.Queue()
         self.result_queues: Dict[int, queue.Queue] = {}
-        self.scheduled_requests: RaggedRequestBatch = RaggedRequestBatch([])
+        self.scheduled_requests: RequestBatch = RequestBatch()
         self.buffer = deque()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
@@ -171,27 +170,26 @@ class RaggedBatchBase:
         self._num_generated_tokens = 0
 
     @sync_debug
-    def _bcast_requests(self, force=False) -> RaggedRequestBatch:
+    def _bcast_requests(self, force=False) -> RequestBatch:
         if self.is_rank_0:
             if not self.scheduled_requests and not force:
                 return self.scheduled_requests
             # Rank 0 gets batch of requests and broadcasts to other ranks
-            data_dicts = [asdict(r.get_msg()) for r in self.scheduled_requests]
+            data_dicts = self.scheduled_requests.to_msg_dicts()
             json_data = ujson.dumps(data_dicts)
             self.socket.send_string(json_data)
         else:
             try:
                 json_data = self.socket.recv_string()
                 data_dicts = ujson.loads(json_data)
-                self.scheduled_requests = RaggedRequestBatch(
-                    [RaggedRequestMsg.from_msg(msg) for msg in data_dicts])
+                self.scheduled_requests = RequestBatch.from_msg_dicts(data_dicts)
             except zmq.Again:
-                self.scheduled_requests = RaggedRequestBatch([])
+                self.scheduled_requests = RequestBatch()
 
         return self.scheduled_requests
 
     def _reset_scheduler_bookkeeping(self) -> None:
-        self.scheduled_requests = RaggedRequestBatch([])
+        self.scheduled_requests = RequestBatch()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
         self.scheduled_req_blocks = 0
@@ -200,8 +198,8 @@ class RaggedBatchBase:
     def _process_logits(
             self,
             next_token_logits: torch.Tensor,
-            running_requests: RaggedRequestBatch) -> Tuple[torch.Tensor,
-                                                           torch.Tensor]:
+            running_requests: RequestBatch) -> Tuple[torch.Tensor,
+                                                     torch.Tensor]:
         next_token_logits = next_token_logits[:, :self.vocab_size]
         next_token_logits = self.logit_processor(next_token_logits,
                                                  running_requests,
@@ -216,7 +214,7 @@ class RaggedBatchBase:
         return next_tokens, done_tokens
 
     @sync_debug
-    def _generate_output(self, r: RaggedRequest) -> bool:
+    def _generate_output(self, r: Request) -> bool:
         outputs = []
         if r.stream:
             outputs.append((
@@ -245,7 +243,7 @@ class RaggedBatchBase:
         for output in outputs:
             self.result_queues[r.tid].put_nowait(output)
 
-    def _do_schedule_requests(self, requests: List[RaggedRequest]) -> None:
+    def _do_schedule_requests(self, requests: List[Request]) -> None:
 
         free_blocks = self.inference_engine._state_manager.free_blocks
         conf_manager = self.inference_engine._config.state_manager
@@ -322,7 +320,7 @@ class RaggedBatchBase:
             print(
                 "Deadlock detected. Resetting KV cache and recomputing requests. Consider limiting number of concurrent requests or decreasing max lengths of prompts/generations."
             )
-            self.scheduled_requests = RaggedRequestBatch([])
+            self.scheduled_requests = RequestBatch()
             self.reset_request_status()
         else:
             scheduled_requests_ids = set(id(r) for r in self.scheduled_requests)
@@ -331,7 +329,7 @@ class RaggedBatchBase:
 
     def _queue_flush_request(self, uid: int) -> None:
         self.request_queue.put_nowait(
-            RaggedRequest(
+            Request(
                 tid=None,
                 uid=uid,
                 input_tokens=None,
@@ -366,7 +364,7 @@ class RaggedBatchBase:
                      tid: int,
                      uid: int,
                      input_tokens: torch.Tensor,
-                     kwargs: Dict) -> RaggedRequest:
+                     kwargs: Dict) -> Request:
         prompt_length = len(input_tokens)
         max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
         assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
@@ -426,7 +424,7 @@ class RaggedBatchBase:
 
         assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
 
-        return RaggedRequest(
+        return Request(
             tid=tid,
             uid=uid,
             input_tokens=input_tokens,
