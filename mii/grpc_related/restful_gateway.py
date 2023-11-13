@@ -2,14 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import time
 import threading
-import mii
+import time
 from flask import Flask, request
 from flask_restful import Resource, Api
-from werkzeug.serving import make_server
-from mii.constants import RESTFUL_GATEWAY_SHUTDOWN_TIMEOUT, RESTFUL_API_PATH
 from google.protobuf.json_format import MessageToJson
+from werkzeug.serving import make_server
+
+import mii
+from mii.constants import RESTFUL_GATEWAY_SHUTDOWN_TIMEOUT, RESTFUL_API_PATH
 
 
 def shutdown(thread):
@@ -17,9 +18,9 @@ def shutdown(thread):
     thread.server.shutdown()
 
 
-def createRestfulGatewayApp(deployment_name, task, lb_port, server_thread):
+def createRestfulGatewayApp(deployment_name, server_thread):
     # client must be thread-safe
-    client = mii.MIIClient(task, "localhost", lb_port)
+    client = mii.client(deployment_name)
 
     class RestfulGatewayService(Resource):
         def __init__(self):
@@ -27,8 +28,7 @@ def createRestfulGatewayApp(deployment_name, task, lb_port, server_thread):
 
         def post(self):
             data = request.get_json()
-            kwargs = data["kwargs"] if "kwargs" in data else {}
-            result = client.query(data["request"], **kwargs)
+            result = client.generate(**data)
             return MessageToJson(result)
 
     app = Flask("RestfulGateway")
@@ -47,10 +47,10 @@ def createRestfulGatewayApp(deployment_name, task, lb_port, server_thread):
 
 
 class RestfulGatewayThread(threading.Thread):
-    def __init__(self, deployment_name, task, lb_port, rest_port):
+    def __init__(self, deployment_name, rest_port):
         threading.Thread.__init__(self)
 
-        app = createRestfulGatewayApp(deployment_name, task, lb_port, self)
+        app = createRestfulGatewayApp(deployment_name, self)
         self.server = make_server("127.0.0.1", rest_port, app)
         self.ctx = app.app_context()
         self.ctx.push()
