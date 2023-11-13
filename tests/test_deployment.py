@@ -77,20 +77,24 @@ def test_multi_replica(deployment, query):
 
 def test_query_kwargs(deployment, query):
     # test ignore_eos
-    output = deployment(query,
-                        max_length=128,
-                        min_new_tokens=16,
-                        ignore_eos=True,
-                        top_p=0.9,
-                        top_k=50,
-                        temperature=0.9)
+    output = deployment(
+        query,
+        max_length=128,
+        min_new_tokens=16,
+        ignore_eos=True,
+        top_p=0.9,
+        top_k=50,
+        temperature=0.9,
+    )
     assert output, "output is empty"
 
 
 def test_do_sample(deployment, query):
     output_0 = deployment(query, do_sample=False, max_length=128)
     output_1 = deployment(query, do_sample=False, max_length=128)
-    assert output_0.response == output_1.response, "do_sample=False should always return the same output"
+    assert (
+        output_0.response == output_1.response
+    ), "do_sample=False should always return the same output"
 
 
 def test_stop_token(deployment, query):

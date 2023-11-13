@@ -203,6 +203,43 @@ client = mii.serve("mistralai/Mistral-7B-v0.1", tensor_parallel=2, replica_num=2
 
 The choice between model parallelism and model replicas for maximum performance will depend on the nature of the hardware, model, and workload. For example, with small models users may find that model replicas provide the lowest average latency for requests. Meanwhile, large models may achieve greater overall throughput when using only model parallelism.
 
+### RESTful API
+
+MII makes it easy to setup and run model inference via RESTful APIs by setting `enable_restful_api=True` when creating a persistent MII deployment. The RESTful API can receive requests at `http://{HOST}:{RESTFUL_API_PORT}/mii/{DEPLOYMENT_NAME}`. A full example is provided below:
+
+```python
+client = mii.serve(
+    "mistralai/Mistral-7B-v0.1",
+    deployment_name="mistral-deployment",
+    enable_restful_api=True,
+    restful_api_port=28080,
+)
+```
+
+---
+📌 **Note:** While providing a `deployment_name` is not necessary (MII will autogenerate one for you), it is good practice to provide a `deployment_name` so that you can ensure you are interfacing with the correct RESTful API.
+
+---
+
+You can then send prompts to the RESTful gateway with any HTTP client, such as `curl`:
+
+```bash
+curl --header "Content-Type: application/json" --request POST  -d '{"prompts": ["DeepSpeed is", "Seattle is"], "max_length": 128}' http://localhost:28080/mii/mistral-deployment
+```
+
+or `python`:
+
+```python
+import json
+import requests
+url = f"http://localhost:28080/mii/mistral-deployment"
+params = {"prompts": ["DeepSpeed is", "Seattle is"], "max_length": 128}
+json_params = json.dumps(params)
+output = requests.post(
+    url, data=json_params, headers={"Content-Type": "application/json"}
+)
+```
+
 <!--
 ### Token Streaming
 With a persistent deployment, the resulting response text can be streamed back to the client as it is generated. This functionality is useful for chatbot style applications. A simple example of streaming tokens is below:
