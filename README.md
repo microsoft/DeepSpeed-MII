@@ -262,11 +262,13 @@ To enable streaming output, we must provide `streaming_fn` with the prompt. This
 While only the model name or path is required to stand up a persistent deployment, we offer customization options to our users.
 
 **`mii.serve()` Options**:
-- `model_name_or_path: str` Name or local path to a [HuggingFace](https://huggingface.co/) model.
-- `max_length: int` Sets the default maximum token length for the prompt + response.
-- `deployment_name: str` A unique identifying string for the persistent model. If provided, client objects should be retrieved with `client = mii.client(deployment_name)`.
-- `tensor_parallel: int` Number of GPUs to split the model across.
-- `replica_num: int` The number of model replicas to stand up.
+- `model_name_or_path: str` (Required) Name or local path to a [HuggingFace](https://huggingface.co/) model.
+- `max_length: int` (Defaults to maximum sequence length in model config) Sets the default maximum token length for the prompt + response.
+- `deployment_name: str` (Defaults to `f"{model_name_or_path}-mii-deployment"`) A unique identifying string for the persistent model. If provided, client objects should be retrieved with `client = mii.client(deployment_name)`.
+- `tensor_parallel: int` (Defaults to `1`) Number of GPUs to split the model across.
+- `replica_num: int` (Defaults to `1`) The number of model replicas to stand up.
+- `enable_restful_api: bool` (Defaults to `False`) When enabled, a RESTful API gateway process is launched that can be queried at `http://{host}:{restful_api_port}/mii/{deployment_name}`. See the [section on RESTful APIs](#restful-api) for more details.
+- `restful_api_port: int` (Defaults to `28080`) The port number used to interface with the RESTful API when `enable_restful_api` is set to `True`.
 
 **`mii.client()` Options**:
 - `model_or_deployment_name: str` Name of the model or `deployment_name` passed to `mii.serve()`
