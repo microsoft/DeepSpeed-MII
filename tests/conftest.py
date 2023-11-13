@@ -48,6 +48,11 @@ def model_name(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=["test-dep"])
+def deployment_name(request):
+    return request.param
+
+
 @pytest.fixture(scope="function", params=[mii.DeploymentType.LOCAL])
 def deployment_type(request):
     return request.param
@@ -78,12 +83,14 @@ def model_config(
 
 @pytest.fixture(scope="function")
 def mii_config(
+    deployment_name: str,
     deployment_type: str,
     port_number: int,
     enable_restful_api: bool,
     restful_api_port: int,
 ):
     config = SimpleNamespace(
+        deployment_name=deployment_name,
         deployment_type=deployment_type,
         port_number=port_number,
         enable_restful_api=enable_restful_api,

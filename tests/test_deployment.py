@@ -3,9 +3,13 @@
 
 # DeepSpeed Team
 import pytest
+
+import json
 import re
+import requests
 import subprocess
 import time
+
 import mii
 
 
@@ -73,20 +77,24 @@ def test_multi_replica(deployment, query):
 
 def test_query_kwargs(deployment, query):
     # test ignore_eos
-    output = deployment(query,
-                        max_length=128,
-                        min_new_tokens=16,
-                        ignore_eos=True,
-                        top_p=0.9,
-                        top_k=50,
-                        temperature=0.9)
+    output = deployment(
+        query,
+        max_length=128,
+        min_new_tokens=16,
+        ignore_eos=True,
+        top_p=0.9,
+        top_k=50,
+        temperature=0.9,
+    )
     assert output, "output is empty"
 
 
 def test_do_sample(deployment, query):
     output_0 = deployment(query, do_sample=False, max_length=128)
     output_1 = deployment(query, do_sample=False, max_length=128)
-    assert output_0.response == output_1.response, "do_sample=False should always return the same output"
+    assert (
+        output_0.response == output_1.response
+    ), "do_sample=False should always return the same output"
 
 
 def test_stop_token(deployment, query):
@@ -99,3 +107,20 @@ def test_stop_token(deployment, query):
 def test_return_full_text(deployment, query):
     output = deployment(query, max_length=128, return_full_text=True)
     assert output.response[0].startswith(query), "output should start with the prompt"
+
+
+@pytest.mark.parametrize("enable_restful_api", [True])
+def test_restful_api(deployment, query, deployment_name, restful_api_port):
+    # Verify deployment is running
+    output = deployment(query, max_length=128)
+    assert output, "output is empty"
+
+    # Verify REST API
+    url = f"http://localhost:{restful_api_port}/mii/{deployment_name}"
+    params = {"prompts": query, "max_length": 128}
+    json_params = json.dumps(params)
+    result = requests.post(url,
+                           data=json_params,
+                           headers={"Content-Type": "application/json"})
+    assert result.status_code == 200
+    assert "response" in result.json()
