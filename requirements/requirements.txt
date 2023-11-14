@@ -5,6 +5,7 @@ Flask-RESTful
 grpcio
 grpcio-tools
 pydantic
+safetensors
 torch
 transformers
 ujson
