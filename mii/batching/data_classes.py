@@ -36,10 +36,10 @@ class Response:
         }
 
     def __repr__(self) -> str:
-        return self.generated_text
+        return str(self.to_msg())
 
     def __str__(self) -> str:
-        return self.generated_text
+        return self.to_msg()
 
 
 @dataclass
@@ -167,6 +167,7 @@ class ResponseBatch:
         return iter(self.responses)
 
     def __repr__(self) -> str:
+        return self.responses
         return "\n\n".join(str(r) for r in self.responses)
 
     @property

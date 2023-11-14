@@ -521,7 +521,7 @@ class MIIPipeline(RaggedBatchBase):
 
     def _bcast_responses(self, responses: ResponseBatch) -> ResponseBatch:
         if self.is_rank_0:
-            data_dicts = [r.get_msg() for r in responses]
+            data_dicts = [r.to_msg() for r in responses]
             json_data = ujson.dumps(data_dicts)
             self.socket.send_string(json_data)
         else:

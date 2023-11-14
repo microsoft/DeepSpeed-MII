@@ -52,6 +52,7 @@ class TaskMethods(ABC):
         return response, time_taken, model_time_taken
 
     def unpack_response_from_proto(self, response):
+        print("RESPONSE", response)
         return response
 
 
