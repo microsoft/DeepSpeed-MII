@@ -41,15 +41,15 @@ class MIIClient:
     def __call__(self, *args, **kwargs) -> ResponseBatch:
         return self.generate(*args, **kwargs)
 
-    async def _request_async_response(self, request_dict, **query_kwargs):
+    async def _request_async_response(self, prompts, **query_kwargs):
         task_methods = TASK_METHODS_DICT[self.task]
-        proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
+        proto_request = task_methods.pack_request_to_proto(prompts, **query_kwargs)
         proto_response = await getattr(self.stub, task_methods.method)(proto_request)
         return task_methods.unpack_response_from_proto(proto_response)
 
-    async def _request_async_response_stream(self, request_dict, **query_kwargs):
+    async def _request_async_response_stream(self, prompts, **query_kwargs):
         task_methods = TASK_METHODS_DICT[self.task]
-        proto_request = task_methods.pack_request_to_proto(request_dict, **query_kwargs)
+        proto_request = task_methods.pack_request_to_proto(prompts, **query_kwargs)
         assert hasattr(task_methods, "method_stream_out"), f"{self.task} does not support streaming response"
         async for response in getattr(self.stub,
                                       task_methods.method_stream_out)(proto_request):
@@ -67,23 +67,21 @@ class MIIClient:
             if len(prompts) > 1:
                 raise RuntimeError(
                     "MII client streaming only supports a single prompt input.")
-            request_dict = {"query": prompts}
-            return self._generate_stream(streaming_fn, request_dict, **query_kwargs)
+            query_kwargs["stream"] = True
+            return self._generate_stream(streaming_fn, prompts, **query_kwargs)
 
-        request_dict = {"query": prompts}
         return self.asyncio_loop.run_until_complete(
-            self._request_async_response(request_dict,
+            self._request_async_response(prompts,
                                          **query_kwargs))
 
     def _generate_stream(self,
                          callback,
-                         request_dict: Dict[str,
-                                            str],
+                         prompts: List[str],
                          **query_kwargs: Dict[str,
                                               Any]):
         async def put_result():
             response_stream = self._request_async_response_stream(
-                request_dict,
+                prompts,
                 **query_kwargs)
 
             while True:

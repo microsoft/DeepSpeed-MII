@@ -32,7 +32,7 @@ class Response:
             "generated_text": self.generated_text,
             "prompt_length": self.prompt_length,
             "generated_length": self.generated_length,
-            "finish_reason": self.finish_reason.value
+            "finish_reason": self.finish_reason
         }
 
     def __repr__(self) -> str:
@@ -165,6 +165,9 @@ class ResponseBatch:
 
     def __iter__(self) -> Iterator[Response]:
         return iter(self.responses)
+
+    def __str__(self) -> str:
+        return str(self.responses)
 
     def __repr__(self) -> str:
         return self.responses

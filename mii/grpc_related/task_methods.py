@@ -4,7 +4,11 @@
 # DeepSpeed Team
 
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Tuple
 
+from google.protobuf.message import Message
+
+from mii.batching.data_classes import Response, ResponseBatch
 from mii.constants import TaskType
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
@@ -22,38 +26,27 @@ def single_string_response_to_proto(self, response, time_taken, model_time_taken
                                                model_time_taken=model_time_taken)
 
 
-def multi_string_request_to_proto(self, request_dict, **query_kwargs):
-    return modelresponse_pb2.MultiStringRequest(
-        request=request_dict["query"] if isinstance(request_dict["query"],
-                                                    list) else [request_dict["query"]],
-        query_kwargs=kwarg_dict_to_proto(query_kwargs),
-    )
-
-
-def proto_request_to_list(self, request):
-    prompts = [r for r in request.request]
-    kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-    return prompts, kwargs
-
-
 class TaskMethods(ABC):
     @property
     @abstractmethod
     def method(self):
         ...
 
-    def pack_request_to_proto(self, request_dict, **query_kwargs):
-        return request_dict, query_kwargs
+    @abstractmethod
+    def pack_request_to_proto(self, request, **query_kwargs):
+        ...
 
-    def unpack_request_from_proto(self, request):
-        return request
+    @abstractmethod
+    def unpack_request_from_proto(self, proto_request):
+        ...
 
-    def pack_response_to_proto(self, response, time_taken, model_time_taken):
-        return response, time_taken, model_time_taken
+    @abstractmethod
+    def pack_response_to_proto(self, response):
+        ...
 
-    def unpack_response_from_proto(self, response):
-        print("RESPONSE", response)
-        return response
+    @abstractmethod
+    def unpack_response_from_proto(self, proto_response):
+        ...
 
 
 class TextGenerationMethods(TaskMethods):
@@ -65,10 +58,25 @@ class TextGenerationMethods(TaskMethods):
     def method_stream_out(self):
         return "GeneratorReplyStream"
 
-    pack_request_to_proto = multi_string_request_to_proto
-    unpack_request_from_proto = proto_request_to_list
+    def pack_request_to_proto(self,
+                              prompts: List[str],
+                              **query_kwargs: Dict[str,
+                                                   Any]) -> Message:
+        proto_request = modelresponse_pb2.MultiStringRequest(
+            request=prompts,
+            query_kwargs=kwarg_dict_to_proto(query_kwargs),
+        )
+        return proto_request
 
-    def pack_response_to_proto(self, responses, time_taken, model_time_taken):
+    def unpack_request_from_proto(self,
+                                  proto_request: Message) -> Tuple[List[str],
+                                                                   Dict[str,
+                                                                        Any]]:
+        prompts = [r for r in proto_request.request]
+        kwargs = unpack_proto_query_kwargs(proto_request.query_kwargs)
+        return prompts, kwargs
+
+    def pack_response_to_proto(self, responses: ResponseBatch) -> Message:
         text_responses = []
         details = []
 
@@ -87,9 +95,21 @@ class TextGenerationMethods(TaskMethods):
             response=text_responses,
             indices=[0],
             details=details,
-            time_taken=time_taken,
-            model_time_taken=model_time_taken,
+            time_taken=-1,
+            model_time_taken=-1,
         )
+
+    def unpack_response_from_proto(self, response: Message) -> ResponseBatch:
+        response_batch = ResponseBatch()
+        for i, r in enumerate(response.response):
+            response_batch.append(
+                Response(
+                    generated_text=r,
+                    prompt_length=response.details[i].prompt_tokens,
+                    generated_length=response.details[i].generated_tokens,
+                    finish_reason=response.details[i].finish_reason,
+                ))
+        return response_batch
 
 
 TASK_METHODS_DICT = {

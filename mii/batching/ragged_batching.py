@@ -588,11 +588,6 @@ class MIIAsyncPipeline(RaggedBatchBase):
 
         return uid
 
-    def is_response_ready(self, uid: int) -> bool:
-        if not self.is_rank_0:
-            return True
-        return not self.result_queues[uid].empty()
-
     def get_response(self) -> Tuple[int, Response]:
         # TODO: We should avoid any request/response work with non-rank 0, but
         # this requires some refactoring how we do the put and request in
