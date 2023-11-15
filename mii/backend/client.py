@@ -7,7 +7,7 @@ import grpc
 import requests
 from typing import Dict, Any, Callable, List, Union
 
-from mii.batching.data_classes import ResponseBatch
+from mii.batching.data_classes import Response
 from mii.config import MIIConfig
 from mii.constants import GRPC_MAX_MSG_SIZE
 from mii.grpc_related.proto import modelresponse_pb2, modelresponse_pb2_grpc
@@ -38,7 +38,7 @@ class MIIClient:
         channel = create_channel(host, self.port)
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
 
-    def __call__(self, *args, **kwargs) -> ResponseBatch:
+    def __call__(self, *args, **kwargs) -> List[Response]:
         return self.generate(*args, **kwargs)
 
     async def _request_async_response(self, prompts, **query_kwargs):
@@ -60,7 +60,8 @@ class MIIClient:
                                 List[str]],
                  streaming_fn: Callable = None,
                  **query_kwargs: Dict[str,
-                                      Any]) -> ResponseBatch:
+                                      Any]) -> Union[None,
+                                                     List[Response]]:
         if isinstance(prompts, str):
             prompts = [prompts]
         if streaming_fn is not None:
@@ -78,7 +79,7 @@ class MIIClient:
                          callback,
                          prompts: List[str],
                          **query_kwargs: Dict[str,
-                                              Any]):
+                                              Any]) -> None:
         async def put_result():
             response_stream = self._request_async_response_stream(
                 prompts,
@@ -93,11 +94,11 @@ class MIIClient:
 
         self.asyncio_loop.run_until_complete(put_result())
 
-    async def terminate_async(self):
+    async def terminate_async(self) -> None:
         await self.stub.Terminate(
             modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
-    def terminate_server(self):
+    def terminate_server(self) -> None:
         self.asyncio_loop.run_until_complete(self.terminate_async())
         if self.mii_config.enable_restful_api:
             requests.get(

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Iterator, Union
 from typing_extensions import Self
 
@@ -19,27 +19,17 @@ class Response:
     finish_reason: GenerationFinishReason
 
     @staticmethod
-    def from_msg(msg: Dict[str, Union[str, int]]) -> Self:
-        return Response(
-            generated_text=msg["generated_text"],
-            prompt_length=msg["prompt_length"],
-            generated_length=msg["generated_length"],
-            finish_reason=GenerationFinishReason(msg["finish_reason"]),
-        )
+    def from_msg_dict(msg: Dict[str, Union[str, int]]) -> Self:
+        return Response(**msg)
 
-    def to_msg(self) -> Dict[str, Union[str, int]]:
-        return {
-            "generated_text": self.generated_text,
-            "prompt_length": self.prompt_length,
-            "generated_length": self.generated_length,
-            "finish_reason": self.finish_reason
-        }
+    def to_msg_dict(self) -> Dict[str, Union[str, int]]:
+        return asdict(self)
 
     def __repr__(self) -> str:
-        return str(self.to_msg())
+        return self.generated_text
 
     def __str__(self) -> str:
-        return self.to_msg()
+        return self.generated_text
 
 
 @dataclass
@@ -157,40 +147,6 @@ class Request:
         self.last_in_prompt = True
         self.next_token = None
         self.is_done = False
-
-
-class ResponseBatch:
-    def __init__(self, responses: List[Response] = []) -> None:
-        self.responses = responses
-
-    def __iter__(self) -> Iterator[Response]:
-        return iter(self.responses)
-
-    def __str__(self) -> str:
-        return str(self.responses)
-
-    def __repr__(self) -> str:
-        return self.responses
-        return "\n\n".join(str(r) for r in self.responses)
-
-    @property
-    def generated_texts(self) -> List[str]:
-        return [r.generated_text for r in self.responses]
-
-    @property
-    def prompt_lengths(self) -> List[int]:
-        return [r.prompt_length for r in self.responses]
-
-    @property
-    def generated_lengths(self) -> List[int]:
-        return [r.generated_length for r in self.responses]
-
-    @property
-    def finish_reasons(self) -> List[GenerationFinishReason]:
-        return [r.finish_reason for r in self.responses]
-
-    def append(self, response: Response) -> None:
-        self.responses.append(response)
 
 
 class RequestBatch:

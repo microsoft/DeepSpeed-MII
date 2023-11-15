@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple
 
 from google.protobuf.message import Message
 
-from mii.batching.data_classes import Response, ResponseBatch
+from mii.batching.data_classes import Response
 from mii.constants import TaskType
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
@@ -76,38 +76,30 @@ class TextGenerationMethods(TaskMethods):
         kwargs = unpack_proto_query_kwargs(proto_request.query_kwargs)
         return prompts, kwargs
 
-    def pack_response_to_proto(self, responses: ResponseBatch) -> Message:
-        text_responses = []
-        details = []
+    def pack_response_to_proto(self, responses: List[Response]) -> Message:
+        proto_responses = []
+        for r in responses:
+            proto_responses.append(
+                modelresponse_pb2.SingleGenerationReply(
+                    response=r.generated_text,
+                    finish_reason=str(r.finish_reason),
+                    prompt_tokens=r.prompt_length,
+                    generated_tokens=r.generated_length,
+                    time_taken=-1,
+                    model_time_taken=-1,
+                ))
 
-        # Response a nested list of dicts
-        # [Sample, 1, Dict]
-        for response in responses:
-            text = response.generated_text
-            text_responses.append(text)
-            details.append(
-                modelresponse_pb2.GenerationDetails(
-                    finish_reason=str(response.finish_reason),
-                    prompt_tokens=response.prompt_length,
-                    generated_tokens=response.generated_length))
+        return modelresponse_pb2.MultiGenerationReply(response=proto_responses, )
 
-        return modelresponse_pb2.GenerationReply(
-            response=text_responses,
-            indices=[0],
-            details=details,
-            time_taken=-1,
-            model_time_taken=-1,
-        )
-
-    def unpack_response_from_proto(self, response: Message) -> ResponseBatch:
-        response_batch = ResponseBatch()
-        for i, r in enumerate(response.response):
+    def unpack_response_from_proto(self, response: Message) -> List[Response]:
+        response_batch = []
+        for r in response.response:
             response_batch.append(
                 Response(
-                    generated_text=r,
-                    prompt_length=response.details[i].prompt_tokens,
-                    generated_length=response.details[i].generated_tokens,
-                    finish_reason=response.details[i].finish_reason,
+                    generated_text=r.response,
+                    prompt_length=r.prompt_tokens,
+                    generated_length=r.generated_tokens,
+                    finish_reason=r.finish_reason,
                 ))
         return response_batch
 

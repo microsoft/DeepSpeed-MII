@@ -40,7 +40,7 @@ from mii.batching.constants import (MAX_LENGTH_KWARG,
                                     TEMP_NAME,
                                     SAMPLER_NAME,
                                     STOP_NAME)
-from mii.batching.data_classes import Response, Request, ResponseBatch, RequestBatch
+from mii.batching.data_classes import Response, Request, RequestBatch
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
 from mii.batching.generation.samplers import LogitsSampler, GreedySampler
 from mii.batching.generation.stop_criterion import EosGenerationStopCriterion, TokenStopCriterion
@@ -463,10 +463,10 @@ class MIIPipeline(RaggedBatchBase):
         super().__init__(*args, **kwargs)
         self.tid = threading.get_ident()
 
-    def __call__(self, inputs: Union[str, List[str]], **kwargs) -> ResponseBatch:
+    def __call__(self, inputs: Union[str, List[str]], **kwargs) -> List[Response]:
         if isinstance(inputs, str):
             inputs = [inputs]
-        outputs: ResponseBatch = ResponseBatch([])
+        outputs: List[Response] = []
         uids_running: List[int] = list(range(len(inputs)))
         uids_complete_order: List[int] = []
 
@@ -494,12 +494,12 @@ class MIIPipeline(RaggedBatchBase):
             while self.scheduled_requests:
                 self.generate()
 
-        outputs = ResponseBatch([
+        outputs = [
             r for idx,
             r in sorted(zip(uids_complete_order,
                             outputs),
                         key=lambda pair: pair[0])
-        ])
+        ]
 
         if self.model_config.all_rank_output:
             outputs = self._bcast_responses(outputs)
@@ -519,15 +519,15 @@ class MIIPipeline(RaggedBatchBase):
         response = self.make_response(generated_tokens, result[2], result[3], result[4])
         return uid, response
 
-    def _bcast_responses(self, responses: ResponseBatch) -> ResponseBatch:
+    def _bcast_responses(self, responses: List[Response]) -> List[Response]:
         if self.is_rank_0:
-            data_dicts = [r.to_msg() for r in responses]
+            data_dicts = [r.to_msg_dict() for r in responses]
             json_data = ujson.dumps(data_dicts)
             self.socket.send_string(json_data)
         else:
             json_data = self.socket.recv_string()
             data_dicts = ujson.loads(json_data)
-            responses = ResponseBatch([Response.from_msg(msg) for msg in data_dicts])
+            responses = [Response.from_msg_dict(msg) for msg in data_dicts]
         return responses
 
 

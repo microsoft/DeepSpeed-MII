@@ -244,7 +244,7 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                         response_proto = result_queue.get(
                             timeout=STREAM_RESPONSE_QUEUE_TIMEOUT)
                         yield response_proto
-                        if response_proto.details[0].finish_reason != str(
+                        if response_proto.response[0].finish_reason != str(
                                 GenerationFinishReason.NONE):
                             break
                     except queue.Empty:
