@@ -82,7 +82,7 @@ class TextGenerationMethods(TaskMethods):
             proto_responses.append(
                 modelresponse_pb2.SingleGenerationReply(
                     response=r.generated_text,
-                    finish_reason=str(r.finish_reason),
+                    finish_reason=str(r.finish_reason.value),
                     prompt_tokens=r.prompt_length,
                     generated_tokens=r.generated_length,
                     time_taken=-1,
