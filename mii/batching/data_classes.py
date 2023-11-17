@@ -150,7 +150,9 @@ class Request:
 
 
 class RequestBatch:
-    def __init__(self, requests: List[Request] = []) -> None:
+    def __init__(self, requests: List[Request] = None) -> None:
+        if requests is None:
+            requests = []
         self.requests = requests
 
     def __len__(self) -> int:
