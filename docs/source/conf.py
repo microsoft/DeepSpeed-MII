@@ -1,3 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
 # Configuration file for the Sphinx documentation builder.
 
 # -- Project information
@@ -6,8 +10,8 @@ project = 'DeepSpeed-MII'
 copyright = '2023, Microsoft'
 author = 'Microsoft'
 
-release = '0.1.2'
-version = '0.1.2'
+with open("../../version.txt", "r") as f:
+    release = f.readline().rstrip()
 
 # -- General configuration
 
