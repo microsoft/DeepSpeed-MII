@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+import json
 import threading
 import time
+
 from flask import Flask, request
 from flask_restful import Resource, Api
-from google.protobuf.json_format import MessageToJson
 from werkzeug.serving import make_server
 
 import mii
@@ -29,7 +30,8 @@ def createRestfulGatewayApp(deployment_name, server_thread):
         def post(self):
             data = request.get_json()
             result = client.generate(**data)
-            return MessageToJson(result)
+            result_json = json.dumps([r.to_msg_dict() for r in result])
+            return result_json
 
     app = Flask("RestfulGateway")
 

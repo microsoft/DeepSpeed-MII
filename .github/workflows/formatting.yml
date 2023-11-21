@@ -27,6 +27,10 @@ jobs:
           which python
           python --version
 
+      - name: Install DeepSpeed
+        run: |
+          pip install git+https://github.com/microsoft/DeepSpeed.git
+
       - name: Install MII
         run: |
           pip install .[dev]
