@@ -3,29 +3,26 @@
 
 # DeepSpeed Team
 import asyncio
-from concurrent import futures
-import logging
-
-import grpc
-
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from .proto import modelresponse_pb2_grpc
+import queue
 import sys
 import threading
-import time
-import queue
+from concurrent import futures
+from typing import Dict
 
+import grpc
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
+
+from mii.backend.client import create_channel
 from mii.constants import (
+    GenerationFinishReason,
     GRPC_MAX_MSG_SIZE,
     TERMINATE_METHOD,
     LB_MAX_WORKER_THREADS,
     SERVER_SHUTDOWN_TIMEOUT,
     STREAM_RESPONSE_QUEUE_TIMEOUT,
 )
-from mii.grpc_related.task_methods import TASK_METHODS_DICT
-from mii.backend.client import create_channel
-
-from mii.constants import GenerationFinishReason
+from mii.grpc_related.proto import modelresponse_pb2_grpc
+from mii.grpc_related.task_methods import TASK_METHODS_DICT, TaskMethods
 
 
 class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
@@ -53,7 +50,7 @@ class ModelResponse(ServiceBase):
         self.method_name_to_task = {m.method: t for t, m in TASK_METHODS_DICT.items()}
         self.lock = threading.Lock()
 
-    def _run_inference(self, method_name, request_proto):
+    def _get_task_methods(self, method_name: str) -> Dict[str, TaskMethods]:
         if method_name not in self.method_name_to_task:
             raise ValueError(f"unknown method: {method_name}")
 
@@ -62,12 +59,14 @@ class ModelResponse(ServiceBase):
             raise ValueError(f"unknown task: {task}")
 
         task_methods = TASK_METHODS_DICT[task]
-        prompts, kwargs = task_methods.unpack_request_from_proto(request_proto)
+        return task_methods
 
-        start = time.time()
-        uids_running = []
-        uids_complete_order = []
-        responses = []
+    def GeneratorReply(self, request, context):
+        task_methods = self._get_task_methods("GeneratorReply")
+
+        prompts, kwargs = task_methods.unpack_request_from_proto(request)
+        uids_running, uids_complete_order, responses = [], [], []
+
         # Put requests for all prompts into the pipeline
         for p in prompts:
             request_kwargs = kwargs.copy()
@@ -85,7 +84,6 @@ class ModelResponse(ServiceBase):
             self.inference_pipeline.flush_uid(uid)
             uids_complete_order.append(uids_running.index(uid))
             uids_running.remove(uid)
-        end = time.time()
 
         # Sort responses in the order of prompts
         responses = [
@@ -95,31 +93,19 @@ class ModelResponse(ServiceBase):
                         key=lambda pair: pair[0])
         ]
 
-        return task_methods.pack_response_to_proto(responses, end - start, -1)
-
-    def GeneratorReply(self, request, context):
-        return self._run_inference("GeneratorReply", request)
-
-    def _run_inference_stream(self, method_name, request_proto) -> int:
-        task = self.method_name_to_task[method_name]
-        task_methods = TASK_METHODS_DICT[task]
-        prompts, kwargs = task_methods.unpack_request_from_proto(request_proto)
-
-        kwargs["stream"] = True
-        # NOTE: Streaming handle only single prompt inputs
-        return self.inference_pipeline.put_request(prompts[0], kwargs)
+        return task_methods.pack_response_to_proto(responses)
 
     def GeneratorReplyStream(self, request, context):
-        method_name = "GeneratorReply"
-        task = self.method_name_to_task[method_name]
-        task_methods = TASK_METHODS_DICT[task]
+        task_methods = self._get_task_methods("GeneratorReply")
 
-        uid = self._run_inference_stream(method_name, request)
+        prompts, kwargs = task_methods.unpack_request_from_proto(request)
+        uid = self.inference_pipeline.put_request(prompts[0], kwargs)
+
         while True:
             response_uid, r = self.inference_pipeline.get_response()
             assert uid == response_uid, "uid mismatch"
             done = r.finish_reason != GenerationFinishReason.NONE
-            response = task_methods.pack_response_to_proto([r], 0.0, 0.0)
+            response = task_methods.pack_response_to_proto([r])
             yield response
             if done:
                 break
@@ -258,8 +244,8 @@ class LoadBalancingInterceptor(grpc.ServerInterceptor):
                         response_proto = result_queue.get(
                             timeout=STREAM_RESPONSE_QUEUE_TIMEOUT)
                         yield response_proto
-                        if response_proto.details[0].finish_reason != str(
-                                GenerationFinishReason.NONE):
+                        if response_proto.response[0].finish_reason != str(
+                                GenerationFinishReason.NONE.value):
                             break
                     except queue.Empty:
                         print(
@@ -302,5 +288,6 @@ def serve_load_balancing(model_config, lb_port):
 
 
 if __name__ == "__main__":
+    import logging
     logging.basicConfig()
     serve_inference(None, sys.argv[1])
