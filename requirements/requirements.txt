@@ -10,3 +10,4 @@ transformers
 ujson
 Werkzeug
 zmq
+Pillow

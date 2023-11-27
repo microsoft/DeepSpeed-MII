@@ -19,6 +19,7 @@ class TaskType(str, Enum):
     TOKEN_CLASSIFICATION = "token-classification"
     CONVERSATIONAL = "conversational"
     TEXT2IMG = "text-to-image"
+    ZERO_SHOT_IMAGE_CLASSIFICATION = "zero-shot-image-classification"
 
 
 class ModelProvider(str, Enum):
@@ -56,6 +57,7 @@ REQUIRED_KEYS_PER_TASK = {
         "generated_responses",
     ],
     TaskType.TEXT2IMG: ["query"],
+    TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image", "candidate_labels"],
 }
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
