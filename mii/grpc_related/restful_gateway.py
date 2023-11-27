@@ -5,6 +5,7 @@
 import json
 import threading
 import time
+import asyncio
 
 from flask import Flask, request
 from flask_restful import Resource, Api
@@ -21,15 +22,16 @@ def shutdown(thread):
 
 def createRestfulGatewayApp(deployment_name, server_thread):
     # client must be thread-safe
-    client = mii.client(deployment_name)
 
     class RestfulGatewayService(Resource):
         def __init__(self):
             super().__init__()
+            asyncio.set_event_loop(asyncio.SelectorEventLoop())
+            self.client = mii.client(deployment_name)
 
         def post(self):
             data = request.get_json()
-            result = client.generate(**data)
+            result = self.client.generate(**data)
             result_json = json.dumps([r.to_msg_dict() for r in result])
             return result_json
 
@@ -53,7 +55,11 @@ class RestfulGatewayThread(threading.Thread):
         threading.Thread.__init__(self)
 
         app = createRestfulGatewayApp(deployment_name, self)
-        self.server = make_server("127.0.0.1", rest_port, app)
+        self.server = make_server("127.0.0.1",
+                                  rest_port,
+                                  app,
+                                  threaded=True,
+                                  processes=1)
         self.ctx = app.app_context()
         self.ctx.push()
 
