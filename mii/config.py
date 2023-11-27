@@ -80,6 +80,8 @@ class ModelConfig(DeepSpeedConfigModel):
     generated, but you can provide a set of custom configs.
     """
 
+    deploy_rank: Union[int, List[int], List[List[int]]] = -1
+
     max_length: Optional[int] = None
     """
     The maximum number of tokens DeepSpeed-Inference can work with, including
