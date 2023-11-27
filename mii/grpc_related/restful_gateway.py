@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import json
 import threading
 import time
 import asyncio
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 from werkzeug.serving import make_server
 
@@ -32,8 +31,7 @@ def createRestfulGatewayApp(deployment_name, server_thread):
         def post(self):
             data = request.get_json()
             result = self.client.generate(**data)
-            result_json = json.dumps([r.to_msg_dict() for r in result])
-            return result_json
+            return jsonify([r.to_msg_dict() for r in result])
 
     app = Flask("RestfulGateway")
 
@@ -51,15 +49,15 @@ def createRestfulGatewayApp(deployment_name, server_thread):
 
 
 class RestfulGatewayThread(threading.Thread):
-    def __init__(self, deployment_name, rest_port):
+    def __init__(self, deployment_name, rest_port, rest_procs):
         threading.Thread.__init__(self)
 
         app = createRestfulGatewayApp(deployment_name, self)
         self.server = make_server("127.0.0.1",
                                   rest_port,
                                   app,
-                                  threaded=True,
-                                  processes=1)
+                                  threaded=False,
+                                  processes=rest_procs)
         self.ctx = app.app_context()
         self.ctx.push()
 
