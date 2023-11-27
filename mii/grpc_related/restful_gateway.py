@@ -4,7 +4,6 @@
 # DeepSpeed Team
 import threading
 import time
-import asyncio
 
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
@@ -20,12 +19,9 @@ def shutdown(thread):
 
 
 def createRestfulGatewayApp(deployment_name, server_thread):
-    # client must be thread-safe
-
     class RestfulGatewayService(Resource):
         def __init__(self):
             super().__init__()
-            asyncio.set_event_loop(asyncio.SelectorEventLoop())
             self.client = mii.client(deployment_name)
 
         def post(self):
