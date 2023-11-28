@@ -142,27 +142,6 @@ class ModelConfig(DeepSpeedConfigModel):
             assert num_replica_config == values.get("replica_num"), "Number of replica configs must match replica_num"
         return values
 
-    @root_validator
-    def check_deploy_rank(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        deploy_rank = values.get("deploy_rank")
-        tensor_parallel = values.get("tensor_parallel")
-        replica_num = values.get("replica_num")
-
-        if deploy_rank is None:
-            return values
-        if isinstance(deploy_rank, int):
-            deploy_rank = [[deploy_rank]]
-        if isinstance(deploy_rank, list) and isinstance(deploy_rank[0], int):
-            deploy_rank = [deploy_rank]
-
-        assert len(deploy_rank) == replica_num, "Number of deploy rank lists must match replica_num"
-        assert len(deploy_rank[0]) == tensor_parallel, "Number of deploy ranks must match tensor_parallel"
-        deploy_rank_set = set([item for sublist in deploy_rank for item in sublist])
-        assert len(deploy_rank_set) == tensor_parallel*replica_num, "Deploy ranks must be unique"
-
-        values["deploy_rank"] = deploy_rank
-        return values
-
 
 class MIIConfig(DeepSpeedConfigModel):
     deployment_name: str = ""
