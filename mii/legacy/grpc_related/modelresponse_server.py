@@ -31,6 +31,7 @@ class ServiceBase(modelresponse_pb2_grpc.ModelResponseServicer):
     """
     Base class to provide common features of an inference server
     """
+
     def __init__(self):
         self._stop_event = threading.Event()
 
@@ -46,6 +47,7 @@ class ModelResponse(ServiceBase):
     """
     Implementation class of an MII inference server
     """
+
     def __init__(self, inference_pipeline):
         super().__init__()
         self.inference_pipeline = inference_pipeline
@@ -128,6 +130,7 @@ class ModelResponse(ServiceBase):
 
 
 class AtomicCounter:
+
     def __init__(self, initial_value=0):
         self.value = initial_value
         self.lock = threading.Lock()
@@ -149,6 +152,7 @@ class ParallelStubInvoker:
     This class aims to call gRPC methods without conversions between proto and python object.
     TensorParallelClient can be used for invocation with the conversions.
     """
+
     def __init__(self, host, ports):
         # Assumption: target services are all on the same host
         self.stubs = []
@@ -175,6 +179,7 @@ class ParallelStubInvoker:
 
 
 class LoadBalancingInterceptor(grpc.ServerInterceptor):
+
     def __init__(self, model_config):
         super().__init__()
         self.asyncio_loop = asyncio.get_event_loop()

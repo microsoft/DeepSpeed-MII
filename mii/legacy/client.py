@@ -58,6 +58,7 @@ class MIIClient:
     """
     Client to send queries to a single endpoint.
     """
+
     def __init__(self, task, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
@@ -108,6 +109,7 @@ class MIIClient:
 
 
 class MIINonPersistentClient:
+
     def __init__(self, task, deployment_name):
         self.task = task
         self.deployment_name = deployment_name
@@ -135,10 +137,8 @@ class MIINonPersistentClient:
 
         elif self.task == TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION:
             if "image" not in request_dict or "candidate_labels" not in request_dict:
-                raise Exception(
-                    "Zero Shot Image Classification Task requires "
-                    "'image' and 'candidate_labels' keys"
-                )
+                raise Exception("Zero Shot Image Classification Task requires "
+                                "'image' and 'candidate_labels' keys")
             args = (request_dict["image"], )
             query_kwargs["candidate_labels"] = request_dict["candidate_labels"]
 
