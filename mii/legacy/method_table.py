@@ -266,7 +266,7 @@ class Text2ImgMethods(TaskMethods):
         return ImageResponse(response)
 
 
-class ZeroShotImgClassificationMehtods(TaskMethods):
+class ZeroShotImgClassificationMethods(TaskMethods):
     @property
     def method(self):
         return "ZeroShotImgClassificationReply"
@@ -298,5 +298,5 @@ GRPC_METHOD_TABLE = {
     TaskType.TOKEN_CLASSIFICATION: TokenClassificationMethods(),
     TaskType.CONVERSATIONAL: ConversationalMethods(),
     TaskType.TEXT2IMG: Text2ImgMethods(),
-    TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ZeroShotImgClassificationMehtods(),
+    TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ZeroShotImgClassificationMethods(),
 }
