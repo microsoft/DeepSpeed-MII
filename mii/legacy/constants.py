@@ -58,7 +58,8 @@ REQUIRED_KEYS_PER_TASK = {
         "generated_responses",
     ],
     TaskType.TEXT2IMG: ["query"],
-    TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image", "candidate_labels"],
+    TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image",
+                                              "candidate_labels"],
 }
 
 MII_CACHE_PATH = "MII_CACHE_PATH"
