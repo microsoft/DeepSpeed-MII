@@ -25,11 +25,6 @@ class ReplicaConfig(DeepSpeedConfigModel):
     zmq_port: int = None
 
 
-class DeviceMap(DeepSpeedConfigModel):
-    hostname: str = ""
-    ranks: Union[int, List[int], List[List[int]]] = None
-
-
 class ModelConfig(DeepSpeedConfigModel):
     model_name_or_path: str
     """
