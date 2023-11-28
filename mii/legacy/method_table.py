@@ -45,7 +45,6 @@ def proto_request_to_list(self, request):
 
 
 class TaskMethods(ABC):
-
     @property
     @abstractmethod
     def method(self):
@@ -129,7 +128,6 @@ class TextGenerationMethods(TaskMethods):
 
 
 class TextClassificationMethods(TaskMethods):
-
     @property
     def method(self):
         return "ClassificationReply"
@@ -140,7 +138,6 @@ class TextClassificationMethods(TaskMethods):
 
 
 class QuestionAnsweringMethods(TaskMethods):
-
     @property
     def method(self):
         return "QuestionAndAnswerReply"
@@ -163,7 +160,6 @@ class QuestionAnsweringMethods(TaskMethods):
 
 
 class FillMaskMethods(TaskMethods):
-
     @property
     def method(self):
         return "FillMaskReply"
@@ -174,7 +170,6 @@ class FillMaskMethods(TaskMethods):
 
 
 class TokenClassificationMethods(TaskMethods):
-
     @property
     def method(self):
         return "TokenClassificationReply"
@@ -185,7 +180,6 @@ class TokenClassificationMethods(TaskMethods):
 
 
 class ConversationalMethods(TaskMethods):
-
     @property
     def method(self):
         return "ConversationalReply"
@@ -240,7 +234,6 @@ class ConversationalMethods(TaskMethods):
 
 
 class Text2ImgMethods(TaskMethods):
-
     @property
     def method(self):
         return "Txt2ImgReply"
@@ -274,7 +267,6 @@ class Text2ImgMethods(TaskMethods):
 
 
 class ZeroShotImgClassificationMehtods(TaskMethods):
-
     @property
     def method(self):
         return "ZeroShotImgClassificationReply"
@@ -290,9 +282,12 @@ class ZeroShotImgClassificationMehtods(TaskMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        kwargs["candidate_labels"] = request.candidate_labels
-        args = (request.image, )
+        args = (request.image, request.candidate_labels)
         return args, kwargs
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        image, candidate_labels = args
+        return inference_pipeline(image, candidate_labels=candidate_labels, **kwargs)
 
 
 GRPC_METHOD_TABLE = {

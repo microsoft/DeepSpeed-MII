@@ -84,9 +84,11 @@ def ds_config(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=[True])
-def replace_with_kernel_inject(request):
-    return request.param
+@pytest.fixture(scope="function")
+def replace_with_kernel_inject(model_name):
+    if "clip-vit" in model_name:
+        return False
+    return True
 
 
 @pytest.fixture(scope="function")

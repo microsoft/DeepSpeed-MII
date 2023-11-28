@@ -8,7 +8,7 @@ import requests
 import mii.legacy as mii
 from .grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
 from .grpc_related.proto import legacymodelresponse_pb2_grpc as modelresponse_pb2_grpc
-from .constants import GRPC_MAX_MSG_SIZE, TaskType, DeploymentType
+from .constants import GRPC_MAX_MSG_SIZE, TaskType, DeploymentType, REQUIRED_KEYS_PER_TASK
 from .method_table import GRPC_METHOD_TABLE
 from .config import MIIConfig
 from .utils import import_score_file
@@ -58,7 +58,6 @@ class MIIClient:
     """
     Client to send queries to a single endpoint.
     """
-
     def __init__(self, task, host, port):
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, port)
@@ -109,7 +108,6 @@ class MIIClient:
 
 
 class MIINonPersistentClient:
-
     def __init__(self, task, deployment_name):
         self.task = task
         self.deployment_name = deployment_name
@@ -121,27 +119,18 @@ class MIINonPersistentClient:
         task_methods = GRPC_METHOD_TABLE[self.task]
         inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
 
-        # TODO: refactor so this code is shared between non-persistent and
-        # persistent deployments in method_table.py
+        for key in REQUIRED_KEYS_PER_TASK[self.task]:
+            assert key in request_dict, f"Task '{self.task}' requires '{key}' key"
         if self.task == TaskType.QUESTION_ANSWERING:
-            if "question" not in request_dict or "context" not in request_dict:
-                raise Exception(
-                    "Question Answering Task requires 'question' and 'context' keys")
             args = (request_dict["question"], request_dict["context"])
             kwargs = query_kwargs
-
         elif self.task == TaskType.CONVERSATIONAL:
             conv = task_methods.create_conversation(request_dict)
             args = (conv, )
             kwargs = query_kwargs
-
         elif self.task == TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION:
-            if "image" not in request_dict or "candidate_labels" not in request_dict:
-                raise Exception("Zero Shot Image Classification Task requires "
-                                "'image' and 'candidate_labels' keys")
-            args = (request_dict["image"], )
-            query_kwargs["candidate_labels"] = request_dict["candidate_labels"]
-
+            args = (request_dict["image"], request_dict["candidate_labels"])
+            kwargs = query_kwargs
         else:
             args = (request_dict["query"], )
             kwargs = query_kwargs
