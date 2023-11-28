@@ -84,6 +84,11 @@ def ds_config(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=[True])
+def replace_with_kernel_inject(request):
+    return request.param
+
+
 @pytest.fixture(scope="function")
 def model_config(
     task_name: str,
@@ -96,6 +101,7 @@ def model_config(
     enable_deepspeed: bool,
     enable_zero: bool,
     ds_config: dict,
+    replace_with_kernel_inject: bool,
 ):
     config = SimpleNamespace(
         task=task_name,
@@ -109,6 +115,7 @@ def model_config(
         enable_deepspeed=enable_deepspeed,
         enable_zero=enable_zero,
         ds_config=ds_config,
+        replace_with_kernel_inject=replace_with_kernel_inject,
     )
     return config.__dict__
 

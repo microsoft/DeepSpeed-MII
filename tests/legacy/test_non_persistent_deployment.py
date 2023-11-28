@@ -9,7 +9,7 @@ import mii.legacy as mii
 
 @pytest.mark.parametrize("deployment_type", [mii.DeploymentType.NON_PERSISTENT])
 @pytest.mark.parametrize(
-    "task_name, model_name, query",
+    "task_name, model_name, query, replace_with_kernel_inject",
     [
         (
             "conversational",
@@ -20,6 +20,7 @@ import mii.legacy as mii
                 "past_user_inputs": [],
                 "generated_responses": [],
             },
+            True,
         ),
         (
             "fill-mask",
@@ -27,6 +28,7 @@ import mii.legacy as mii
             {
                 "query": "Hello I'm a [MASK] model."
             },
+            True,
         ),
         (
             "question-answering",
@@ -35,6 +37,7 @@ import mii.legacy as mii
                 "question": "What is the greatest?",
                 "context": "DeepSpeed is the greatest",
             },
+            True,
         ),
         (
             "text-generation",
@@ -42,6 +45,7 @@ import mii.legacy as mii
             {
                 "query": ["DeepSpeed is the greatest"]
             },
+            True,
         ),
         (
             "text-generation",
@@ -50,6 +54,7 @@ import mii.legacy as mii
                 "query": ["DeepSpeed is the greatest",
                           "Seattle is"]
             },
+            True,
         ),
         (
             "token-classification",
@@ -57,6 +62,7 @@ import mii.legacy as mii
             {
                 "query": "My name is jean-baptiste and I live in montreal."
             },
+            True,
         ),
         (
             "text-classification",
@@ -64,7 +70,17 @@ import mii.legacy as mii
             {
                 "query": "DeepSpeed is the greatest"
             },
+            True,
         ),
+        (
+            "zero-shot-image-classification",
+            "openai/clip-vit-base-patch32",
+            {
+                "image": "https://huggingface.co/datasets/Narsil/image_dummy/raw/main/parrots.png",
+                "candidate_labels": ["animals", "humans", "landscape"]
+            },
+            False,
+        )
     ],
 )
 def test_single_GPU(deployment, query):

@@ -40,7 +40,8 @@ SUPPORTED_MODEL_TYPES = {
     'bloom': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
     'stable-diffusion': ModelProvider.DIFFUSERS,
-    'llama': ModelProvider.HUGGING_FACE
+    'llama': ModelProvider.HUGGING_FACE,
+    'clip': ModelProvider.HUGGING_FACE
 }
 
 REQUIRED_KEYS_PER_TASK = {
