@@ -4,7 +4,7 @@
 # DeepSpeed Team
 import os
 import string
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union, Dict, Any, Literal
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
@@ -13,7 +13,7 @@ from deepspeed.inference import RaggedInferenceEngineConfig
 from mii.constants import DeploymentType, TaskType, ModelProvider
 from mii.errors import DeploymentNotFoundError
 from mii.modeling.tokenizers import MIITokenizerWrapper
-from mii.pydantic_v1 import Field, root_validator
+from mii.pydantic_v1 import Field, root_validator, validator
 from mii.utils import generate_deployment_name, get_default_task, import_score_file
 
 
@@ -23,6 +23,11 @@ class ReplicaConfig(DeepSpeedConfigModel):
     torch_dist_port: int = None
     gpu_indices: List[int] = []
     zmq_port: int = None
+
+
+class DeviceMap(DeepSpeedConfigModel):
+    hostname: str = ""
+    ranks: Union[int, List[int], List[List[int]]] = None
 
 
 class ModelConfig(DeepSpeedConfigModel):
@@ -80,7 +85,11 @@ class ModelConfig(DeepSpeedConfigModel):
     generated, but you can provide a set of custom configs.
     """
 
-    deploy_rank: Union[int, List[int], List[List[int]]] = -1
+    device_map: Union[Literal["auto"], Dict[str, List[List[int]]]] = "auto"
+    """
+    GPU indices a model is deployed on. Note that CUDA_VISIBLE_DEVICES does not
+    work with DeepSpeed-MII.
+    """
 
     max_length: Optional[int] = None
     """
@@ -107,6 +116,16 @@ class ModelConfig(DeepSpeedConfigModel):
     def provider(self) -> ModelProvider:
         return ModelProvider.HUGGING_FACE
 
+    @validator("device_map", pre=True)
+    def make_device_map_dict(cls, v):
+        if isinstance(v, int):
+            return {"localhost": [[v]]}
+        if isinstance(v, list) and isinstance(v[0], int):
+            return {"localhost": [v]}
+        if isinstance(v, list) and isinstance(v[0], list):
+            return {"localhost": v}
+        return v
+
     @root_validator
     def auto_fill_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if not values.get("tokenizer"):
@@ -126,6 +145,27 @@ class ModelConfig(DeepSpeedConfigModel):
         num_replica_config = len(values.get("replica_configs"))
         if num_replica_config > 0:
             assert num_replica_config == values.get("replica_num"), "Number of replica configs must match replica_num"
+        return values
+
+    @root_validator
+    def check_deploy_rank(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        deploy_rank = values.get("deploy_rank")
+        tensor_parallel = values.get("tensor_parallel")
+        replica_num = values.get("replica_num")
+
+        if deploy_rank is None:
+            return values
+        if isinstance(deploy_rank, int):
+            deploy_rank = [[deploy_rank]]
+        if isinstance(deploy_rank, list) and isinstance(deploy_rank[0], int):
+            deploy_rank = [deploy_rank]
+
+        assert len(deploy_rank) == replica_num, "Number of deploy rank lists must match replica_num"
+        assert len(deploy_rank[0]) == tensor_parallel, "Number of deploy ranks must match tensor_parallel"
+        deploy_rank_set = set([item for sublist in deploy_rank for item in sublist])
+        assert len(deploy_rank_set) == tensor_parallel*replica_num, "Deploy ranks must be unique"
+
+        values["deploy_rank"] = deploy_rank
         return values
 
 
@@ -201,19 +241,17 @@ class MIIConfig(DeepSpeedConfigModel):
     def generate_replica_configs(self) -> None:
         if self.model_config.replica_configs:
             return
-        # TODO: refactor this function
-        hostfile = self.hostfile
-        port_number = self.port_number
         torch_dist_port = self.model_config.torch_dist_port
         tensor_parallel = self.model_config.tensor_parallel
-        zmq_port = self.model_config.zmq_port_number
-        replica_num = self.model_config.replica_num
-        replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
+        replica_pool = _allocate_devices(self.hostfile,
+                                         tensor_parallel,
+                                         self.model_config.replica_num,
+                                         self.model_config.device_map)
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
             port_offset = 1
-            base_port = port_number + i * tensor_parallel + port_offset
+            base_port = self.port_number + i * tensor_parallel + port_offset
             tensor_parallel_ports = list(range(base_port, base_port + tensor_parallel))
             replica_torch_dist_port = torch_dist_port + (100 * i)
             replica_configs.append(
@@ -222,48 +260,42 @@ class MIIConfig(DeepSpeedConfigModel):
                     tensor_parallel_ports=tensor_parallel_ports,
                     torch_dist_port=replica_torch_dist_port,
                     gpu_indices=gpu_indices,
-                    zmq_port=zmq_port + i,
+                    zmq_port=self.model_config.zmq_port_number + i,
                 ))
 
         self.model_config.replica_configs = replica_configs
 
 
-def _allocate_processes(hostfile_path: str, tensor_parallel: int, replica_num: int):
+def _allocate_devices(hostfile_path: str,
+                      tensor_parallel: int,
+                      replica_num: int,
+                      device_map: Dict[str,
+                                       List[List[int]]] = "auto"):
     resource_pool = fetch_hostfile(hostfile_path)
     assert (
         resource_pool is not None and len(resource_pool) > 0
     ), f"No hosts found in {hostfile_path}"
 
+    # If no device map was provided, we generate one based on the resources we find in the hostfile
+    if device_map == "auto":
+        device_map = {}
+        for host, slots in resource_pool.items():
+            device_map[host] = [
+                list(range(i * tensor_parallel,
+                           (i + 1) * tensor_parallel))
+                for i in range(slots // tensor_parallel)
+            ]
+
     replica_pool = []
-    allocated_num = 0
-    for host, slots in resource_pool.items():
-        available_on_host = slots
-        while available_on_host >= tensor_parallel:
-            if allocated_num >= replica_num:
-                break
-            if slots < tensor_parallel:
-                raise ValueError(
-                    f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required"
-                )
+    # Fill the available slots with replicas
+    for host, slots_list in device_map.items():
+        assert host in resource_pool, f"Host {host} not found in hostfile"
+        slots_to_fill = min(len(slots_list), replica_num - len(replica_pool))
+        for i in range(slots_to_fill):
+            assert len(slots_list[i]) == tensor_parallel, f"Number of devices must match tensor_parallel"
+            replica_pool.append((host, slots_list[i]))
 
-            allocated_num_on_host = slots - available_on_host
-            replica_pool.append((
-                host,
-                [
-                    i for i in range(
-                        allocated_num_on_host,
-                        allocated_num_on_host + tensor_parallel,
-                    )
-                ],
-            ))
-            allocated_num += 1
-
-            available_on_host -= tensor_parallel
-
-    if allocated_num < replica_num:
-        raise ValueError(
-            f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
-        )
+    assert len(replica_pool) == replica_num, f"Only able to place {len(replica_pool)} replicas, but {replica_num} replicas were requested."
 
     return replica_pool
 
