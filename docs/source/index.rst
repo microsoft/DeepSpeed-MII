@@ -9,6 +9,14 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 1
 
-   usage
+   install
    api
+   pipeline
+   deployment
+   config
+   rest
+   parallelism
+   replicas
+   multinode

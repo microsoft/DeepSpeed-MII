@@ -97,6 +97,9 @@ def _parse_kwargs_to_mii_config(
 
 
 def client(model_or_deployment_name: str) -> MIIClient:
+    """
+    Returns an `MIIClient` object for a given persistent deployment.
+    """
     mii_config = get_mii_config(model_or_deployment_name)
 
     return MIIClient(mii_config)
@@ -109,8 +112,7 @@ def serve(
     mii_config: Optional[Dict[str,
                               Any]] = None,
     **kwargs,
-) -> Union[None,
-           MIIClient]:
+) -> MIIClient:
     mii_config = _parse_kwargs_to_mii_config(
         model_name_or_path=model_name_or_path,
         model_config=model_config,

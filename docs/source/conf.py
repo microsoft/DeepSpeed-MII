@@ -3,6 +3,9 @@
 
 # DeepSpeed Team
 # Configuration file for the Sphinx documentation builder.
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information
 
@@ -30,6 +33,9 @@ intersphinx_mapping = {
                None),
 }
 intersphinx_disabled_domains = ['std']
+
+#autodoc_mock_imports = ["deepspeed", "torch"]
+autosummary_generate = True
 
 templates_path = ['_templates']
 
