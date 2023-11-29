@@ -98,7 +98,20 @@ def _parse_kwargs_to_mii_config(
 
 def client(model_or_deployment_name: str) -> MIIClient:
     """
-    Returns an `MIIClient` object for a given persistent deployment.
+    Creates a client object for interfacing with an existing persistent model deployment.
+
+    :param model_or_deployment_name: Name of the HuggingFace model name for the
+        persistent model deployment. If `deployment_name` was provided input to
+        :func:`mii.serve`, users should provide the `deployment_name` string instead.
+    :type model_or_deployment_name: str
+
+    :raises UnknownArgument: Raised when provided keyword argument does not
+        match any field in :class:`ModelConfig <mii.config.ModelConfig>` or
+        :class:`MIIConfig <mii.config.MIIConfig>`.
+
+    :return: Client object that can be used to interface with the deployed
+        persistent model server, which uses ragged batching and dynamic splitfuse.
+    :rtype: :class:`MIIClient <mii.backend.client.MIIClient>`
     """
     mii_config = get_mii_config(model_or_deployment_name)
 
@@ -113,6 +126,33 @@ def serve(
                               Any]] = None,
     **kwargs,
 ) -> MIIClient:
+    """
+    Creates a persistent MII model deployment from a locally stored model path
+    or HuggingFace model name.
+
+    :param model_name_or_path: HuggingFace model name or path to locally stored
+        model. This must be provided here or in the `model_config` dictionary.
+        Defaults to ``""``.
+    :type model_name_or_path: str, optional
+    :param model_config: Dictionary containing model configuration fields. See
+        :class:`ModelConfig <mii.config.ModelConfig>` for a full list of options.
+        Users can pass these options in a dictionary here or as keyword arguments to
+        the function.  Defaults to ``None``.
+    :type model_config: Dict[str, Any], optional
+    :param mii_config: Dictionary containing DeepSpeed-MII configuration fields.
+        See :class:`MIIConfig <mii.config.MIIConfig>` for a full list of options.
+        Users can pass these options in a dictionary here or as keyword arguments to
+        the function.  Defaults to ``None``.
+    :type mii_config: Dict[str, Any], optional
+
+    :raises UnknownArgument: Raised when provided keyword argument does not
+        match any field in :class:`ModelConfig <mii.config.ModelConfig>` or
+        :class:`MIIConfig <mii.config.MIIConfig>`.
+
+    :return: Client object that can be used to interface with the deployed
+        persistent model server, which uses ragged batching and dynamic splitfuse.
+    :rtype: :class:`MIIClient <mii.backend.client.MIIClient>`
+    """
     mii_config = _parse_kwargs_to_mii_config(
         model_name_or_path=model_name_or_path,
         model_config=model_config,
@@ -151,6 +191,26 @@ def pipeline(
                                 Any]] = None,
     **kwargs,
 ) -> MIIPipeline:
+    """
+    Creates a non-persistent MII model pipeline from a locally stored model path
+    or HuggingFace model name.
+
+    :param model_name_or_path: HuggingFace model name or path to locally stored
+        model. This must be provided here or in the `model_config` dictionary.
+        Defaults to ``""``.
+    :type model_name_or_path: str, optional
+    :param model_config: Dictionary containing model configuration fields. See
+        :class:`ModelConfig <mii.config.ModelConfig>` for a full list of options.
+        Users can pass these options in a dictionary here or as keyword arguments to
+        the function.  Defaults to ``None``.
+    :type model_config: Dict[str, Any], optional
+
+    :raises UnknownArgument: Raised when provided keyword argument does not
+        match any field in :class:`ModelConfig <mii.config.ModelConfig>`.
+
+    :return: Non-persistent model pipeline using ragged batching and dynamic splitfuse.
+    :rtype: :class:`MIIPipeline <mii.batching.ragged_batching.MIIPipeline>`
+    """
     model_config, remaining_kwargs = _parse_kwargs_to_model_config(
         model_name_or_path=model_name_or_path, model_config=model_config, **kwargs
     )

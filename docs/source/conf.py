@@ -5,6 +5,7 @@
 # Configuration file for the Sphinx documentation builder.
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath('../../'))
 
 # -- Project information
@@ -24,6 +25,10 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.linkcode',
+    'sphinx_copybutton',
+    'sphinx-prompt',
+    'sphinxcontrib.autodoc_pydantic',
 ]
 
 intersphinx_mapping = {
@@ -33,6 +38,37 @@ intersphinx_mapping = {
                None),
 }
 intersphinx_disabled_domains = ['std']
+
+
+# linkcode config
+def linkcode_resolve(domain, info):
+    if domain != 'py':
+        return None
+    if not info['module']:
+        return None
+    filename = info['module'].replace('.', '/')
+    #return f"https://github.com/Microsoft/DeepSpeed-MII/tree/v{release}/{filename}.py"
+    if filename == "mii":
+        filename = "mii/api.py"
+    return f"https://github.com/Microsoft/DeepSpeed-MII/tree/main/{filename}.py"
+
+
+# autodoc_pyandtic config
+autodoc_pydantic_model_show_field_summary = False
+autodoc_pydantic_field_signature_prefix = ' '
+autodoc_pydantic_model_signature_prefix = 'class'
+autodoc_pydantic_model_show_json = False
+autodoc_pydantic_model_show_config_summary = False
+autodoc_pydantic_model_show_config_member = False
+autodoc_pydantic_model_show_validator_summary = False
+autodoc_pydantic_model_show_validator_members = False
+autodoc_pydantic_model_summary_list_order = 'bysource'
+autodoc_pydantic_model_member_order = 'bysource'
+autodoc_pydantic_field_list_validators = False
+
+# sphinx_copybutton config
+copybutton_prompt_text = r">>> |\$ |\(.venv\) \$ "
+copybutton_prompt_is_regexp = True
 
 #autodoc_mock_imports = ["deepspeed", "torch"]
 autosummary_generate = True
