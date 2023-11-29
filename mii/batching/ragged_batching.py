@@ -474,12 +474,14 @@ class MIIPipeline(RaggedBatchBase):
         self.tid = threading.get_ident()
 
     def __call__(self,
-                 inputs: Union[str,
-                               List[str]],
+                 prompts: Union[str,
+                                List[str]],
                  all_rank_output: bool = False,
                  **generate_kwargs) -> List[Response]:
         """
-        :param inputs: The string or list of strings used an prompts for generation.
+        Generates text for the given prompts
+
+        :param prompts: The string or list of strings used as prompts for generation.
         :param all_rank_output: Whether to return generated text on all ranks
             (when using `tensor_parallel>1`). If `True`, all ranks will return the
             same output. If `False`, only rank 0 will return output and the rest
@@ -489,13 +491,13 @@ class MIIPipeline(RaggedBatchBase):
         :return: A list of :class:`Response` objects containing the generated
             text for all prompts.
         """ # noqa: W605
-        if isinstance(inputs, str):
-            inputs = [inputs]
+        if isinstance(prompts, str):
+            prompts = [prompts]
         outputs: List[Response] = []
-        uids_running: List[int] = list(range(len(inputs)))
+        uids_running: List[int] = list(range(len(prompts)))
         uids_complete_order: List[int] = []
 
-        for uid, input in zip(uids_running, inputs):
+        for uid, input in zip(uids_running, prompts):
             request_kwargs = generate_kwargs.copy()
             self._put_request(uid, input, request_kwargs)
 
