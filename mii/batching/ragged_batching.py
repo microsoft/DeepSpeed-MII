@@ -464,11 +464,31 @@ class RaggedBatchBase:
 
 
 class MIIPipeline(RaggedBatchBase):
-    def __init__(self, *args, **kwargs):
+    """
+    Pipeline class that inherits from :class:`RaggedBatchBase` and provides
+    functionality of ragged batching and dynamic splitfuse. This class is
+    returned from :func:`mii.pipeline`.
+    """
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.tid = threading.get_ident()
 
-    def __call__(self, inputs: Union[str, List[str]], **kwargs) -> List[Response]:
+    def __call__(self,
+                 inputs: Union[str,
+                               List[str]],
+                 all_rank_output: bool = False,
+                 **generate_kwargs) -> List[Response]:
+        """
+        :param inputs: The string or list of strings used an prompts for generation.
+        :param all_rank_output: Whether to return generated text on all ranks
+            (when using `tensor_parallel>1`). If `True`, all ranks will return the
+            same output. If `False`, only rank 0 will return output and the rest
+            will return `None`.
+        :param \**generate_kwargs: Generation keywords. A full list can be found here.
+
+        :return: A list of :class:`Response` objects containing the generated
+            text for all prompts.
+        """
         if isinstance(inputs, str):
             inputs = [inputs]
         outputs: List[Response] = []
@@ -476,7 +496,7 @@ class MIIPipeline(RaggedBatchBase):
         uids_complete_order: List[int] = []
 
         for uid, input in zip(uids_running, inputs):
-            request_kwargs = kwargs.copy()
+            request_kwargs = generate_kwargs.copy()
             self._put_request(uid, input, request_kwargs)
 
         self.schedule_requests()
@@ -506,7 +526,7 @@ class MIIPipeline(RaggedBatchBase):
                         key=lambda pair: pair[0])
         ]
 
-        if self.model_config.all_rank_output:
+        if all_rank_output:
             outputs = self._bcast_responses(outputs)
 
         return outputs

@@ -86,12 +86,6 @@ class ModelConfig(DeepSpeedConfigModel):
     the input and output tokens.
     """
 
-    all_rank_output: bool = False
-    """
-    Weather to return output on all ranks for `mii.pipeline`. Default behavior
-    is to only return on rank 0.
-    """
-
     sync_debug: bool = False
     """
     Inserts additional synchronization points for debugging purposes.

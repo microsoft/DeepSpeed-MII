@@ -26,6 +26,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode',
+    'sphinx_autodoc_typehints',
     'sphinx_copybutton',
     'sphinx-prompt',
     'sphinxcontrib.autodoc_pydantic',
@@ -38,6 +39,9 @@ intersphinx_mapping = {
                None),
 }
 intersphinx_disabled_domains = ['std']
+
+# sphinx_autodoc_typehints config
+typehints_defaults = "braces"
 
 
 # linkcode config

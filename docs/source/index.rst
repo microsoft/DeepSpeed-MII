@@ -15,6 +15,7 @@ Contents
    api
    pipeline
    deployment
+   response
    config
    rest
    parallelism
