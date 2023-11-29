@@ -488,7 +488,7 @@ class MIIPipeline(RaggedBatchBase):
 
         :return: A list of :class:`Response` objects containing the generated
             text for all prompts.
-        """
+        """ # noqa: W605
         if isinstance(inputs, str):
             inputs = [inputs]
         outputs: List[Response] = []
