@@ -250,7 +250,7 @@ class Text2ImgMethods(TaskMethods):
             img_bytes = img.tobytes()
             images_bytes.append(img_bytes)
             nsfw_content_detected.append(
-                response.nsfw_content_detected[i] if response.nsfw_content_detected else None
+                response.nsfw_content_detected[i] if response.nsfw_content_detected else False
             )
         img_mode = response.images[0].mode
         img_size_w, img_size_h = response.images[0].size
