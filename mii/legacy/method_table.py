@@ -266,6 +266,30 @@ class Text2ImgMethods(TaskMethods):
         return ImageResponse(response)
 
 
+class ZeroShotImgClassificationMethods(TaskMethods):
+    @property
+    def method(self):
+        return "ZeroShotImgClassificationReply"
+
+    pack_response_to_proto = single_string_response_to_proto
+
+    def pack_request_to_proto(self, request_dict, **query_kwargs):
+        return modelresponse_pb2.ZeroShotImgClassificationRequest(
+            image=request_dict["image"],
+            candidate_labels=request_dict["candidate_labels"],
+            query_kwargs=kwarg_dict_to_proto(query_kwargs),
+        )
+
+    def unpack_request_from_proto(self, request):
+        kwargs = unpack_proto_query_kwargs(request.query_kwargs)
+        args = (request.image, request.candidate_labels)
+        return args, kwargs
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        image, candidate_labels = args
+        return inference_pipeline(image, candidate_labels=candidate_labels, **kwargs)
+
+
 GRPC_METHOD_TABLE = {
     TaskType.TEXT_GENERATION: TextGenerationMethods(),
     TaskType.TEXT_CLASSIFICATION: TextClassificationMethods(),
@@ -274,4 +298,5 @@ GRPC_METHOD_TABLE = {
     TaskType.TOKEN_CLASSIFICATION: TokenClassificationMethods(),
     TaskType.CONVERSATIONAL: ConversationalMethods(),
     TaskType.TEXT2IMG: Text2ImgMethods(),
+    TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ZeroShotImgClassificationMethods(),
 }
