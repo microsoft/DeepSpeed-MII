@@ -43,7 +43,7 @@ def task_name(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=["facebook/opt-1.3b"])
+@pytest.fixture(scope="function", params=["facebook/opt-125m"])
 def model_name(request):
     return request.param
 

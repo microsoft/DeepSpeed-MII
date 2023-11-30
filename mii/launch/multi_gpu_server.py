@@ -59,6 +59,10 @@ def main() -> None:
         default=0,
         help="Port to use for restful gateway.",
     )
+    parser.add_argument("--restful-gateway-procs",
+                        type=int,
+                        default=32,
+                        help="Number of processes to use for restful gateway.")
     args = parser.parse_args()
     assert not (
         args.load_balancer and args.restful_gateway
@@ -70,6 +74,7 @@ def main() -> None:
         gateway_thread = RestfulGatewayThread(
             deployment_name=args.deployment_name,
             rest_port=args.restful_gateway_port,
+            rest_procs=args.restful_gateway_procs,
         )
         stop_event = gateway_thread.get_stop_event()
         gateway_thread.start()

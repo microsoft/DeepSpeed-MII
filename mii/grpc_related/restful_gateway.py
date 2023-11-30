@@ -4,9 +4,9 @@
 # DeepSpeed Team
 import threading
 import time
-from flask import Flask, request
+
+from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
-from google.protobuf.json_format import MessageToJson
 from werkzeug.serving import make_server
 
 import mii
@@ -19,17 +19,15 @@ def shutdown(thread):
 
 
 def createRestfulGatewayApp(deployment_name, server_thread):
-    # client must be thread-safe
-    client = mii.client(deployment_name)
-
     class RestfulGatewayService(Resource):
         def __init__(self):
             super().__init__()
+            self.client = mii.client(deployment_name)
 
         def post(self):
             data = request.get_json()
-            result = client.generate(**data)
-            return MessageToJson(result)
+            result = self.client.generate(**data)
+            return jsonify([r.to_msg_dict() for r in result])
 
     app = Flask("RestfulGateway")
 
@@ -47,11 +45,15 @@ def createRestfulGatewayApp(deployment_name, server_thread):
 
 
 class RestfulGatewayThread(threading.Thread):
-    def __init__(self, deployment_name, rest_port):
+    def __init__(self, deployment_name, rest_port, rest_procs):
         threading.Thread.__init__(self)
 
         app = createRestfulGatewayApp(deployment_name, self)
-        self.server = make_server("127.0.0.1", rest_port, app)
+        self.server = make_server("127.0.0.1",
+                                  rest_port,
+                                  app,
+                                  threaded=False,
+                                  processes=rest_procs)
         self.ctx = app.app_context()
         self.ctx.push()
 

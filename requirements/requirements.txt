@@ -4,6 +4,7 @@ deepspeed-kernels
 Flask-RESTful
 grpcio
 grpcio-tools
+Pillow
 pydantic
 safetensors
 torch
