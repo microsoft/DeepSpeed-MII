@@ -6,6 +6,7 @@ grpcio
 grpcio-tools
 Pillow
 pydantic
+safetensors
 torch
 transformers
 ujson
