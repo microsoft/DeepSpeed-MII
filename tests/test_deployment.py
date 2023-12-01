@@ -123,4 +123,4 @@ def test_restful_api(deployment, query, deployment_name, restful_api_port):
                            data=json_params,
                            headers={"Content-Type": "application/json"})
     assert result.status_code == 200
-    assert "generated_text" in result.json()
+    assert "generated_text" in result.json()[0]

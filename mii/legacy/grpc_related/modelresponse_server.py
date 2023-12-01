@@ -123,6 +123,9 @@ class ModelResponse(ServiceBase):
     def ConversationalReply(self, request, context):
         return self._run_inference("ConversationalReply", request)
 
+    def ZeroShotImgClassificationReply(self, request, context):
+        return self._run_inference("ZeroShotImgClassificationReply", request)
+
 
 class AtomicCounter:
     def __init__(self, initial_value=0):
