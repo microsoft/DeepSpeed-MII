@@ -17,6 +17,42 @@ from mii.pydantic_v1 import Field, root_validator
 from mii.utils import generate_deployment_name, get_default_task, import_score_file
 
 
+class GenerateConfig(DeepSpeedConfigModel):
+    """
+    Options for changing text-generation behavior.
+    """
+
+    max_length: int = 1024
+    """ Maximum length of ``input_tokens`` + ``generated_tokens``. """
+
+    max_new_tokens: int = None
+    """ Maximum number of new tokens generated. ``max_length`` takes precedent. """
+
+    min_new_tokens: int = 0
+    """ Minimum number of new tokens generated. """
+
+    stream: bool = False
+    """ Enable streaming output. """
+
+    ignore_eos: bool = False
+    """ Ignore EoS token and continue generating text until we reach ``max_length`` or ``max_new_tokens``. """
+
+    return_full_text: bool = False
+    """ Prepends the input prompt to the generated text. """
+
+    do_sample: bool = True
+    """ When ``False``, do greedy sampling. """
+
+    top_p: float = Field(0.9, gt=0, le=1)
+    """ Top P value. """
+
+    top_k: int = Field(None, gt=0)
+    """ Top K value. """
+
+    temperature: float = Field(None, gt=0)
+    """ Temperature value. """
+
+
 class ReplicaConfig(DeepSpeedConfigModel):
     hostname: str = ""
     tensor_parallel_ports: List[int] = []

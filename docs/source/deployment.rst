@@ -91,7 +91,7 @@ Generate Options
 Text-generation behavior using the callable :class:`MIIClient
 <mii.backend.client.MIIClient>` class can be customized with several keyword
 arguments. A full list of the available options can be found in
-:class:`GenerateConfig`.
+:class:`GenerateConfig <mii.config.GenerateConfig>`.
 
 The generate options affect on the prompt(s) passed in a given call the client.
 For example, the generation length can be controlled on a per-prompt basis and
