@@ -39,7 +39,7 @@ to customize the pipeline.
 <mii.config.ModelConfig>` **can be passed as keyword arguments or in a**
 ``model_config`` **dictionary to the** :func:`mii.pipeline` **API.**
 
-For example, to change the default `max_length` for token generation, the following are equivalent:
+For example, to change the default ``max_length`` for token generation, the following are equivalent:
 
 As a keyword argument:
 
@@ -47,7 +47,7 @@ As a keyword argument:
 
     pipe = mii.pipeline("mistralai/Mistral-7B-v0.1", max_length=2048)
 
-As a `model_config` dictionary:
+As a ``model_config`` dictionary:
 
 .. code-block:: python
 

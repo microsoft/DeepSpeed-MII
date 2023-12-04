@@ -20,8 +20,14 @@ class ModelProvider(str, Enum):
 
 
 class GenerationFinishReason(str, Enum):
+    """ Reason for text-generation to stop. """
+
     STOP = "stop"
+    """ Reached an EoS token. """
+
     LENGTH = "length"
+    """ Reached ``max_length`` or ``max_new_tokens``. """
+
     NONE = "none"
 
 

@@ -75,6 +75,7 @@ copybutton_prompt_text = r">>> |\$ |\(.venv\) \$ "
 copybutton_prompt_is_regexp = True
 
 #autodoc_mock_imports = ["deepspeed", "torch"]
+autodoc_member_order = 'bysource'
 autosummary_generate = True
 
 templates_path = ['_templates']
