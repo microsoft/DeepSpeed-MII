@@ -102,6 +102,8 @@ override the default ``max_length``:
     response_long = client(prompt, max_length=1024)
     response_short = client(prompt, max_length=128)
 
+.. _deployment_model_parallelism:
+
 Model Parallelism
 -----------------
 
@@ -112,6 +114,8 @@ argument to :func:`mii.serve`:
 .. code-block:: python
 
     client = mii.serve("mistralai/Mistral-7B-v0.1", tensor_parallel=2)
+
+.. _deployment_model_replicas:
 
 Model Replicas
 --------------

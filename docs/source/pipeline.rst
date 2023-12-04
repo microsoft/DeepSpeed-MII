@@ -70,6 +70,8 @@ pipeline. For example, you can control per-prompt generation length:
     response_long = pipeline(prompt, max_length=1024)
     response_short = pipeline(prompt, max_length=128)
 
+.. _pipeline_model_parallelism:
+
 Model Parallelism
 -----------------
 
