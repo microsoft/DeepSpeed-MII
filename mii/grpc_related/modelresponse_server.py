@@ -151,9 +151,9 @@ class ParallelStubInvoker:
 
     async def _invoke_async(self, method_name, proto_request):
         responses = []
-        for stub in self.stubs:
-            method = getattr(stub, method_name)
-            responses.append(method(proto_request))
+        stub = self.stubs[0]
+        method = getattr(stub, method_name)
+        responses.append(method(proto_request))
         return await responses[0]
 
     def invoke(self, method_name, proto_request):
