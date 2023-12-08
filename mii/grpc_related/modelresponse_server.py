@@ -151,7 +151,12 @@ class ParallelStubInvoker:
 
     async def _invoke_async(self, method_name, proto_request):
         responses = []
-        for stub in self.stubs:
+        if method_name == TERMINATE_METHOD:
+            stubs = self.stubs
+        else:
+            stubs = [self.stubs[0]
+                     ]  # Only the first stub is used for non-terminate methods
+        for stub in stubs:
             method = getattr(stub, method_name)
             responses.append(method(proto_request))
         return await responses[0]
