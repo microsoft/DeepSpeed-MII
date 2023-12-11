@@ -2,10 +2,12 @@ import grpc
 import argparse
 import json
 import os
-from typing import AsyncGenerator, Optional, Dict, List
+from typing import AsyncGenerator, Optional, Dict, List, Union
+from transformers import AutoTokenizer
+import codecs
 
 import fastapi
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -16,7 +18,8 @@ import tiktoken
 import uvicorn
 import mii
 from mii.grpc_related.proto.modelresponse_pb2_grpc import ModelResponseStub
-from mii.grpc_related.task_methods import multi_string_request_to_proto
+from mii.grpc_related.proto import modelresponse_pb2
+from mii.utils import kwarg_dict_to_proto
 from fastchat.conversation import Conversation, SeparatorStyle
 from fastchat.model.model_adapter import get_conversation_template
 from fastchat.constants import ErrorCode
@@ -45,6 +48,7 @@ from .data_models import (
 
 app = FastAPI()
 load_balancer = "localhost:50050"
+tokenizer = None
 app_settings = AppSettings()
 get_bearer_token = HTTPBearer(auto_error=False)
 
@@ -74,6 +78,35 @@ def create_error_response(code: int, message: str) -> JSONResponse:
     return JSONResponse(
         ErrorResponse(message=message, code=code).dict(), status_code=400
     )
+
+def countTokens(prompt: Union[str, list[str]]) -> int:
+    if isinstance(prompt, str):
+        prompt = [prompt]
+
+    total_tokens = 0
+    for p in prompt:
+        total_tokens += len(tokenizer(p).input_ids)
+
+    return total_tokens
+
+def load_chat_template(args, tokenizer):
+    if args.chat_template is not None:
+        try:
+            with open(args.chat_template, "r") as f:
+                chat_template = f.read()
+        except OSError:
+            # If opening a file fails, set chat template to be args to
+            # ensure we decode so our escape are interpreted correctly
+            chat_template = codecs.decode(args.chat_template, "unicode_escape")
+
+        tokenizer.chat_template = chat_template
+        print(
+            f"Using supplied chat template:\n{tokenizer.chat_template}")
+    elif tokenizer.chat_template is not None:
+        print(f"Using default chat template:\n{tokenizer.chat_template}")
+    else:
+        # throw a warning if no chat template is provided
+        print("WARNING: No chat template provided. chat completion won't work.")
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
@@ -143,69 +176,55 @@ async def create_chat_completion(request: ChatCompletionRequest):
     channel = grpc.aio.insecure_channel(load_balancer)
     stub = ModelResponseStub(channel)
 
-    conversation = get_conversation_template(app_settings.model_id)
-    conversation = Conversation(
-        name=conversation.name,
-        system_template=conversation.system_template,
-        system_message=conversation.system_message,
-        roles=conversation.roles,
-        messages=list(conversation.messages),  # prevent in-place modification
-        offset=conversation.offset,
-        sep_style=SeparatorStyle(conversation.sep_style),
-        sep=conversation.sep,
-        sep2=conversation.sep2,
-        stop_str=conversation.stop_str,
-        stop_token_ids=conversation.stop_token_ids,
+    finalPrompt = tokenizer.apply_chat_template(
+        conversation=request.messages,
+        tokenize=False,
+        add_generation_prompt=request.add_generation_prompt)
+
+    prompts = [finalPrompt for _ in range(request.n)]
+
+    requestData = modelresponse_pb2.MultiStringRequest(
+        request=prompts,
+        query_kwargs=kwarg_dict_to_proto(generate_args),
     )
 
-    if isinstance(request.messages, str):
-        return create_error_response(
-            ErrorCode.PARAM_TYPE_ERROR,
-            "messages must be a list of objects.",
-        )
-    else:
-        for message in request.messages:
-            role = message["role"]
-            if role == "system":
-                conversation.system_message = message["content"]
-            elif role == "user":
-                conversation.append_message(conversation.roles[0], message["content"])
-            elif role == "assistant":
-                conversation.append_message(conversation.roles[1], message["content"])
-            else:
-                return create_error_response(
-                    ErrorCode.PARAM_TYPE_ERROR,
-                    "role must be one of 'user', 'system', 'assistant'.",
-                )
-
-    # Add a blank message for the assistant.
-    conversation.append_message(conversation.roles[1], None)
-    finalPrompt = conversation.get_prompt()
-
-    requestData = multi_string_request_to_proto(self=None, request_dict={"query": finalPrompt}, **generate_args)
     id = f"chatcmpl-{shortuuid.random()}"
+
+    response_role = "assistant"
+
+    if request.add_generation_prompt:
+        response_role = app_settings.response_role
 
     # Streaming case
     if request.stream:
         async def StreamResults() -> AsyncGenerator[bytes, None]:
             # First chunk with role
-            choice_data = ChatCompletionResponseStreamChoice(
-                index=0,
-                delta=DeltaMessage(role="assistant"),
-                finish_reason=None,
-            )
+            firstChoices = []
+            for _ in range(request.n):
+                firstChoice = ChatCompletionResponseStreamChoice(
+                    index=len(firstChoices),
+                    delta=DeltaMessage(role=response_role),
+                    finish_reason=None,
+                )
+                firstChoices.append(firstChoice)
+
             chunk = ChatCompletionStreamResponse(
-                id=id, choices=[choice_data], model=app_settings.model_id
+                id=id, choices=firstChoices, model=app_settings.model_id
             )
             yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
             async for response_chunk in stub.GeneratorReplyStream(requestData):
-                choice_data = ChatCompletionResponseStreamChoice(
-                    index=0,
-                    delta=DeltaMessage(content=response_chunk.response[0]),
-                    finish_reason=convert_reason(response_chunk.details[0].finish_reason),
-                )
+                streamChoices = []
+
+                for c in response_chunk.response:
+                    choice = ChatCompletionResponseStreamChoice(
+                        index=len(streamChoices),
+                        delta=DeltaMessage(content=c.response),
+                        finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+                    )
+                    streamChoices.append(choice)
+
                 chunk = ChatCompletionStreamResponse(
-                    id=id, choices=[choice_data], model=app_settings.model_id
+                    id=id, choices=streamChoices, model=app_settings.model_id
                 )
                 yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
@@ -213,12 +232,24 @@ async def create_chat_completion(request: ChatCompletionRequest):
     
     # Non-streaming case
     responseData = await stub.GeneratorReply(requestData)
-    choice = ChatCompletionResponseChoice(
-        index=0,
-        message=ChatMessage(role="assistant", content=responseData.response[0]),
-        finish_reason=convert_reason(responseData.details[0].finish_reason),
-    )
-    return ChatCompletionResponse(model=app_settings.model_id, choices=[choice], usage=UsageInfo())
+    choices = []
+
+    for c in response_chunk.response:
+        choice = ChatCompletionResponseChoice(
+            index=len(choices),
+            message=ChatMessage(role=response_role, content=c.response),
+            finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+        )
+        choices.append(choice)
+
+    prompt_tokens = countTokens([r.content for r in request.messages]) * request.n
+    completion_tokens = countTokens([content for r in responseData.response for content in r.messages.content])
+
+    return ChatCompletionResponse(model=app_settings.model_id, choices=choices, usage=UsageInfo(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=prompt_tokens + completion_tokens,
+    ))
 
 @app.post("/v1/completions", dependencies=[Depends(check_api_key)])
 async def create_completion(request: CompletionRequest):
@@ -243,6 +274,9 @@ async def create_completion(request: CompletionRequest):
             ErrorCode.PARAM_REQUIRED,
             "Prompt is required.",
         )
+
+    if isinstance(request.prompt, str):
+        request.prompt = [request.prompt]
 
     # Set up the generation arguments
     generate_args = {
@@ -278,7 +312,10 @@ async def create_completion(request: CompletionRequest):
 
     channel = grpc.aio.insecure_channel(load_balancer)
     stub = ModelResponseStub(channel)
-    requestData = multi_string_request_to_proto(self=None, request_dict={"query": request.prompt}, **generate_args)
+    requestData = modelresponse_pb2.MultiStringRequest(
+        request=request.prompt,
+        query_kwargs=kwarg_dict_to_proto(generate_args),
+    )
     id = f"cmpl-{shortuuid.random()}"
     # Streaming case
     if request.stream:
@@ -286,16 +323,21 @@ async def create_completion(request: CompletionRequest):
             # Send an empty chunk to start the stream and prevent timeout
             yield ""
             async for response_chunk in stub.GeneratorReplyStream(requestData):
-                choice_data = CompletionResponseStreamChoice(
-                    index=0,
-                    text=response_chunk.response[0],
-                    logprobs=None,
-                    finish_reason=convert_reason(response_chunk.details[0].finish_reason),
-                )
+                streamChoices = []
+
+                for c in response_chunk.response:
+                    choice = CompletionResponseStreamChoice(
+                        index=len(streamChoices),
+                        text=c.response,
+                        logprobs=None,
+                        finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+                    )
+                    streamChoices.append(choice)
+
                 chunk = CompletionStreamResponse(
                     id=id,
                     object="text_completion",
-                    choices=[choice_data],
+                    choices=streamChoices,
                     model=app_settings.model_id,
                 )
                 yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
@@ -304,14 +346,26 @@ async def create_completion(request: CompletionRequest):
 
     # Non-streaming case
     responseData = await stub.GeneratorReply(requestData)
-    choice = CompletionResponseChoice(
-        index=0,
-        text=responseData.response[0],
-        logprobs=None,
-        finish_reason=convert_reason(responseData.details[0].finish_reason),
-    )
+    choices = []
+
+    for c in responseData.response:
+        choice = CompletionResponseChoice(
+            index=len(choices),
+            text=c.response,
+            logprobs=None,
+            finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+        )
+        choices.append(choice)
+
+    prompt_tokens = countTokens(request.prompt)
+    completion_tokens = countTokens([r.response for r in responseData.response])
+
     return CompletionResponse(
-        model=app_settings.model_id, choices=[choice], usage=UsageInfo()
+        model=app_settings.model_id, choices=choices, usage=UsageInfo(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+        )
     )
 
 @app.get("/health")
@@ -341,6 +395,8 @@ if __name__ == "__main__":
     parser.add_argument("--allowed-origins", type=json.loads, default=["*"], help="allowed origins")
     parser.add_argument("--allowed-methods", type=json.loads, default=["*"], help="allowed methods")
     parser.add_argument("--allowed-headers", type=json.loads, default=["*"], help="allowed headers")
+    parser.add_argument("--chat-template", type=str, default=None)
+    parser.add_argument("--response-role", type=str, default="assistant")
     parser.add_argument("--api-keys", type=lambda s: s.split(","), help="Optional list of comma separated API keys")
     parser.add_argument("--ssl", action="store_true", required=False, default=False, help="Enable SSL. Requires OS Environment variables 'SSL_KEYFILE' and 'SSL_CERTFILE'.")
     args = parser.parse_args()
@@ -366,6 +422,12 @@ if __name__ == "__main__":
     else:
         # Initialize the DeepSpeed-MII instance
         mii.serve(args.model, deployment_name=args.deployment_name)
+
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    load_chat_template(args, tokenizer)
+
+    if args.response_role is not None:
+        app_settings.response_role = args.response_role
 
     if args.ssl:
         uvicorn.run(

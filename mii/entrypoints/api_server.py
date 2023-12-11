@@ -18,7 +18,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, Response
 from mii.grpc_related.proto.modelresponse_pb2_grpc import ModelResponseStub
-from mii.grpc_related.task_methods import multi_string_request_to_proto
+from mii.grpc_related.proto import modelresponse_pb2
+from mii.utils import kwarg_dict_to_proto
 
 # Local module imports
 from .data_models import CompletionRequest
@@ -42,6 +43,9 @@ async def generate(request: CompletionRequest) -> Response:
 
     if request.prompt is None:
         return JSONResponse({"error": "Prompt is required."}, status_code=400)
+
+    if isinstance(request.prompt, str):
+        request.prompt = [request.prompt]
 
     # Set up the generation arguments
     generate_args = {
@@ -77,7 +81,10 @@ async def generate(request: CompletionRequest) -> Response:
 
     channel = grpc.aio.insecure_channel(load_balancer)
     stub = ModelResponseStub(channel)
-    requestData = multi_string_request_to_proto(self=None, request_dict={"query": request.prompt}, **generate_args)
+    requestData = modelresponse_pb2.MultiStringRequest(
+        request=request.prompt,
+        query_kwargs=kwarg_dict_to_proto(generate_args),
+    )
 
     # Streaming case
     if request.stream:
@@ -86,14 +93,16 @@ async def generate(request: CompletionRequest) -> Response:
             yield ""
             async for response_chunk in stub.GeneratorReplyStream(requestData):
                 # Send the response chunk
-                dataOut = {"text": response_chunk.response[0]}
+                responses = [obj.response for obj in response_chunk.response]
+                dataOut = {"text": responses}
                 yield f"data: {json.dumps(dataOut)}\n\n"
             yield f"data: [DONE]\n\n"
         return StreamingResponse(StreamResults(), media_type="text/event-stream")
 
     # Non-streaming case
     responseData = await stub.GeneratorReply(requestData)
-    result = {"text": responseData.response[0]}
+    responses = [obj.response for obj in responseData.response]
+    result = {"text": responses}
     return JSONResponse(result)
 
 @app.get("/health")

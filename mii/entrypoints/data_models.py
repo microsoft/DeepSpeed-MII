@@ -67,6 +67,7 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: Optional[int] = None
     stop: Optional[Union[str, List[str]]] = None
     stream: Optional[bool] = False
+    add_generation_prompt: Optional[bool] = True
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     user: Optional[str] = None
@@ -204,3 +205,4 @@ class AppSettings(BaseSettings):
     controller_address: str = "http://localhost:21001"
     model_id: str = None
     api_keys: Optional[List[str]] = None
+    response_role: Optional[str] = "assiatant"
