@@ -253,23 +253,33 @@ def _allocate_devices(hostfile_path: str,
     # If no device map was provided, we generate one based on the resources we find in the hostfile
     if device_map == "auto":
         device_map = {}
+        filled_slots = 0
         for host, slots in resource_pool.items():
+            slots_to_fill = min(slots // tensor_parallel, replica_num - filled_slots)
+            filled_slots += slots_to_fill
             device_map[host] = [
                 list(range(i * tensor_parallel,
-                           (i + 1) * tensor_parallel))
-                for i in range(slots // tensor_parallel)
+                           (i + 1) * tensor_parallel)) for i in range(slots_to_fill)
             ]
+
+    # Assert that we have the correct number of mappings
+    device_map_slots = sum([len(slots_list) for slots_list in device_map.values()])
+    if device_map_slots < replica_num:
+        raise ValueError(
+            f"Only able to place {device_map_slots} replicas, but {replica_num} replicas were requested."
+        )
+    if device_map_slots > replica_num:
+        raise ValueError(
+            f"Device map contains {device_map_slots} mappings, but only {replica_num} replicas were requested. There must be a 1:1 mapping."
+        )
 
     replica_pool = []
     # Fill the available slots with replicas
     for host, slots_list in device_map.items():
         assert host in resource_pool, f"Host {host} not found in hostfile"
-        slots_to_fill = min(len(slots_list), replica_num - len(replica_pool))
-        for i in range(slots_to_fill):
-            assert len(slots_list[i]) == tensor_parallel, f"Number of devices must match tensor_parallel"
-            replica_pool.append((host, slots_list[i]))
-
-    assert len(replica_pool) == replica_num, f"Only able to place {len(replica_pool)} replicas, but {replica_num} replicas were requested."
+        for slots in slots_list:
+            assert len(slots) == tensor_parallel, f"Number of devices must match tensor_parallel"
+            replica_pool.append((host, slots))
 
     return replica_pool
 
