@@ -174,9 +174,19 @@ class MIIConfig(DeepSpeedConfigModel):
     Enables a RESTful API that can be queries with via http POST method.
     """
 
+    restful_api_host: str = "localhost"
+    """
+    Hostname to use for the RESTful API.
+    """
+
     restful_api_port: int = 51080
     """
     Port number to use for the RESTful API.
+    """
+
+    restful_processes: int = Field(32, ge=1)
+    """
+    Number of processes to use for the RESTful API.
     """
 
     hostfile: str = DLTS_HOSTFILE

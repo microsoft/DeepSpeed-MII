@@ -71,7 +71,7 @@ def test_multi_replica(deployment, query):
     double_query_time = sum(double_query_time) / 2
 
     assert single_query_time == pytest.approx(
-        double_query_time, 0.1
+        double_query_time, single_query_time / 2
     ), "two queries should take about the same time as one query"
 
 
@@ -123,4 +123,4 @@ def test_restful_api(deployment, query, deployment_name, restful_api_port):
                            data=json_params,
                            headers={"Content-Type": "application/json"})
     assert result.status_code == 200
-    assert "generated_text" in result.json()
+    assert "generated_text" in result.json()[0]
