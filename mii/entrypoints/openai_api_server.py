@@ -100,10 +100,9 @@ def load_chat_template(args, tokenizer):
             chat_template = codecs.decode(args.chat_template, "unicode_escape")
 
         tokenizer.chat_template = chat_template
-        print(
-            f"Using supplied chat template:\n{tokenizer.chat_template}")
+        print(f"Chat template loaded from {args.chat_template}.")
     elif tokenizer.chat_template is not None:
-        print(f"Using default chat template:\n{tokenizer.chat_template}")
+        print(f"Chat template loaded from tokenizer.")
     else:
         # throw a warning if no chat template is provided
         print("WARNING: No chat template provided. chat completion won't work.")
@@ -234,7 +233,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
     responseData = await stub.GeneratorReply(requestData)
     choices = []
 
-    for c in response_chunk.response:
+    for c in responseData.response:
         choice = ChatCompletionResponseChoice(
             index=len(choices),
             message=ChatMessage(role=response_role, content=c.response),
@@ -242,8 +241,8 @@ async def create_chat_completion(request: ChatCompletionRequest):
         )
         choices.append(choice)
 
-    prompt_tokens = countTokens([r.content for r in request.messages]) * request.n
-    completion_tokens = countTokens([content for r in responseData.response for content in r.messages.content])
+    prompt_tokens = countTokens([message['content'] for message in request.messages if 'content' in message]) * request.n
+    completion_tokens = countTokens([r.response for r in responseData.response])
 
     return ChatCompletionResponse(model=app_settings.model_id, choices=choices, usage=UsageInfo(
         prompt_tokens=prompt_tokens,
@@ -414,6 +413,9 @@ if __name__ == "__main__":
     )
 
     app_settings.model_id = args.model
+
+    if args.api_keys is not None:
+        app_settings.api_keys = args.api_keys
 
     # Check if a load balancer is specified else start the DeepSpeed-MII instance
     if args.load_balancer is not None:

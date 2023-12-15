@@ -60,11 +60,11 @@ class ChatCompletionRequest(BaseModel):
     model: str
     messages: Union[str, List[Dict[str, str]]]
     temperature: Optional[float] = 0.7
-    top_p: Optional[float] = 1.0
-    top_k: Optional[int] = -1
+    top_p: Optional[float] = 0.9
+    top_k: Optional[int] = None
     n: Optional[int] = 1
     min_tokens: Optional[int] = None
-    max_tokens: Optional[int] = None
+    max_tokens: Optional[int] = 128
     stop: Optional[Union[str, List[str]]] = None
     stream: Optional[bool] = False
     add_generation_prompt: Optional[bool] = True
@@ -154,7 +154,7 @@ class CompletionRequest(BaseModel):
     suffix: Optional[str] = None
     temperature: Optional[float] = 0.7
     n: Optional[int] = 1
-    min_tokens: Optional[int] = 32
+    min_tokens: Optional[int] = None
     max_tokens: Optional[int] = 128
     stop: Optional[Union[str, List[str]]] = None
     stream: Optional[bool] = False
