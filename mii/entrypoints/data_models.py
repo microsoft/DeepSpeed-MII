@@ -201,8 +201,7 @@ class CompletionStreamResponse(BaseModel):
 
 
 class AppSettings(BaseSettings):
-    # The address of the model controller.
-    controller_address: str = "http://localhost:21001"
     model_id: str = None
     api_keys: Optional[List[str]] = None
+    deployment_name: str = "deepspeed-mii"
     response_role: Optional[str] = "assiatant"

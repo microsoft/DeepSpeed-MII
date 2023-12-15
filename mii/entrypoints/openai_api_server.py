@@ -2,7 +2,7 @@ import grpc
 import argparse
 import json
 import os
-from typing import AsyncGenerator, Optional, Dict, List, Union
+from typing import AsyncGenerator, Optional, List, Union
 from transformers import AutoTokenizer
 import codecs
 
@@ -14,14 +14,11 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 
 import shortuuid
-import tiktoken
 import uvicorn
 import mii
 from mii.grpc_related.proto.modelresponse_pb2_grpc import ModelResponseStub
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto
-from fastchat.conversation import Conversation, SeparatorStyle
-from fastchat.model.model_adapter import get_conversation_template
 from fastchat.constants import ErrorCode
 
 from .data_models import (
@@ -38,7 +35,6 @@ from .data_models import (
     CompletionResponseStreamChoice,
     CompletionStreamResponse,
     ErrorResponse,
-    LogProbs,
     ModelCard,
     ModelList,
     ModelPermission,
@@ -79,7 +75,7 @@ def create_error_response(code: int, message: str) -> JSONResponse:
         ErrorResponse(message=message, code=code).dict(), status_code=400
     )
 
-def countTokens(prompt: Union[str, list[str]]) -> int:
+def countTokens(prompt: Union[str, List[str]]) -> int:
     if isinstance(prompt, str):
         prompt = [prompt]
 
@@ -107,13 +103,14 @@ def load_chat_template(args, tokenizer):
         # throw a warning if no chat template is provided
         print("WARNING: No chat template provided. chat completion won't work.")
 
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     return create_error_response(ErrorCode.VALIDATION_TYPE_ERROR, str(exc))
 
+
 @app.get("/v1/models", dependencies=[Depends(check_api_key)])
 async def show_available_models():
-    models.sort()
     # TODO: return real model permission details
     model_cards = []
     model_cards.append(ModelCard(id=app_settings.model_id, root=app_settings.model_id, permission=[ModelPermission()]))
@@ -124,7 +121,7 @@ async def show_available_models():
 async def create_chat_completion(request: ChatCompletionRequest):
     if request.model != app_settings.model_id:
         return create_error_response(
-            ErrorCode.MODEL_NOT_FOUND,
+            ErrorCode.INVALID_MODEL,
             f"Model \"{request.model}\" not found. Please use \"{app_settings.model_id}\".",
         )
 
@@ -140,7 +137,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     if request.messages is None:
         return create_error_response(
-            ErrorCode.PARAM_REQUIRED,
+            ErrorCode.VALIDATION_TYPE_ERROR,
             "messages is required.",
         )
 
@@ -254,7 +251,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 async def create_completion(request: CompletionRequest):
     if request.model != app_settings.model_id:
         return create_error_response(
-            ErrorCode.MODEL_NOT_FOUND,
+            ErrorCode.INVALID_MODEL,
             f"Model {request.model} not found.",
         )
 
@@ -270,7 +267,7 @@ async def create_completion(request: CompletionRequest):
 
     if request.prompt is None:
         return create_error_response(
-            ErrorCode.PARAM_REQUIRED,
+            ErrorCode.VALIDATION_TYPE_ERROR,
             "Prompt is required.",
         )
 
@@ -372,15 +369,6 @@ async def health() -> Response:
     """Health check."""
     return JSONResponse({"status": "ok"}, status_code=200)
 
-def convert_reason(finish_reason):
-    if finish_reason == "GenerationFinishReason.NONE":
-        return None
-    elif finish_reason == "GenerationFinishReason.LENGTH":
-        return "length"
-    elif finish_reason == "GenerationFinishReason.STOP":
-        return "stop"
-    else:
-        return finish_reason
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="OpenAI-Compatible RESTful API server.")
@@ -401,7 +389,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Set the deployment name
-    deployment_name = args.deployment_name
+    if args.deployment_name is not None:
+        app_settings.deployment_name = args.deployment_name
 
     # Add CORS middleware
     app.add_middleware(
@@ -420,31 +409,31 @@ if __name__ == "__main__":
     # Check if a load balancer is specified else start the DeepSpeed-MII instance
     if args.load_balancer is not None:
         # Set the load balancer
+        print(f"Using already running DeepSpeed-MII instance for model {app_settings.model_id}...")
+        print(f"Load balancer: {args.load_balancer}")
         load_balancer = args.load_balancer
     else:
         # Initialize the DeepSpeed-MII instance
-        mii.serve(args.model, deployment_name=args.deployment_name)
+        print(f"Starting DeepSpeed-MII instance for model {app_settings.model_id}...")
+        print(f"Deployment name: {app_settings.deployment_name}")
+        mii.serve(app_settings.model_id, deployment_name=app_settings.deployment_name)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(app_settings.model_id)
     load_chat_template(args, tokenizer)
 
     if args.response_role is not None:
         app_settings.response_role = args.response_role
 
-    if args.ssl:
-        uvicorn.run(
-            app,
-            host=args.host,
-            port=args.port,
-            log_level="info",
-            ssl_keyfile=os.environ["SSL_KEYFILE"],
-            ssl_certfile=os.environ["SSL_CERTFILE"],
-            timeout_keep_alive=300
-        )
-    else:
-        uvicorn.run(app,
-            host=args.host,
-            port=args.port,
-            log_level="info",
-            timeout_keep_alive=300
-        )
+    ssl_config = {
+        "ssl_keyfile": os.environ["SSL_KEYFILE"],
+        "ssl_certfile": os.environ["SSL_CERTFILE"]
+    } if args.ssl else {}
+
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        log_level="info",
+        timeout_keep_alive=300,
+        **ssl_config
+    )
