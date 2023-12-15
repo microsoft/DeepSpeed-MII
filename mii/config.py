@@ -16,6 +16,8 @@ from mii.modeling.tokenizers import MIITokenizerWrapper
 from mii.pydantic_v1 import Field, root_validator, validator
 from mii.utils import generate_deployment_name, get_default_task, import_score_file
 
+DEVICE_MAP_DEFAULT = "auto"
+
 
 class ReplicaConfig(DeepSpeedConfigModel):
     hostname: str = ""
@@ -80,7 +82,7 @@ class ModelConfig(DeepSpeedConfigModel):
     generated, but you can provide a set of custom configs.
     """
 
-    device_map: Union[Literal["auto"], Dict[str, List[List[int]]]] = "auto"
+    device_map: Union[Literal["auto"], Dict[str, List[List[int]]]] = DEVICE_MAP_DEFAULT
     """
     GPU indices a model is deployed on. Note that CUDA_VISIBLE_DEVICES does not
     work with DeepSpeed-MII.
@@ -244,14 +246,14 @@ def _allocate_devices(hostfile_path: str,
                       tensor_parallel: int,
                       replica_num: int,
                       device_map: Dict[str,
-                                       List[List[int]]] = "auto"):
+                                       List[List[int]]] = DEVICE_MAP_DEFAULT):
     resource_pool = fetch_hostfile(hostfile_path)
     assert (
         resource_pool is not None and len(resource_pool) > 0
     ), f"No hosts found in {hostfile_path}"
 
     # If no device map was provided, we generate one based on the resources we find in the hostfile
-    if device_map == "auto":
+    if device_map == DEVICE_MAP_DEFAULT:
         device_map = {}
         filled_slots = 0
         for host, slots in resource_pool.items():
@@ -276,9 +278,13 @@ def _allocate_devices(hostfile_path: str,
     replica_pool = []
     # Fill the available slots with replicas
     for host, slots_list in device_map.items():
-        assert host in resource_pool, f"Host {host} not found in hostfile"
+        if host not in resource_pool:
+            raise ValueError(f"Host {host} not found in hostfile")
         for slots in slots_list:
-            assert len(slots) == tensor_parallel, f"Number of devices must match tensor_parallel"
+            if len(slots) != tensor_parallel:
+                raise ValueError(
+                    f"Number of devices must match tensor_parallel. Found {len(slots)} devices for host {host}, but tensor_parallel={tensor_parallel}"
+                )
             replica_pool.append((host, slots))
 
     return replica_pool

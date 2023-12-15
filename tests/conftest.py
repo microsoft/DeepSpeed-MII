@@ -9,6 +9,8 @@ import torch
 import os
 import mii
 from types import SimpleNamespace
+from typing import Union
+from deepspeed.launcher.runner import DLTS_HOSTFILE
 
 
 @pytest.fixture(scope="function", params=[None])
@@ -28,6 +30,11 @@ def replica_num(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=[mii.config.DEVICE_MAP_DEFAULT])
+def device_map(request):
+    return request.param
+
+
 @pytest.fixture(scope="function", params=[False])
 def enable_restful_api(request):
     return request.param
@@ -36,6 +43,22 @@ def enable_restful_api(request):
 @pytest.fixture(scope="function", params=[28080])
 def restful_api_port(request):
     return request.param
+
+
+@pytest.fixture(scope="function", params=[None])
+def hostfile_content(request):
+    return request.param
+
+
+@pytest.fixture(scope="function", params=[DLTS_HOSTFILE])
+def hostfile(request, hostfile_content, tmpdir):
+    if hostfile_content is None:
+        return request.param
+    hostfile_path = tmpdir.join("hostfile")
+    with open(hostfile_path, "w") as f:
+        for line in hostfile_content:
+            f.write(line + "\n")
+    return str(hostfile_path)
 
 
 @pytest.fixture(scope="function", params=[mii.TaskType.TEXT_GENERATION])
@@ -69,6 +92,8 @@ def model_config(
     model_name: str,
     tensor_parallel: int,
     replica_num: int,
+    device_map: Union[str,
+                      dict],
     all_rank_output: bool,
 ):
     config = SimpleNamespace(
@@ -76,6 +101,7 @@ def model_config(
         task=task_name,
         tensor_parallel=tensor_parallel,
         replica_num=replica_num,
+        device_map=device_map,
         all_rank_output=all_rank_output,
     )
     return config.__dict__
@@ -88,13 +114,18 @@ def mii_config(
     port_number: int,
     enable_restful_api: bool,
     restful_api_port: int,
+    hostfile: str,
+    model_config: dict,
 ):
+    print(f"hostfile: {hostfile}")
     config = SimpleNamespace(
         deployment_name=deployment_name,
         deployment_type=deployment_type,
         port_number=port_number,
         enable_restful_api=enable_restful_api,
         restful_api_port=restful_api_port,
+        hostfile=hostfile,
+        model_config=model_config,
     )
     return config.__dict__
 
@@ -119,13 +150,13 @@ def pipeline(model_config, expected_failure):
 
 
 @pytest.fixture(scope="function")
-def deployment(mii_config, model_config, expected_failure):
+def deployment(mii_config, expected_failure):
     if expected_failure is not None:
         with pytest.raises(expected_failure) as excinfo:
-            mii.serve(model_config=model_config, mii_config=mii_config)
+            mii.serve(mii_config=mii_config)
         yield excinfo
     else:
-        client = mii.serve(model_config=model_config, mii_config=mii_config)
+        client = mii.serve(mii_config=mii_config)
         yield client
         client.terminate_server()
         time.sleep(1)
