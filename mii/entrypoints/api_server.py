@@ -133,16 +133,13 @@ if __name__ == "__main__":
         allow_headers=args.allowed_headers,
     )
 
-    # Set the deployment name
-    deployment_name = args.deployment_name
-
     # Check if a load balancer is specified else start the DeepSpeed-MII instance
     if args.load_balancer is not None:
         # Set the load balancer
         load_balancer = args.load_balancer
     else:
         # Initialize the DeepSpeed-MII instance
-        mii.serve(args.model, deployment_name=deployment_name)
+        mii.serve(args.model, deployment_name=args.deployment_name)
 
     # Start the server
     uvicorn.run(app,
