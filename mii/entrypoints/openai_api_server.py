@@ -375,20 +375,107 @@ async def health() -> Response:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="OpenAI-Compatible RESTful API server.")
-    parser.add_argument("--model", type=str)
-    parser.add_argument("--deployment-name", type=str, default="deepspeed-mii")
-    parser.add_argument("--load-balancer", type=str)
-    parser.add_argument("--max-length", type=int, default=32768)
-    parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--allow-credentials", action="store_true", help="allow credentials")
-    parser.add_argument("--allowed-origins", type=json.loads, default=["*"], help="allowed origins")
-    parser.add_argument("--allowed-methods", type=json.loads, default=["*"], help="allowed methods")
-    parser.add_argument("--allowed-headers", type=json.loads, default=["*"], help="allowed headers")
-    parser.add_argument("--chat-template", type=str, default=None)
-    parser.add_argument("--response-role", type=str, default="assistant")
-    parser.add_argument("--api-keys", type=lambda s: s.split(","), help="Optional list of comma separated API keys")
-    parser.add_argument("--ssl", action="store_true", required=False, default=False, help="Enable SSL. Requires OS Environment variables 'SSL_KEYFILE' and 'SSL_CERTFILE'.")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="mistralai/Mistral-7B-Instruct-v0.1",
+        help="model name or path to model directory (defaults to mistralai/Mistral-7B-Instruct-v0.1)"
+    )
+    parser.add_argument(
+        '--deployment-name',
+        type=str,
+        default=None,
+        help='A unique identifying string for the persistent model (defaults to f"deepspeed-mii")'
+    )
+    parser.add_argument(
+        "--load-balancer",
+        type=str,
+        default=None,
+        help="load balancer address (defaults to None)"
+    )
+    parser.add_argument(
+        "--max-length",
+        type=int,
+        default=32768,
+        help="maximum token length (defaults to 32768)"
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="host address (defaults to 0.0.0.0)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="port (defaults to 8000)"
+    )
+    parser.add_argument(
+        "--allow-credentials",
+        action="store_true",\
+        help="allow credentials"
+    )
+    parser.add_argument(
+        "--allowed-origins",
+        type=json.loads,
+        default=["*"],
+        help="allowed origins"
+    )
+    parser.add_argument(
+        "--allowed-methods",
+        type=json.loads,
+        default=["*"],
+        help="allowed methods"
+    )
+    parser.add_argument(
+        "--allowed-headers",
+        type=json.loads,
+        default=["*"],
+        help="allowed headers"
+    )
+    parser.add_argument(
+        '--max_length',
+        type=int,
+        default=None,
+        help='Sets the default maximum token length for the prompt + response (defaults to maximum sequence length in model config)'
+    )
+    parser.add_argument(
+        '--tensor-parallel',
+        type=int,
+        default=1,
+        help='Number of GPUs to split the model across (defaults to 1)'
+    )
+    parser.add_argument(
+        '--replica-num',
+        type=int,
+        default=1,
+        help='The number of model replicas to stand up (defaults to 1)'
+    )
+    parser.add_argument(
+        "--chat-template",
+        type=str,
+        default=None,
+        help="Path to chat template file,, or chat template string (defaults to None)"
+    )
+    parser.add_argument(
+        "--response-role",
+        type=str,
+        default="assistant",
+        help="Role for the response"
+    )
+    parser.add_argument(
+        "--api-keys",
+        type=lambda s: s.split(","),
+        help="Optional list of comma separated API keys"
+    )
+    parser.add_argument(
+        "--ssl",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Enable SSL. Requires OS Environment variables 'SSL_KEYFILE' and 'SSL_CERTFILE'."
+    )
     args = parser.parse_args()
 
     # Set the deployment name
@@ -419,7 +506,7 @@ if __name__ == "__main__":
         # Initialize the DeepSpeed-MII instance
         print(f"Starting DeepSpeed-MII instance for model {app_settings.model_id}...")
         print(f"Deployment name: {app_settings.deployment_name}")
-        mii.serve(app_settings.model_id, deployment_name=app_settings.deployment_name)
+        mii.serve(app_settings.model_id, deployment_name=app_settings.deployment_name, tensor_parallel=args.tensor_parallel, replica_num=args.replica_num, max_length=args.max_length)
 
     tokenizer = AutoTokenizer.from_pretrained(app_settings.model_id)
     load_chat_template(args, tokenizer)
