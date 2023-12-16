@@ -384,7 +384,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--deployment-name',
         type=str,
-        default=None,
+        default="deepspeed-mii",
         help='A unique identifying string for the persistent model (defaults to f"deepspeed-mii")'
     )
     parser.add_argument(
