@@ -101,6 +101,11 @@ class RaggedBatchBase:
             self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
             self.socket.setsockopt(zmq.RCVTIMEO, ZMQ_RECV_TIMEOUT)
 
+        self.breakdown_times = []
+        self.profile_dump_count = 0
+        self.reset_kv_cache_count = 0
+        self.schedule_breakdown_times = {}
+
     @cached_property
     def local_rank(self) -> int:
         return get_accelerator().current_device()
@@ -111,11 +116,23 @@ class RaggedBatchBase:
 
     @profiler
     def generate(self) -> None:
+        start_generate = time.time()
+
         # 1. Get a batch of requests, broadcast to all ranks
         scheduled_requests = self._bcast_requests()
 
+        if len(scheduled_requests) > 0:
+            end_bcast = time.time()
+
         # 2. Flush for uids that are finished generating
         self.flush(scheduled_requests.requests_to_flush.uids)
+
+        if len(scheduled_requests) > 0:
+            end_bcast = time.time()
+
+            prompt_num = len([t for t in scheduled_requests.requests_to_run.tokens if len(t) > 1])
+            gen_num = len([t for t in scheduled_requests.requests_to_run.tokens if len(t) == 1])
+            prompt_lengths = [len(t) for t in scheduled_requests.requests_to_run.tokens if len(t) > 1]
 
         # 3. Put new tokens into inference engine
         if scheduled_requests.requests_to_run:
@@ -123,6 +140,10 @@ class RaggedBatchBase:
                 scheduled_requests.requests_to_run.uids,
                 scheduled_requests.requests_to_run.tokens,
             )
+
+        if len(scheduled_requests) > 0:
+            torch.cuda.synchronize()
+            end_put = time.time()
 
         # short circuit if not rank 0, only rank 0 does scheduling and postprocessing of logits
         if not self.is_rank_0:
@@ -138,8 +159,14 @@ class RaggedBatchBase:
             running_requests.next_tokens = next_tokens
             running_requests.done_tokens = done_tokens
 
+            torch.cuda.synchronize()
+            end_sampling = time.time()
+        else:
+            end_sampling = 0
+
         # 5. Schedule requests while we wait for the forward pass to finish
         self._reset_scheduler_bookkeeping()
+        end_reset_sched = time.time()
 
         # 6. Accumulate generated tokens, check completion, and generate output
         for r in running_requests.last_in_prompt:
@@ -151,12 +178,43 @@ class RaggedBatchBase:
                 r.set_next_as_input()
                 self.request_queue.put(r)
 
+        end_pp = time.time()
+
         # 7. Update scheduled requests
         self.scheduled_requests.prune(running_requests.completed.uids)
         self.schedule_requests()
 
-        if self.profile_model_time:
-            self._print_profiled_times()
+        if self.is_rank_0 and len(self.scheduled_requests) > 0:
+            end_schedule = time.time()
+        else:
+            end_schedule = 0
+
+        if self.is_rank_0:
+            if end_sampling > 0 and end_schedule > 0:
+                prof_time_dict = {
+                    "generate": end_schedule - start_generate,
+                    "bcast": end_bcast - start_generate,
+                    "put": end_put - end_bcast,
+                    "sampling": end_sampling - end_put,
+                    "reset_sched": end_reset_sched - end_sampling,
+                    "pp": end_pp - end_reset_sched,
+                    "schedule": end_schedule - end_pp,
+                    "prompt_num": prompt_num,
+                    "gen_num": gen_num,
+                    "prompt_lengths": prompt_lengths,
+                    "reset_kv_cache_count": self.reset_kv_cache_count,
+                }
+                prof_time_dict.update(self.schedule_breakdown_times)
+                self.breakdown_times.append(prof_time_dict)
+                if len(self.breakdown_times) > 10000:
+                    import pickle
+                    fname = f"profile_dump_{self.profile_dump_count}.pkl"
+                    pickle.dump(self.breakdown_times, open(fname, "wb"))
+                    print(f"Dumped profile data to {fname}")
+                    self.breakdown_times = []
+                    self.profile_dump_count += 1
+            self.reset_kv_cache_count= 0
+
 
     def _print_profiled_times(self) -> None:
         self._iters += 1
@@ -300,9 +358,11 @@ class RaggedBatchBase:
                 self.buffer.appendleft(req_remaining)
 
     def schedule_requests(self) -> None:
+        start_schedule = time.time()
         while not self.request_queue.empty():
             r = self.request_queue.get_nowait()
             self.buffer.append(r)
+        end_take = time.time()
 
         # Run next token generation first
         next_token_gen_reqs = []
@@ -317,9 +377,14 @@ class RaggedBatchBase:
                 else:
                     prompt_reqs.append(r)
 
+        end_append = time.time()
+
         # We want to process next token generation first
         self._do_schedule_requests(next_token_gen_reqs)
+        end_schedule1 = time.time()
         self._do_schedule_requests(prompt_reqs)
+        end_schedule2 = time.time()
+
 
         if len(self.buffer) > 0 and len(self.scheduled_requests) == 0:
             print(
@@ -327,10 +392,20 @@ class RaggedBatchBase:
             )
             self.scheduled_requests = RequestBatch()
             self.reset_request_status()
+            self.reset_kv_cache_count += 1
         else:
             scheduled_requests_ids = set(id(r) for r in self.scheduled_requests)
             self.buffer = deque(
                 [r for r in self.buffer if id(r) not in scheduled_requests_ids])
+        end_schedule = time.time()
+
+        self.schedule_breakdown_times = {
+            "schedule_take": end_take - start_schedule,
+            "schedule_append": end_append - end_take,
+            "schedule1": end_schedule1 - end_append,
+            "schedule2": end_schedule2 - end_schedule1,
+            "schedule_deque": end_schedule - end_schedule2,
+        }
 
     def _queue_flush_request(self, uid: int) -> None:
         self.request_queue.put_nowait(
