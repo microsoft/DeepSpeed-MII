@@ -1,3 +1,8 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
+
 ## Adapted from https://github.com/lm-sys/FastChat/blob/af4dfe3f0ed481700265914af61b86e0856ac2d9/fastchat/protocol/openai_api_protocol.py
 from typing import Literal, Optional, List, Dict, Any, Union
 
