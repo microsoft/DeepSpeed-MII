@@ -504,7 +504,7 @@ if __name__ == "__main__":
     # Check if a load balancer is specified else start the DeepSpeed-MII instance
     if args.load_balancer is not None:
         # Set the load balancer
-        print(f"Using already running DeepSpeed-MII instance for model {app_settings.model_id}...")
+        print(f"Using existing DeepSpeed-MII instance for model {app_settings.model_id}...")
         print(f"Load balancer: {args.load_balancer}")
         load_balancer = args.load_balancer
     else:
