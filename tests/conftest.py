@@ -152,7 +152,6 @@ def deployment(mii_config, expected_failure):
             mii.serve(mii_config=mii_config)
         yield excinfo
     else:
-        print("CONFIG", mii_config)
         client = mii.serve(mii_config=mii_config)
         yield client
         client.terminate_server()
