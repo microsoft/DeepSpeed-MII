@@ -5,7 +5,6 @@
 
 import pytest
 import time
-import torch
 import os
 import mii
 from types import SimpleNamespace
@@ -117,7 +116,6 @@ def mii_config(
     hostfile: str,
     model_config: dict,
 ):
-    print(f"hostfile: {hostfile}")
     config = SimpleNamespace(
         deployment_name=deployment_name,
         deployment_type=deployment_type,
@@ -144,9 +142,7 @@ def pipeline(model_config, expected_failure):
     else:
         pipe = mii.pipeline(model_config=model_config)
         yield pipe
-        del pipe.inference_engine
-        del pipe
-        torch.cuda.empty_cache()
+        pipe.destroy()
 
 
 @pytest.fixture(scope="function")
@@ -156,6 +152,7 @@ def deployment(mii_config, expected_failure):
             mii.serve(mii_config=mii_config)
         yield excinfo
     else:
+        print("CONFIG", mii_config)
         client = mii.serve(mii_config=mii_config)
         yield client
         client.terminate_server()

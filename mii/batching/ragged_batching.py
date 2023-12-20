@@ -90,14 +90,14 @@ class RaggedBatchBase:
         self._iters: int = 0
         self._num_generated_tokens: int = 0
 
-        context = zmq.Context()
+        self._zmq_context = zmq.Context()
         torch.cuda.synchronize()
         if self.is_rank_0:
-            self.socket = context.socket(zmq.PUB)
+            self.socket = self._zmq_context.socket(zmq.PUB)
             self.socket.bind(f"tcp://*:{self.zmq_port}")
             time.sleep(1)  # Give the subscriber a change to connect
         else:
-            self.socket = context.socket(zmq.SUB)
+            self.socket = self._zmq_context.socket(zmq.SUB)
             self.socket.connect(f"tcp://localhost:{self.zmq_port}")
             self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
             self.socket.setsockopt(zmq.RCVTIMEO, ZMQ_RECV_TIMEOUT)
@@ -543,6 +543,8 @@ class MIIPipeline(RaggedBatchBase):
 
     def destroy(self) -> None:
         del self.inference_engine
+        self.socket.close()
+        self._zmq_context.term()
         gc.collect()
         get_accelerator().empty_cache()
         self._destroyed = True
