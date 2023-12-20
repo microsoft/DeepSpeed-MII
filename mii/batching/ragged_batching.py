@@ -3,8 +3,9 @@
 
 # DeepSpeed Team
 import copy
-import queue
+import gc
 import os
+import queue
 import random
 import threading
 import time
@@ -467,8 +468,13 @@ class MIIPipeline(RaggedBatchBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tid = threading.get_ident()
+        self._destroyed = False
 
     def __call__(self, inputs: Union[str, List[str]], **kwargs) -> List[Response]:
+        if self._destroyed:
+            raise RuntimeError(
+                "The inference engine of this pipeline has been destroyed.")
+
         if isinstance(inputs, str):
             inputs = [inputs]
         outputs: List[Response] = []
@@ -534,6 +540,12 @@ class MIIPipeline(RaggedBatchBase):
             data_dicts = ujson.loads(json_data)
             responses = [Response.from_msg_dict(msg) for msg in data_dicts]
         return responses
+
+    def destroy(self) -> None:
+        del self.inference_engine
+        gc.collect()
+        get_accelerator().empty_cache()
+        self._destroyed = True
 
 
 class MIIAsyncPipeline(RaggedBatchBase):
