@@ -127,6 +127,12 @@ The returned `response` is a list of `Response` objects. We can access several d
 - `generated_length: int` Number of tokens generated.
 - `finish_reason: str` Reason for stopping generation. `stop` indicates the EOS token was generated and `length` indicates the generation reached `max_new_tokens` or `max_length`.
 
+If you want to free device memory and destroy the pipeline, use the `destroy` method:
+
+```python
+pipe.destroy()
+```
+
 ### Tensor parallelism
 
 Taking advantage of multi-GPU systems for greater performance is easy with MII. When run with the `deepspeed` launcher, tensor parallelism is automatically controlled by the `--num_gpus` flag:
