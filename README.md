@@ -78,7 +78,7 @@ Under-the-hood MII is powered by [DeepSpeed-Inference](https://github.com/micros
 
 # Supported Models
 
-MII currently supports over 13,000 models across three popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
+MII currently supports over 20,000 models across three popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
 
 model family | size range | ~model count
 ------ | ------ | ------
