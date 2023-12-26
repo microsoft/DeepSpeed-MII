@@ -3,8 +3,9 @@
 
 # DeepSpeed Team
 import copy
-import queue
+import gc
 import os
+import queue
 import random
 import threading
 import time
@@ -89,14 +90,14 @@ class RaggedBatchBase:
         self._iters: int = 0
         self._num_generated_tokens: int = 0
 
-        context = zmq.Context()
+        self._zmq_context = zmq.Context()
         torch.cuda.synchronize()
         if self.is_rank_0:
-            self.socket = context.socket(zmq.PUB)
+            self.socket = self._zmq_context.socket(zmq.PUB)
             self.socket.bind(f"tcp://*:{self.zmq_port}")
             time.sleep(1)  # Give the subscriber a change to connect
         else:
-            self.socket = context.socket(zmq.SUB)
+            self.socket = self._zmq_context.socket(zmq.SUB)
             self.socket.connect(f"tcp://localhost:{self.zmq_port}")
             self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
             self.socket.setsockopt(zmq.RCVTIMEO, ZMQ_RECV_TIMEOUT)
@@ -467,8 +468,13 @@ class MIIPipeline(RaggedBatchBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tid = threading.get_ident()
+        self._destroyed = False
 
     def __call__(self, inputs: Union[str, List[str]], **kwargs) -> List[Response]:
+        if self._destroyed:
+            raise RuntimeError(
+                "The inference engine of this pipeline has been destroyed.")
+
         if isinstance(inputs, str):
             inputs = [inputs]
         outputs: List[Response] = []
@@ -534,6 +540,14 @@ class MIIPipeline(RaggedBatchBase):
             data_dicts = ujson.loads(json_data)
             responses = [Response.from_msg_dict(msg) for msg in data_dicts]
         return responses
+
+    def destroy(self) -> None:
+        del self.inference_engine
+        self.socket.close()
+        self._zmq_context.term()
+        gc.collect()
+        get_accelerator().empty_cache()
+        self._destroyed = True
 
 
 class MIIAsyncPipeline(RaggedBatchBase):

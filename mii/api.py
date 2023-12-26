@@ -62,6 +62,9 @@ def _parse_kwargs_to_mii_config(
                               Any]] = None,
     **kwargs,
 ) -> MIIConfig:
+    if model_config is None:
+        model_config = mii_config.get("model_config", {})
+
     # Parse all model_config kwargs
     model_config, remaining_kwargs = _parse_kwargs_to_model_config(
         model_name_or_path=model_name_or_path, model_config=model_config, **kwargs
@@ -72,13 +75,7 @@ def _parse_kwargs_to_mii_config(
 
     assert isinstance(mii_config, dict), "mii_config must be a dict"
 
-    # Verify that any model_config kwargs match any existing model_config in the mii_config
-    if "model_config" in mii_config:
-        assert (
-            mii_config.get("model_config") == model_config
-        ), "mii_config['model_config'] must match model_config"
-    else:
-        mii_config["model_config"] = model_config
+    mii_config["model_config"] = model_config
 
     # Fill mii_config dict with relevant kwargs, raise error on unknown kwargs
     for key, val in remaining_kwargs.items():

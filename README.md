@@ -78,14 +78,16 @@ Under-the-hood MII is powered by [DeepSpeed-Inference](https://github.com/micros
 
 # Supported Models
 
-MII currently supports over 13,000 models across three popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
+MII currently supports over 20,000 models across three popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
 
 model family | size range | ~model count
 ------ | ------ | ------
-[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 11,000
-[llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 800
-[mistral](https://huggingface.co/models?other=mistral) | 7B | 1,100
-[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 900
+[falcon](https://huggingface.co/models?other=falcon) | 7B - 180B | 300
+[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 15,000
+[llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 900
+[mistral](https://huggingface.co/models?other=mistral) | 7B | 3,300
+[mixtral](https://huggingface.co/models?other=mixtral) | 7B | 200
+[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 1,100
 
 ## MII Legacy Model Support
 
@@ -126,6 +128,12 @@ The returned `response` is a list of `Response` objects. We can access several d
 - `prompt_length: int` Number of tokens in the original prompt.
 - `generated_length: int` Number of tokens generated.
 - `finish_reason: str` Reason for stopping generation. `stop` indicates the EOS token was generated and `length` indicates the generation reached `max_new_tokens` or `max_length`.
+
+If you want to free device memory and destroy the pipeline, use the `destroy` method:
+
+```python
+pipe.destroy()
+```
 
 ### Tensor parallelism
 
