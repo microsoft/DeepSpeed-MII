@@ -201,38 +201,42 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     # Streaming case
     if request.stream:
-        async def StreamResults() -> AsyncGenerator[bytes, None]:
-            # First chunk with role
-            firstChoices = []
-            for _ in range(request.n):
-                firstChoice = ChatCompletionResponseStreamChoice(
-                    index=len(firstChoices),
-                    delta=DeltaMessage(role=response_role),
-                    finish_reason=None,
-                )
-                firstChoices.append(firstChoice)
+        return create_error_response(
+            ErrorCode.VALIDATION_TYPE_ERROR,
+            f"Streaming is not yet supported.",
+        )
+        # async def StreamResults() -> AsyncGenerator[bytes, None]:
+        #     # First chunk with role
+        #     firstChoices = []
+        #     for _ in range(request.n):
+        #         firstChoice = ChatCompletionResponseStreamChoice(
+        #             index=len(firstChoices),
+        #             delta=DeltaMessage(role=response_role),
+        #             finish_reason=None,
+        #         )
+        #         firstChoices.append(firstChoice)
 
-            chunk = ChatCompletionStreamResponse(
-                id=id, choices=firstChoices, model=app_settings.model_id
-            )
-            yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
-            async for response_chunk in stub.GeneratorReplyStream(requestData):
-                streamChoices = []
+        #     chunk = ChatCompletionStreamResponse(
+        #         id=id, choices=firstChoices, model=app_settings.model_id
+        #     )
+        #     yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
+        #     async for response_chunk in stub.GeneratorReplyStream(requestData):
+        #         streamChoices = []
 
-                for c in response_chunk.response:
-                    choice = ChatCompletionResponseStreamChoice(
-                        index=len(streamChoices),
-                        delta=DeltaMessage(content=c.response),
-                        finish_reason=None if c.finish_reason == "none" else c.finish_reason,
-                    )
-                    streamChoices.append(choice)
+        #         for c in response_chunk.response:
+        #             choice = ChatCompletionResponseStreamChoice(
+        #                 index=len(streamChoices),
+        #                 delta=DeltaMessage(content=c.response),
+        #                 finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+        #             )
+        #             streamChoices.append(choice)
 
-                chunk = ChatCompletionStreamResponse(
-                    id=id, choices=streamChoices, model=app_settings.model_id
-                )
-                yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
-        return StreamingResponse(StreamResults(), media_type="text/event-stream")
+        #         chunk = ChatCompletionStreamResponse(
+        #             id=id, choices=streamChoices, model=app_settings.model_id
+        #         )
+        #         yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
+        #     yield "data: [DONE]\n\n"
+        # return StreamingResponse(StreamResults(), media_type="text/event-stream")
     
     # Non-streaming case
     responseData = await stub.GeneratorReply(requestData)
@@ -323,30 +327,34 @@ async def create_completion(request: CompletionRequest):
     id = f"cmpl-{shortuuid.random()}"
     # Streaming case
     if request.stream:
-        async def StreamResults() -> AsyncGenerator[bytes, None]:
-            # Send an empty chunk to start the stream and prevent timeout
-            yield ""
-            async for response_chunk in stub.GeneratorReplyStream(requestData):
-                streamChoices = []
+        return create_error_response(
+            ErrorCode.VALIDATION_TYPE_ERROR,
+            f"Streaming is not yet supported.",
+        )
+        # async def StreamResults() -> AsyncGenerator[bytes, None]:
+        #     # Send an empty chunk to start the stream and prevent timeout
+        #     yield ""
+        #     async for response_chunk in stub.GeneratorReplyStream(requestData):
+        #         streamChoices = []
 
-                for c in response_chunk.response:
-                    choice = CompletionResponseStreamChoice(
-                        index=len(streamChoices),
-                        text=c.response,
-                        logprobs=None,
-                        finish_reason=None if c.finish_reason == "none" else c.finish_reason,
-                    )
-                    streamChoices.append(choice)
+        #         for c in response_chunk.response:
+        #             choice = CompletionResponseStreamChoice(
+        #                 index=len(streamChoices),
+        #                 text=c.response,
+        #                 logprobs=None,
+        #                 finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+        #             )
+        #             streamChoices.append(choice)
 
-                chunk = CompletionStreamResponse(
-                    id=id,
-                    object="text_completion",
-                    choices=streamChoices,
-                    model=app_settings.model_id,
-                )
-                yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
-            yield "data: [DONE]\n\n"
-        return StreamingResponse(StreamResults(), media_type="text/event-stream")
+        #         chunk = CompletionStreamResponse(
+        #             id=id,
+        #             object="text_completion",
+        #             choices=streamChoices,
+        #             model=app_settings.model_id,
+        #         )
+        #         yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
+        #     yield "data: [DONE]\n\n"
+        # return StreamingResponse(StreamResults(), media_type="text/event-stream")
 
     # Non-streaming case
     responseData = await stub.GeneratorReply(requestData)
