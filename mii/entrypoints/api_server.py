@@ -92,16 +92,17 @@ async def generate(request: CompletionRequest) -> Response:
 
     # Streaming case
     if request.stream:
-        async def StreamResults() -> AsyncGenerator[bytes, None]:
-            # Send an empty chunk to start the stream and prevent timeout
-            yield ""
-            async for response_chunk in stub.GeneratorReplyStream(requestData):
-                # Send the response chunk
-                responses = [obj.response for obj in response_chunk.response]
-                dataOut = {"text": responses}
-                yield f"data: {json.dumps(dataOut)}\n\n"
-            yield f"data: [DONE]\n\n"
-        return StreamingResponse(StreamResults(), media_type="text/event-stream")
+        return JSONResponse({"error": "Streaming is not yet supported."}, status_code=400)
+        # async def StreamResults() -> AsyncGenerator[bytes, None]:
+        #     # Send an empty chunk to start the stream and prevent timeout
+        #     yield ""
+        #     async for response_chunk in stub.GeneratorReplyStream(requestData):
+        #         # Send the response chunk
+        #         responses = [obj.response for obj in response_chunk.response]
+        #         dataOut = {"text": responses}
+        #         yield f"data: {json.dumps(dataOut)}\n\n"
+        #     yield f"data: [DONE]\n\n"
+        # return StreamingResponse(StreamResults(), media_type="text/event-stream")
 
     # Non-streaming case
     responseData = await stub.GeneratorReply(requestData)
