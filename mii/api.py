@@ -62,6 +62,9 @@ def _parse_kwargs_to_mii_config(
                               Any]] = None,
     **kwargs,
 ) -> MIIConfig:
+    if mii_config is None:
+        mii_config = {}
+
     if model_config is None:
         model_config = mii_config.get("model_config", {})
 
@@ -69,9 +72,6 @@ def _parse_kwargs_to_mii_config(
     model_config, remaining_kwargs = _parse_kwargs_to_model_config(
         model_name_or_path=model_name_or_path, model_config=model_config, **kwargs
     )
-
-    if mii_config is None:
-        mii_config = {}
 
     assert isinstance(mii_config, dict), "mii_config must be a dict"
 
