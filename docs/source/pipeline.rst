@@ -35,24 +35,10 @@ While we prioritize offering a simple interface to load models and run
 text-generation, we also provide many configuration options for users that want
 to customize the pipeline.
 
-**Any of the fields documented in** :class:`ModelConfig
-<mii.config.ModelConfig>` **can be passed as keyword arguments or in a**
-``model_config`` **dictionary to the** :func:`mii.pipeline` **API.**
-
-For example, to change the default ``max_length`` for token generation, the following are equivalent:
-
-As a keyword argument:
-
-.. code-block:: python
-
-    pipe = mii.pipeline("mistralai/Mistral-7B-v0.1", max_length=2048)
-
-As a ``model_config`` dictionary:
-
-.. code-block:: python
-
-    pipe = mii.pipeline("mistralai/Mistral-7B-v0.1", model_config={"max_length": 2048})
-
+**Any of the fields in** :class:`ModelConfig <mii.config.ModelConfig>` **can be
+passed as keyword arguments or in a** ``model_config`` **dictionary to the**
+:func:`mii.pipeline` **API. Please see** :ref:`Model Configuration
+<model_configuration>` **for more information.**
 
 Generate Options
 ----------------

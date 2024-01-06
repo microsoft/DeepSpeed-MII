@@ -64,26 +64,13 @@ While we prioritize offering a simple interface for loading models into
 production-ready persistent deployments, we also provide many configuration
 options for our persistent deployment.
 
-**Any of the fields document in ** :class:`ModelConfig <mii.config.ModelConfig>`
-***or** :class:`MIIConfig <mii.config.MIIConfig>` **can be passed as keyword
-*arguments or in respective** ``model_config`` **and** ``mii_config``
-***dictionaries to the** :func:`mii.serve` **API.**
+**Any of the fields in** :class:`ModelConfig <mii.config.ModelConfig>` **and**
+:class:`MIIConfig <mii.config.MIIConfig>` **can be passed as keyword
+arguments or in respective** ``model_config`` **and** ``mii_config``
+**dictionaries to the** :func:`mii.serve` **API. Please see** :ref:`Model
+Configuration <model_configuration>` **and** :ref:`MII Server Configuration
+<mii_configuration>` **for more information.**
 
-For example, to change the base port number used to to communicate with the
-persistent deployment and the default ``max_length`` for token generation, the
-following are equivalent:
-
-As keyword arguments:
-
-.. code-block:: python
-
-    client = mii.serve("mistralai/Mistral-7B-v0.1", port_number=50055, max_length=2048)
-
-As ``model_config`` and ``mii_config`` dictionaries:
-
-.. code-block:: python
-
-    client = mii.serve("mistralai/Mistral-7B-v0.1", mii_config={"port_number": 50055}, model_config={"max_length": 2048})
 
 Generate Options
 ----------------
