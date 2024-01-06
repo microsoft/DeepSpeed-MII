@@ -9,6 +9,7 @@ from typing_extensions import Self
 import torch
 
 from mii.constants import GenerationFinishReason
+from mii.config import GenerateConfig
 
 
 @dataclass
@@ -58,14 +59,9 @@ class Request:
     input_tokens: torch.Tensor
     prompt_tokens: torch.Tensor
     seq_length: int
-    max_length: int
-    max_new_tokens: int
-    min_new_tokens: int
     last_in_prompt: bool
     post_processing: List[object]
-    stream: bool = False
-    ignore_eos: bool = False
-    return_full_text: bool = False
+    generate_config: GenerateConfig
 
     _next_token: Union[None, torch.Tensor] = None
     _is_done: bool = False
@@ -79,6 +75,14 @@ class Request:
     @property
     def next_token(self) -> Union[None, torch.Tensor]:
         return self._next_token
+
+    @property
+    def ignore_eos(self) -> bool:
+        return self.generate_config.ignore_eos
+
+    @property
+    def min_new_tokens(self) -> int:
+        return self.generate_config.min_new_tokens
 
     @next_token.setter
     def next_token(self, next_token: Union[None, torch.Tensor]) -> None:
