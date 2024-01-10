@@ -19,7 +19,7 @@ from mii.utils import generate_deployment_name, get_default_task, import_score_f
 DEVICE_MAP_DEFAULT = "auto"
 
 
-class GenerateConfig(BaseModel):
+class GenerateParamsConfig(BaseModel):
     """
     Options for changing text-generation behavior.
     """

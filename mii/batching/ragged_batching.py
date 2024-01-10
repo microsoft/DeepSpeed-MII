@@ -30,7 +30,7 @@ from mii.batching.postprocess import (
     run_batch_stop_criterion,
 )
 from mii.batching.utils import sync_debug, profiler
-from mii.config import GenerateConfig
+from mii.config import GenerateParamsConfig
 from mii.constants import GenerationFinishReason, ZMQ_RECV_TIMEOUT
 from mii.logging import logger
 
@@ -323,7 +323,7 @@ class RaggedBatchBase:
                 seq_length=None,
                 last_in_prompt=None,
                 post_processing=None,
-                generate_config=None,
+                generate_params=None,
             ))
 
     def reset_request_status(self):
@@ -350,24 +350,24 @@ class RaggedBatchBase:
                      kwargs: Dict) -> Request:
         kwargs["prompt_length"] = len(input_tokens)
         kwargs["max_length"] = kwargs.get("max_length", self.max_length)
-        generate_config = GenerateConfig(**kwargs)
+        generate_params = GenerateParamsConfig(**kwargs)
 
         post_processing = []
 
-        top_p = generate_config.top_p
+        top_p = generate_params.top_p
         top_p_name = "_".join((TOP_P_NAME, str(top_p)))
         if top_p_name not in self._post_processors:
             self._post_processors[top_p_name] = TopPLogitProcessor(top_p=top_p)
         post_processing.append(top_p_name)
 
-        top_k = generate_config.top_k
+        top_k = generate_params.top_k
         if top_k is not None:
             top_k_name = "_".join((TOP_K_NAME, str(top_k)))
             if top_k_name not in self._post_processors:
                 self._post_processors[top_k_name] = TopKLogitProcessor(top_k=top_k)
             post_processing.append(top_k_name)
 
-        temp = generate_config.temperature
+        temp = generate_params.temperature
         if temp is not None:
             temp_name = "_".join((TEMP_NAME, str(temp)))
             if temp_name not in self._post_processors:
@@ -375,7 +375,7 @@ class RaggedBatchBase:
                     temperature=temp)
             post_processing.append(temp_name)
 
-        do_sample = generate_config.do_sample
+        do_sample = generate_params.do_sample
         if do_sample:
             sampler_name = "_".join((SAMPLER_NAME, "logits"))
             if sampler_name not in self._post_processors:
@@ -386,7 +386,7 @@ class RaggedBatchBase:
                 self._post_processors[sampler_name] = GreedySampler()
         post_processing.append(sampler_name)
 
-        stop = generate_config.stop
+        stop = generate_params.stop
         if stop != []:
             stop_name = "_".join([STOP_NAME] + stop)
             if stop_name not in self._post_processors:
@@ -408,7 +408,7 @@ class RaggedBatchBase:
             seq_length=0,
             last_in_prompt=True,
             post_processing=post_processing,
-            generate_config=generate_config,
+            generate_params=generate_params,
         )
 
     def make_response(self,
