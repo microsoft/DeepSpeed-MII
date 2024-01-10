@@ -1,12 +1,15 @@
-name: nv-torch-latest-v100-local
+name: nv-torch-latest-v100
 
 on:
   push:
     branches:
       - 'master'
       - 'staging**'
-    paths-ignore:
-      - 'docs/**'
+    paths:
+      - 'mii/__init__.py'
+      - 'mii/legacy/**'
+      - 'tests/legacy/**'
+      - '.github/workflows/nv-torch-latest-v100.yml'
   pull_request:
     paths-ignore:
       - 'docs/**'
