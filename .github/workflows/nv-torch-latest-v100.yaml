@@ -10,6 +10,8 @@ on:
       - 'mii/legacy/**'
       - 'tests/legacy/**'
       - '.github/workflows/nv-torch-latest-v100.yml'
+      - 'requirements/**'
+      - 'setup.py'
   pull_request:
     paths-ignore:
       - 'docs/**'
