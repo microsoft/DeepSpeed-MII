@@ -13,8 +13,13 @@ on:
       - 'requirements/**'
       - 'setup.py'
   pull_request:
-    paths-ignore:
-      - 'docs/**'
+    paths:
+      - 'mii/__init__.py'
+      - 'mii/legacy/**'
+      - 'tests/legacy/**'
+      - '.github/workflows/nv-torch-latest-v100.yml'
+      - 'requirements/**'
+      - 'setup.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
