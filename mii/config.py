@@ -13,18 +13,18 @@ from deepspeed.inference import RaggedInferenceEngineConfig
 from mii.constants import DeploymentType, TaskType, ModelProvider
 from mii.errors import DeploymentNotFoundError
 from mii.modeling.tokenizers import MIITokenizerWrapper
-from mii.pydantic_v1 import Field, root_validator, validator
+from mii.pydantic_v1 import BaseModel, Field, root_validator, validator
 from mii.utils import generate_deployment_name, get_default_task, import_score_file
 
 DEVICE_MAP_DEFAULT = "auto"
 
 
-class GenerateConfig(DeepSpeedConfigModel):
+class GenerateConfig(BaseModel):
     """
     Options for changing text-generation behavior.
     """
 
-    _prompt_length: int
+    prompt_length: int
     """ Length of the input prompt. Autopopulated when creating requests, any user-provided values will be ignored."""
 
     max_length: int = 1024
@@ -57,31 +57,30 @@ class GenerateConfig(DeepSpeedConfigModel):
     temperature: Optional[float] = Field(None, gt=0)
     """ Temperature value. """
 
-    stop: Optional[List[str]] = None
+    stop: List[str] = []
     """ List of strings to stop generation at."""
     @validator("stop", pre=True)
-    def make_stop_string_list(cls, field_value):
+    def make_stop_string_list(cls, field_value: Union[str, List[str]]) -> List[str]:
         if isinstance(field_value, str):
             return [field_value]
         return field_value
 
     @validator("stop")
-    def sort_stop_strings(cls, field_value):
-        if field_value is None:
-            return field_value
+    def sort_stop_strings(cls, field_value: List[str]) -> List[str]:
         return sorted(field_value)
 
     @root_validator
-    def check_prompt_length(cls, values):
-        prompt_length = values.get("_prompt_length")
+    def check_prompt_length(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        prompt_length = values.get("prompt_length")
         max_length = values.get("max_length")
         assert max_length > prompt_length, f"max_length ({max_length}) must be greater than prompt_length ({prompt_length})"
+        return values
 
     @root_validator
-    def set_max_new_tokens(cls, values):
+    def set_max_new_tokens(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         max_length = values.get("max_length")
         max_new_tokens = values.get("max_new_tokens")
-        prompt_length = values.get("_prompt_length")
+        prompt_length = values.get("prompt_length")
         if max_new_tokens is None:
             values["max_new_tokens"] = max_length - prompt_length
         return values

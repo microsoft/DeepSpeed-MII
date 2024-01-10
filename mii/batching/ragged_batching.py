@@ -321,12 +321,9 @@ class RaggedBatchBase:
                 input_tokens=None,
                 prompt_tokens=None,
                 seq_length=None,
-                max_length=None,
-                max_new_tokens=None,
-                min_new_tokens=None,
                 last_in_prompt=None,
                 post_processing=None,
-                stream=None,
+                generate_config=None,
             ))
 
     def reset_request_status(self):
@@ -351,7 +348,7 @@ class RaggedBatchBase:
                      uid: int,
                      input_tokens: torch.Tensor,
                      kwargs: Dict) -> Request:
-        kwargs["_prompt_length"] = len(input_tokens)
+        kwargs["prompt_length"] = len(input_tokens)
         kwargs["max_length"] = kwargs.get("max_length", self.max_length)
         generate_config = GenerateConfig(**kwargs)
 
@@ -390,7 +387,7 @@ class RaggedBatchBase:
         post_processing.append(sampler_name)
 
         stop = generate_config.stop
-        if stop is not None:
+        if stop != []:
             stop_name = "_".join([STOP_NAME] + stop)
             if stop_name not in self._post_processors:
                 self._post_processors[stop_name] = TokenStopCriterion(
