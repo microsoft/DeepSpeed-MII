@@ -27,13 +27,9 @@ jobs:
           which python
           python --version
 
-      - name: Install DeepSpeed
+      - name: Install dependencies
         run: |
-          pip install git+https://github.com/microsoft/DeepSpeed.git
-
-      - name: Install MII
-        run: |
-          pip install .[dev]
+          grep -E "clang-format|pre-commit" requirements/requirements-dev.txt | xargs pip install
 
       - name: Formatting checks
         run: |

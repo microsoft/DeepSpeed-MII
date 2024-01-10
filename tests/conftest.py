@@ -10,6 +10,7 @@ import mii
 from types import SimpleNamespace
 from typing import Union
 from deepspeed.launcher.runner import DLTS_HOSTFILE
+import deepspeed.comm as dist
 
 
 @pytest.fixture(scope="function", params=[None])
@@ -143,6 +144,7 @@ def pipeline(model_config, expected_failure):
         pipe = mii.pipeline(model_config=model_config)
         yield pipe
         pipe.destroy()
+        dist.destroy_process_group()
 
 
 @pytest.fixture(scope="function")
@@ -155,7 +157,7 @@ def deployment(mii_config, expected_failure):
         client = mii.serve(mii_config=mii_config)
         yield client
         client.terminate_server()
-        time.sleep(1)
+        time.sleep(1)  # Give a second for ports to be released
 
 
 @pytest.fixture(scope="function", params=["DeepSpeed is the greatest"], ids=["query0"])
