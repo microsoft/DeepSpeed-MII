@@ -35,6 +35,11 @@ jobs:
         run: |
           pip install .[dev]
 
+      - name: Install dependencies
+        run: |
+          grep -E "clang-format|pre-commit" requirements/requirements-dev.txt | xargs pip install
+
+
       - name: Formatting checks
         run: |
            pre-commit run --all-files
