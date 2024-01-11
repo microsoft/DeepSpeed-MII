@@ -81,7 +81,7 @@ def inject_checkpoint_engine():
     "model_name",
     [
         "tiiuae/falcon-7b",
-        "meta-llama/Llama-2-7b-hf",
+        "baffo32/decapoda-research-llama-7B-hf",
         "mistralai/Mistral-7B-v0.1",
         "cloudyu/Mixtral_11Bx2_MoE_19B",
         "facebook/opt-125m",
