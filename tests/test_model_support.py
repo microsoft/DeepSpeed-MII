@@ -6,13 +6,13 @@
 import pytest
 
 import deepspeed
+import torch
 from deepspeed.inference.v2.checkpoint import (
     CheckpointEngineBase,
     HuggingFaceCheckpointEngine,
 )
 from transformers import AutoConfig, AutoModel, GenerationConfig
 from typing import Iterable, Tuple
-import torch
 
 
 class RandomWeightsCheckpointEngine(CheckpointEngineBase):
