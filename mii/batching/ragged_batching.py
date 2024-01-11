@@ -19,28 +19,7 @@ import zmq
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils.timer import SynchronizedWallClockTimer
 
-from mii.batching.constants import (MAX_LENGTH_KWARG,
-                                    MAX_NEW_TOKENS_KWARG,
-                                    MIN_NEW_TOKENS_KWARG,
-                                    STREAM_KWARG,
-                                    IGNORE_EOS_KWARG,
-                                    TOP_P_KWARG,
-                                    TOP_K_KWARG,
-                                    TEMPERATURE_KWARG,
-                                    RETURN_FULL_TEXT_KWARG,
-                                    DO_SAMPLE_KWARG,
-                                    STOP_KWARG,
-                                    MIN_NEW_TOKENS_DEFAULT,
-                                    STREAM_DEFAULT,
-                                    IGNORE_EOS_DEFAULT,
-                                    TOP_P_DEFAULT,
-                                    RETURN_FULL_TEXT_DEFAULT,
-                                    DO_SAMPLE_DEFAULT,
-                                    TOP_K_NAME,
-                                    TOP_P_NAME,
-                                    TEMP_NAME,
-                                    SAMPLER_NAME,
-                                    STOP_NAME)
+from mii.batching.constants import TOP_K_NAME, TOP_P_NAME, TEMP_NAME, SAMPLER_NAME, STOP_NAME
 from mii.batching.data_classes import Response, Request, RequestBatch
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
 from mii.batching.generation.samplers import LogitsSampler, GreedySampler
@@ -51,6 +30,7 @@ from mii.batching.postprocess import (
     run_batch_stop_criterion,
 )
 from mii.batching.utils import sync_debug, profiler
+from mii.config import GenerateParamsConfig
 from mii.constants import GenerationFinishReason, ZMQ_RECV_TIMEOUT
 from mii.logging import logger
 
@@ -341,12 +321,9 @@ class RaggedBatchBase:
                 input_tokens=None,
                 prompt_tokens=None,
                 seq_length=None,
-                max_length=None,
-                max_new_tokens=None,
-                min_new_tokens=None,
                 last_in_prompt=None,
                 post_processing=None,
-                stream=None,
+                generate_params=None,
             ))
 
     def reset_request_status(self):
@@ -371,31 +348,26 @@ class RaggedBatchBase:
                      uid: int,
                      input_tokens: torch.Tensor,
                      kwargs: Dict) -> Request:
-        prompt_length = len(input_tokens)
-        max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
-        assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
-        max_new_tokens = kwargs.pop(MAX_NEW_TOKENS_KWARG, max_length - prompt_length)
-        min_new_tokens = kwargs.pop(MIN_NEW_TOKENS_KWARG, MIN_NEW_TOKENS_DEFAULT)
-        stream = kwargs.pop(STREAM_KWARG, STREAM_DEFAULT)
-        ignore_eos = kwargs.pop(IGNORE_EOS_KWARG, IGNORE_EOS_DEFAULT)
-        return_full_text = kwargs.pop(RETURN_FULL_TEXT_KWARG, RETURN_FULL_TEXT_DEFAULT)
+        kwargs["prompt_length"] = len(input_tokens)
+        kwargs["max_length"] = kwargs.get("max_length", self.max_length)
+        generate_params = GenerateParamsConfig(**kwargs)
 
         post_processing = []
 
-        top_p = kwargs.pop(TOP_P_KWARG, TOP_P_DEFAULT)
+        top_p = generate_params.top_p
         top_p_name = "_".join((TOP_P_NAME, str(top_p)))
         if top_p_name not in self._post_processors:
             self._post_processors[top_p_name] = TopPLogitProcessor(top_p=top_p)
         post_processing.append(top_p_name)
 
-        top_k = kwargs.pop(TOP_K_KWARG, None)
+        top_k = generate_params.top_k
         if top_k is not None:
             top_k_name = "_".join((TOP_K_NAME, str(top_k)))
             if top_k_name not in self._post_processors:
                 self._post_processors[top_k_name] = TopKLogitProcessor(top_k=top_k)
             post_processing.append(top_k_name)
 
-        temp = kwargs.pop(TEMPERATURE_KWARG, None)
+        temp = generate_params.temperature
         if temp is not None:
             temp_name = "_".join((TEMP_NAME, str(temp)))
             if temp_name not in self._post_processors:
@@ -403,7 +375,7 @@ class RaggedBatchBase:
                     temperature=temp)
             post_processing.append(temp_name)
 
-        do_sample = kwargs.pop(DO_SAMPLE_KWARG, DO_SAMPLE_DEFAULT)
+        do_sample = generate_params.do_sample
         if do_sample:
             sampler_name = "_".join((SAMPLER_NAME, "logits"))
             if sampler_name not in self._post_processors:
@@ -414,9 +386,9 @@ class RaggedBatchBase:
                 self._post_processors[sampler_name] = GreedySampler()
         post_processing.append(sampler_name)
 
-        stop = kwargs.pop(STOP_KWARG, None)
-        if stop is not None:
-            stop_name = "_".join((STOP_NAME, stop))
+        stop = generate_params.stop
+        if stop != []:
+            stop_name = "_".join([STOP_NAME] + stop)
             if stop_name not in self._post_processors:
                 self._post_processors[stop_name] = TokenStopCriterion(
                     token=stop,
@@ -428,22 +400,15 @@ class RaggedBatchBase:
                     tokenizer=self.tokenizer)
         post_processing.append(stop_name)
 
-        assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
-
         return Request(
             tid=tid,
             uid=uid,
             input_tokens=input_tokens,
             prompt_tokens=input_tokens,
             seq_length=0,
-            max_length=max_length,
-            max_new_tokens=max_new_tokens,
-            min_new_tokens=min_new_tokens,
             last_in_prompt=True,
             post_processing=post_processing,
-            stream=stream,
-            ignore_eos=ignore_eos,
-            return_full_text=return_full_text,
+            generate_params=generate_params,
         )
 
     def make_response(self,
