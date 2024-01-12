@@ -225,20 +225,20 @@ class RequestBatch:
         return [r.next_token for r in self.requests]
 
     @property
-    def done_tokens(self) -> List[torch.Tensor]:
+    def done_tokens(self) -> List[bool]:
         return [r.is_done for r in self.requests]
 
     @next_tokens.setter
-    def next_tokens(self, next_tokens: List[torch.Tensor]) -> None:
+    def next_tokens(self, next_tokens: torch.Tensor) -> None:
         assert len(next_tokens) == len(self.requests)
         for idx, r in enumerate(self.requests):
             r.next_token = next_tokens[idx]
 
     @done_tokens.setter
-    def done_tokens(self, done_tokens: List[torch.Tensor]) -> None:
+    def done_tokens(self, done_tokens: torch.Tensor) -> None:
         assert len(done_tokens) == len(self.requests)
         for idx, r in enumerate(self.requests):
-            r.is_done = done_tokens[idx]
+            r.is_done = done_tokens[idx].item()
 
     def to_msg_dicts(self) -> List[Dict[str, Any]]:
         return [r.to_msg_dict() for r in self.requests]

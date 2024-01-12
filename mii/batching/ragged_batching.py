@@ -194,6 +194,7 @@ class RaggedBatchBase:
                                           running_requests,
                                           self._post_processors)
         next_tokens = next_tokens.to(torch.device("cpu"), non_blocking=False)
+        done_tokens = done_tokens.to(torch.device("cpu"), non_blocking=False)
         return next_tokens, done_tokens
 
     @sync_debug
