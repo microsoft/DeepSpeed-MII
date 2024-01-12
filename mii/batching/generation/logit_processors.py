@@ -54,10 +54,11 @@ class TopPLogitProcessor(BaseLogitProcessor):
         # above the threshold
         sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
         sorted_indices_to_remove[..., 0] = 0
-        for i in range(sorted_indices.size(0)):
-            indices_to_remove = sorted_indices[i][sorted_indices_to_remove[i]]
-            logits[i][indices_to_remove] = FLOAT_PAD
-        return logits
+
+        indices_to_remove = sorted_indices_to_remove.scatter(1,
+                                                             sorted_indices,
+                                                             sorted_indices_to_remove)
+        return logits.masked_fill(indices_to_remove, FLOAT_PAD)
 
     def get_key(self) -> str:
         return super().get_key() + f"_top_p={self.top_p}"
