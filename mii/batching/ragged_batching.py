@@ -55,9 +55,11 @@ class RaggedBatchBase:
         self.buffer = deque()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks = torch.zeros(inference_engine.n_kv_cache_groups,
-                                                dtype=torch.int32,
-                                                device="cpu")
+        assert inference_engine.n_kv_cache_groups == 1, "Currently the inference engine has one KV cache group"
+        # We need to extend scheduled_req_blocks to a list when the inference engine supports multiple KV cache groups
+        # like self.scheduled_req_blocks = [0] * inference_engine.n_kv_cache_groups
+        # Now we just use a single int
+        self.scheduled_req_blocks = 0
 
         # TODO: we will need to prune self._post_processors for long running deployments
         self._post_processors = {}
@@ -175,7 +177,7 @@ class RaggedBatchBase:
         self.scheduled_requests = RequestBatch()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks.zero_()
+        self.scheduled_req_blocks = 0
 
     @sync_debug
     def _process_logits(
@@ -229,11 +231,13 @@ class RaggedBatchBase:
 
     def _do_schedule_requests(self, requests: List[Request]) -> None:
 
-        free_blocks = self.inference_engine.free_blocks
+        assert len(self.inference_engine.free_blocks) == 1, "Currently the inference engine has one KV cache group"
+        free_blocks = self.inference_engine.free_blocks.item()
+        if free_blocks == 0:
+            return
+
         conf_manager = self.inference_engine._config.state_manager
         for r in requests:
-            if free_blocks.min().item() == 0:
-                break
 
             if r.max_length <= r.seq_length:
                 continue
@@ -257,6 +261,7 @@ class RaggedBatchBase:
 
             req_tokens = min(len(r.input_tokens), max_batch_size)
             req_tokens, req_blocks = self.inference_engine.query(r.uid, req_tokens, max_blocks)
+            req_blocks = req_blocks.item()
 
             if req_tokens <= 0:
                 continue
