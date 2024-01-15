@@ -442,7 +442,8 @@ class RaggedBatchBase:
                         finish_reason=finish_reason)
 
     def put(self, uids: List[int], tokenized_input: List[torch.Tensor]) -> torch.Tensor:
-        return self.inference_engine.put(uids, tokenized_input)
+        # Call inference engine. You can skip checking schedulability because we already checked when scheduling
+        return self.inference_engine.put(uids, tokenized_input, skip_check=True)
 
     def flush(self, uids: List[int]) -> None:
         for uid in uids:
