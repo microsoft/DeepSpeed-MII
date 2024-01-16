@@ -226,7 +226,7 @@ class RaggedBatchBase:
             self.result_queues[r.tid].put_nowait(output)
 
     def _schedule_token_gen(self, requests: List[Request]) -> None:
-        free_blocks = self.inference_engine.free_blocks.min().item()
+        free_blocks = min(self.inference_engine.free_blocks)
         conf_manager = self.inference_engine._config.state_manager
 
         num_schedulable = min(len(requests), conf_manager.max_ragged_sequence_count)
@@ -247,7 +247,7 @@ class RaggedBatchBase:
                     self.scheduled_requests.append(r)
 
     def _schedule_prompts(self, requests: List[Request]) -> None:
-        free_blocks = self.inference_engine.free_blocks.min().item()
+        free_blocks = min(self.inference_engine.free_blocks)
         conf_manager = self.inference_engine._config.state_manager
 
         for r in requests:
