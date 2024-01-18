@@ -50,6 +50,13 @@ def _parse_kwargs_to_model_config(
 
     # Create the ModelConfig object and return it with remaining kwargs
     model_config = ModelConfig(**model_config)
+
+    # TODO: to find a way to make this more elegant.
+    if "quantization_mode" in remaining_kwargs.keys():
+        model_config.inference_engine_config.quantization.quantization_mode = remaining_kwargs[
+            "quantization_mode"]
+        remaining_kwargs.pop("quantization_mode")
+
     return model_config, remaining_kwargs
 
 
@@ -151,7 +158,8 @@ def serve(
     create_score_file(mii_config)
 
     if mii_config.deployment_type == DeploymentType.LOCAL:
-        import_score_file(mii_config.deployment_name, DeploymentType.LOCAL).init()
+        import_score_file(mii_config.deployment_name,
+                          DeploymentType.LOCAL).init()
         return MIIClient(mii_config=mii_config)
     if mii_config.deployment_type == DeploymentType.AML:
         acr_name = mii.aml_related.utils.get_acr_name()
