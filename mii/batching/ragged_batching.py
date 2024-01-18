@@ -55,9 +55,7 @@ class RaggedBatchBase:
         self.buffer = deque()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks = torch.zeros(inference_engine.n_kv_cache_groups,
-                                                dtype=torch.int32,
-                                                device="cpu")
+        self.scheduled_req_blocks = 0
 
         # TODO: we will need to prune self._post_processors for long running deployments
         self._post_processors = {}
@@ -175,7 +173,7 @@ class RaggedBatchBase:
         self.scheduled_requests = RequestBatch()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks.zero_()
+        self.scheduled_req_blocks = 0
 
     @sync_debug
     def _process_logits(
@@ -194,6 +192,7 @@ class RaggedBatchBase:
                                           running_requests,
                                           self._post_processors)
         next_tokens = next_tokens.to(torch.device("cpu"), non_blocking=False)
+        done_tokens = done_tokens.to(torch.device("cpu"), non_blocking=False)
         return next_tokens, done_tokens
 
     @sync_debug
@@ -226,12 +225,35 @@ class RaggedBatchBase:
         for output in outputs:
             self.result_queues[r.tid].put_nowait(output)
 
-    def _do_schedule_requests(self, requests: List[Request]) -> None:
-
-        free_blocks = self.inference_engine.free_blocks
+    def _schedule_token_gen(self, requests: List[Request]) -> None:
+        free_blocks = min(self.inference_engine.free_blocks)
         conf_manager = self.inference_engine._config.state_manager
+
+        num_schedulable = min([
+            len(requests),
+            conf_manager.max_ragged_sequence_count,
+            conf_manager.max_ragged_batch_size
+        ])
+
+        for r in requests[:num_schedulable]:
+            block_capacity = self.inference_engine.get_remaining_block_capacity(r.uid)
+            # We can schedule token generation if the last block has a capacity
+            if block_capacity > 0:
+                self.scheduled_length += 1
+                self.scheduled_requests.append(r)
+            elif free_blocks > 0:
+                # We need a new block
+                free_blocks -= 1
+                self.scheduled_length += 1
+                self.scheduled_req_blocks += 1
+                self.scheduled_requests.append(r)
+
+    def _schedule_prompts(self, requests: List[Request]) -> None:
+        free_blocks = min(self.inference_engine.free_blocks)
+        conf_manager = self.inference_engine._config.state_manager
+
         for r in requests:
-            if free_blocks.min().item() == 0:
+            if free_blocks == 0:
                 break
 
             if r.max_length <= r.seq_length:
@@ -285,7 +307,6 @@ class RaggedBatchBase:
             r = self.request_queue.get_nowait()
             self.buffer.append(r)
 
-        # Run next token generation first
         next_token_gen_reqs = []
         prompt_reqs = []
 
@@ -293,14 +314,15 @@ class RaggedBatchBase:
             if r.is_flush_request:
                 self.scheduled_requests.append(r)
             else:
-                if len(r.input_tokens) == 1:
-                    next_token_gen_reqs.append(r)
+                if r.num_generated_tokens > 0:
+                    if r.max_length > r.seq_length:
+                        next_token_gen_reqs.append(r)
                 else:
                     prompt_reqs.append(r)
 
         # We want to process next token generation first
-        self._do_schedule_requests(next_token_gen_reqs)
-        self._do_schedule_requests(prompt_reqs)
+        self._schedule_token_gen(next_token_gen_reqs)
+        self._schedule_prompts(prompt_reqs)
 
         if len(self.buffer) > 0 and len(self.scheduled_requests) == 0:
             print(
@@ -422,7 +444,8 @@ class RaggedBatchBase:
                         finish_reason=finish_reason)
 
     def put(self, uids: List[int], tokenized_input: List[torch.Tensor]) -> torch.Tensor:
-        return self.inference_engine.put(uids, tokenized_input)
+        # Call inference engine. You can skip checking schedulability because we already checked when scheduling
+        return self.inference_engine.put(uids, tokenized_input, do_checks=False)
 
     def flush(self, uids: List[int]) -> None:
         for uid in uids:
