@@ -229,8 +229,11 @@ class RaggedBatchBase:
         free_blocks = min(self.inference_engine.free_blocks)
         conf_manager = self.inference_engine._config.state_manager
 
-        num_schedulable = min(len(requests), conf_manager.max_ragged_sequence_count)
-        num_schedulable = min(num_schedulable, conf_manager.max_ragged_batch_size)
+        num_schedulable = min([
+            len(requests),
+            conf_manager.max_ragged_sequence_count,
+            conf_manager.max_ragged_batch_size
+        ])
 
         for r in requests[:num_schedulable]:
             block_capacity = self.inference_engine.get_remaining_block_capacity(r.uid)
@@ -238,13 +241,12 @@ class RaggedBatchBase:
             if block_capacity > 0:
                 self.scheduled_length += 1
                 self.scheduled_requests.append(r)
-            else:
+            elif free_blocks > 0:
                 # We need a new block
-                if free_blocks > 0:
-                    free_blocks -= 1
-                    self.scheduled_length += 1
-                    self.scheduled_req_blocks += 1
-                    self.scheduled_requests.append(r)
+                free_blocks -= 1
+                self.scheduled_length += 1
+                self.scheduled_req_blocks += 1
+                self.scheduled_requests.append(r)
 
     def _schedule_prompts(self, requests: List[Request]) -> None:
         free_blocks = min(self.inference_engine.free_blocks)
