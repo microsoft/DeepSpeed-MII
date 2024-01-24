@@ -483,7 +483,7 @@ class MIIPipeline(RaggedBatchBase):
                     uid, response = self._get_response()
                     outputs.append(response)
                     self._queue_flush_request(uid)
-                    uids_complete_order.append(uids_running.index(uid))
+                    uids_complete_order.append(uid)
                     uids_running.remove(uid)
             # Ensure final flush requests broadcast and
             # kick ranks 1 -> n out of the while loop
