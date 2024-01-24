@@ -13,7 +13,7 @@ from deepspeed.inference import RaggedInferenceEngineConfig
 from mii.constants import DeploymentType, TaskType, ModelProvider
 from mii.errors import DeploymentNotFoundError
 from mii.modeling.tokenizers import MIITokenizerWrapper
-from mii.pydantic_v1 import BaseModel, Field, root_validator, validator
+from mii.pydantic_v1 import BaseModel, Field, root_validator, validator, Extra
 from mii.utils import generate_deployment_name, get_default_task, import_score_file
 
 DEVICE_MAP_DEFAULT = "auto"
@@ -84,6 +84,9 @@ class GenerateParamsConfig(BaseModel):
         if max_new_tokens is None:
             values["max_new_tokens"] = max_length - prompt_length
         return values
+
+    class Config:
+        extra = Extra.forbid
 
 
 class ReplicaConfig(DeepSpeedConfigModel):
