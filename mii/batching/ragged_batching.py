@@ -9,6 +9,7 @@ import queue
 import random
 import threading
 import time
+from dataclasses import dataclass
 from collections import deque, defaultdict
 from functools import cached_property
 from typing import Dict, Tuple, List, Any, Union, DefaultDict
@@ -33,6 +34,7 @@ from mii.batching.utils import sync_debug, profiler
 from mii.config import GenerateParamsConfig
 from mii.constants import GenerationFinishReason, ZMQ_RECV_TIMEOUT
 from mii.logging import logger
+from mii.modeling.tokenizers import MIITokenizerWrapper
 
 
 class RaggedBatchBase:
@@ -199,12 +201,14 @@ class RaggedBatchBase:
     def _generate_output(self, r: Request) -> bool:
         outputs = []
         if r.stream:
-            outputs.append((r.uid,
-                            [r.next_token],
-                            r.prompt_length,
-                            r.num_generated_tokens,
-                            GenerationFinishReason.NONE,
-                            r.stream))
+            outputs.append((
+                r.uid,
+                [r.next_token],
+                r.prompt_length,
+                r.num_generated_tokens,
+                GenerationFinishReason.NONE,
+                r.stream,
+            ))
         if r.finish_reason != GenerationFinishReason.NONE:
             if r.stream or not r.generated_tokens:
                 output_tokens = []
@@ -214,12 +218,14 @@ class RaggedBatchBase:
                 if r.return_full_text:
                     # Avoid returning bos token, refactor this later
                     output_tokens = torch.cat((r.prompt_tokens[1:], output_tokens))
-            outputs.append((r.uid,
-                            output_tokens,
-                            r.prompt_length,
-                            r.num_generated_tokens,
-                            r.finish_reason,
-                            r.stream))
+            outputs.append((
+                r.uid,
+                output_tokens,
+                r.prompt_length,
+                r.num_generated_tokens,
+                r.finish_reason,
+                r.stream,
+            ))
         for output in outputs:
             self.result_queues[r.tid].put_nowait(output)
 
@@ -452,40 +458,47 @@ class RaggedBatchBase:
 
 @dataclass
 class StreamState:
-    prev_tok: str
-    tids: List[int]
+    prev_token_size: int
+    token_ids: List[int]
 
 
-class ReadableStream():
-    def __init__(self, tokenizer):
+class ReadableStream:
+    def __init__(self, tokenizer: MIITokenizerWrapper) -> None:
         self.tokenizer = tokenizer
-        self.stream_state = {}
+        self.stream_state: Dict[int, StreamState] = {}
 
-    def init_state(self, thread_id):
+    def init_state(self, thread_id: int) -> StreamState:
         if thread_id not in self.stream_state:
-            self.stream_state[thread_id] = StreamState(prev_tok=None, tids=[])
+            self.stream_state[thread_id] = StreamState(token_ids=[], prev_token_size=0)
+            return self.stream_state[thread_id]
         return self.stream_state[thread_id]
 
-    def flush_state(self, thread_id):
+    def flush_state(self, thread_id: int) -> None:
         if thread_id in self.stream_state:
             del self.stream_state[thread_id]
 
-    def decode(self, thread_id, token_ids):
-        sstate = self.init_state(thread_id)
-        final = []
-        for tid in token_ids:
-            sstate.tids.append(tid)
-            r = self.tokenizer.decode(sstate.tids)
-            if " " in r:
-                if sstate.prev_tok is not None:
-                    r = r.replace(sstate.prev_tok, "")
-                    sstate.tids = [sstate.tids[-1]]
-            elif len(sstate.tids) > 1:
-                sstate.tids.pop(0)
-                r = r.replace(sstate.prev_tok, "")
-            sstate.prev_tok = self.tokenizer.decode(tid)
-            final.append(r)
-        return "".join(final)
+    def decode(self, thread_id: int, token_ids: List[int]) -> str:
+        state = self.init_state(thread_id)
+        output = []
+
+        for token_id in token_ids:
+            state.token_ids.append(token_id)
+            decoded = self.tokenizer.decode(state.token_ids)
+
+            # We don't have enough token_ids in the buffer and
+            # tokenizer returned unicode 'U+FFFD REPLACEMENT CHARACTER'
+            if "\ufffd" in decoded:
+                continue
+
+            if state.prev_token_size > 0:
+                prev_token = state.token_ids[:state.prev_token_size]
+                state.token_ids = state.token_ids[state.prev_token_size:]
+                decoded = decoded.replace(self.tokenizer.decode(prev_token), "", 1)
+
+            output.append(decoded)
+            state.prev_token_size = len(state.token_ids)
+
+        return "".join(output)
 
 
 class MIIPipeline(RaggedBatchBase):
@@ -652,10 +665,12 @@ class MIIAsyncPipeline(RaggedBatchBase):
         else:
             generated_text = self.tokenizer.decode(generated_token_ids)
 
-        response = self.make_response(generated_text=generated_text,
-                                      prompt_length=prompt_length,
-                                      generated_length=generated_length,
-                                      finish_reason=finish_reason)
+        response = self.make_response(
+            generated_text=generated_text,
+            prompt_length=prompt_length,
+            generated_length=generated_length,
+            finish_reason=finish_reason,
+        )
         return uid, response
 
     def start(self) -> None:
