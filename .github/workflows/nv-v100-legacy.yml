@@ -1,4 +1,4 @@
-name: nv-torch-latest-v100
+name: nv-v100-legacy
 
 on:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: nv-a6000
+name: nv-a6000-fastgen
 
 on:
   workflow_dispatch:
