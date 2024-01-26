@@ -1,17 +1,9 @@
 name: nv-torch-latest-v100
 
 on:
-  push:
-    branches:
-      - 'master'
-      - 'staging**'
-    paths:
-      - 'mii/__init__.py'
-      - 'mii/legacy/**'
-      - 'tests/legacy/**'
-      - '.github/workflows/nv-torch-latest-v100.yml'
-      - 'requirements/**'
-      - 'setup.py'
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
   pull_request:
     paths:
       - 'mii/__init__.py'

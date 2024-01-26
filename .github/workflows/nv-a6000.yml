@@ -1,7 +1,14 @@
 name: nv-a6000
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
   pull_request:
+    paths-ignore:
+      - 'mii/legacy/**'
+      - 'tests/legacy/**'
+      - '.github/workflows/nv-torch-latest-v100.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
