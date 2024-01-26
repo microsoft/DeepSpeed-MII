@@ -32,6 +32,20 @@ jobs:
           cd transformers
           git rev-parse --short HEAD
           python -m pip install .
+      - name: Install deepspeed
+        run: |
+          git clone --depth=1 https://github.com/microsoft/DeepSpeed
+          cd DeepSpeed
+          python -m pip install .
+          ds_report
+      - name: Install MII
+        run: |
+          pip install .[dev]
       - name: Python environment
         run: |
           python -m pip list
+      - name: Unit tests
+        run: |
+          unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
+          cd tests
+          python -m pytest --color=yes --durations=0 --verbose -rF ./
