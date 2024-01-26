@@ -1,5 +1,6 @@
-<!-- [![Build Status](https://github.com/microsoft/deepspeed-mii/workflows/Build/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions) -->
-[![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
+[![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg?branch=main)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
+[![nv-v100-legacy](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-v100-legacy.yml/badge.svg?branch=main)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-v100-legacy.yml)
+[![nv-a6000-fastgen](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-a6000-fastgen.yml/badge.svg?branch=main)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-a6000-fastgen.yml)
 [![License Apache 2.0](https://badgen.net/badge/license/apache2.0/blue)](https://github.com/Microsoft/DeepSpeed/blob/master/LICENSE)
 [![PyPI version](https://badge.fury.io/py/deepspeed-mii.svg)](https://pypi.org/project/deepspeed-mii/)
 <!-- [![Documentation Status](https://readthedocs.org/projects/deepspeed/badge/?version=latest)](https://deepspeed.readthedocs.io/en/latest/?badge=latest) -->
