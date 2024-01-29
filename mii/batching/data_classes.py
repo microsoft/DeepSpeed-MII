@@ -88,6 +88,10 @@ class Request:
     def max_new_tokens(self) -> int:
         return self.generate_params.max_new_tokens
 
+    @max_new_tokens.setter
+    def max_new_tokens(self, max_new_tokens: int) -> None:
+        self.generate_params.max_new_tokens = max_new_tokens
+
     @property
     def stream(self) -> bool:
         return self.generate_params.stream
