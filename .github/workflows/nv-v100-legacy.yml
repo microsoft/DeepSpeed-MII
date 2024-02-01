@@ -1,15 +1,17 @@
-name: nv-torch-latest-v100-local
+name: nv-v100-legacy
 
 on:
-  push:
-    branches:
-      - 'master'
-      - 'staging**'
-    paths-ignore:
-      - 'docs/**'
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
   pull_request:
-    paths-ignore:
-      - 'docs/**'
+    paths:
+      - 'mii/__init__.py'
+      - 'mii/legacy/**'
+      - 'tests/legacy/**'
+      - '.github/workflows/nv-torch-latest-v100.yml'
+      - 'requirements/**'
+      - 'setup.py'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -20,7 +22,7 @@ jobs:
     runs-on: [self-hosted, nvidia, cu116, v100]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - id: setup-venv
         uses: ./.github/workflows/setup-venv

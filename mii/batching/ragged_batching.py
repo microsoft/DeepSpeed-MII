@@ -19,28 +19,7 @@ import zmq
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils.timer import SynchronizedWallClockTimer
 
-from mii.batching.constants import (MAX_LENGTH_KWARG,
-                                    MAX_NEW_TOKENS_KWARG,
-                                    MIN_NEW_TOKENS_KWARG,
-                                    STREAM_KWARG,
-                                    IGNORE_EOS_KWARG,
-                                    TOP_P_KWARG,
-                                    TOP_K_KWARG,
-                                    TEMPERATURE_KWARG,
-                                    RETURN_FULL_TEXT_KWARG,
-                                    DO_SAMPLE_KWARG,
-                                    STOP_KWARG,
-                                    MIN_NEW_TOKENS_DEFAULT,
-                                    STREAM_DEFAULT,
-                                    IGNORE_EOS_DEFAULT,
-                                    TOP_P_DEFAULT,
-                                    RETURN_FULL_TEXT_DEFAULT,
-                                    DO_SAMPLE_DEFAULT,
-                                    TOP_K_NAME,
-                                    TOP_P_NAME,
-                                    TEMP_NAME,
-                                    SAMPLER_NAME,
-                                    STOP_NAME)
+from mii.batching.constants import TOP_K_NAME, TOP_P_NAME, TEMP_NAME, SAMPLER_NAME, STOP_NAME
 from mii.batching.data_classes import Response, Request, RequestBatch
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
 from mii.batching.generation.samplers import LogitsSampler, GreedySampler
@@ -51,6 +30,7 @@ from mii.batching.postprocess import (
     run_batch_stop_criterion,
 )
 from mii.batching.utils import sync_debug, profiler
+from mii.config import GenerateParamsConfig
 from mii.constants import GenerationFinishReason, ZMQ_RECV_TIMEOUT
 from mii.logging import logger
 
@@ -75,9 +55,7 @@ class RaggedBatchBase:
         self.buffer = deque()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks = torch.zeros(inference_engine.n_kv_cache_groups,
-                                                dtype=torch.int32,
-                                                device="cpu")
+        self.scheduled_req_blocks = 0
 
         # TODO: we will need to prune self._post_processors for long running deployments
         self._post_processors = {}
@@ -195,7 +173,7 @@ class RaggedBatchBase:
         self.scheduled_requests = RequestBatch()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks.zero_()
+        self.scheduled_req_blocks = 0
 
     @sync_debug
     def _process_logits(
@@ -214,6 +192,7 @@ class RaggedBatchBase:
                                           running_requests,
                                           self._post_processors)
         next_tokens = next_tokens.to(torch.device("cpu"), non_blocking=False)
+        done_tokens = done_tokens.to(torch.device("cpu"), non_blocking=False)
         return next_tokens, done_tokens
 
     @sync_debug
@@ -246,12 +225,35 @@ class RaggedBatchBase:
         for output in outputs:
             self.result_queues[r.tid].put_nowait(output)
 
-    def _do_schedule_requests(self, requests: List[Request]) -> None:
-
-        free_blocks = self.inference_engine.free_blocks
+    def _schedule_token_gen(self, requests: List[Request]) -> None:
+        free_blocks = min(self.inference_engine.free_blocks)
         conf_manager = self.inference_engine._config.state_manager
+
+        num_schedulable = min([
+            len(requests),
+            conf_manager.max_ragged_sequence_count,
+            conf_manager.max_ragged_batch_size
+        ])
+
+        for r in requests[:num_schedulable]:
+            block_capacity = self.inference_engine.get_remaining_block_capacity(r.uid)
+            # We can schedule token generation if the last block has a capacity
+            if block_capacity > 0:
+                self.scheduled_length += 1
+                self.scheduled_requests.append(r)
+            elif free_blocks > 0:
+                # We need a new block
+                free_blocks -= 1
+                self.scheduled_length += 1
+                self.scheduled_req_blocks += 1
+                self.scheduled_requests.append(r)
+
+    def _schedule_prompts(self, requests: List[Request]) -> None:
+        free_blocks = min(self.inference_engine.free_blocks)
+        conf_manager = self.inference_engine._config.state_manager
+
         for r in requests:
-            if free_blocks.min().item() == 0:
+            if free_blocks == 0:
                 break
 
             if r.max_length <= r.seq_length:
@@ -305,7 +307,6 @@ class RaggedBatchBase:
             r = self.request_queue.get_nowait()
             self.buffer.append(r)
 
-        # Run next token generation first
         next_token_gen_reqs = []
         prompt_reqs = []
 
@@ -313,14 +314,15 @@ class RaggedBatchBase:
             if r.is_flush_request:
                 self.scheduled_requests.append(r)
             else:
-                if len(r.input_tokens) == 1:
-                    next_token_gen_reqs.append(r)
+                if r.num_generated_tokens > 0:
+                    if r.max_length > r.seq_length:
+                        next_token_gen_reqs.append(r)
                 else:
                     prompt_reqs.append(r)
 
         # We want to process next token generation first
-        self._do_schedule_requests(next_token_gen_reqs)
-        self._do_schedule_requests(prompt_reqs)
+        self._schedule_token_gen(next_token_gen_reqs)
+        self._schedule_prompts(prompt_reqs)
 
         if len(self.buffer) > 0 and len(self.scheduled_requests) == 0:
             print(
@@ -341,12 +343,9 @@ class RaggedBatchBase:
                 input_tokens=None,
                 prompt_tokens=None,
                 seq_length=None,
-                max_length=None,
-                max_new_tokens=None,
-                min_new_tokens=None,
                 last_in_prompt=None,
                 post_processing=None,
-                stream=None,
+                generate_params=None,
             ))
 
     def reset_request_status(self):
@@ -371,31 +370,26 @@ class RaggedBatchBase:
                      uid: int,
                      input_tokens: torch.Tensor,
                      kwargs: Dict) -> Request:
-        prompt_length = len(input_tokens)
-        max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
-        assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
-        max_new_tokens = kwargs.pop(MAX_NEW_TOKENS_KWARG, max_length - prompt_length)
-        min_new_tokens = kwargs.pop(MIN_NEW_TOKENS_KWARG, MIN_NEW_TOKENS_DEFAULT)
-        stream = kwargs.pop(STREAM_KWARG, STREAM_DEFAULT)
-        ignore_eos = kwargs.pop(IGNORE_EOS_KWARG, IGNORE_EOS_DEFAULT)
-        return_full_text = kwargs.pop(RETURN_FULL_TEXT_KWARG, RETURN_FULL_TEXT_DEFAULT)
+        kwargs["prompt_length"] = len(input_tokens)
+        kwargs["max_length"] = kwargs.get("max_length", self.max_length)
+        generate_params = GenerateParamsConfig(**kwargs)
 
         post_processing = []
 
-        top_p = kwargs.pop(TOP_P_KWARG, TOP_P_DEFAULT)
+        top_p = generate_params.top_p
         top_p_name = "_".join((TOP_P_NAME, str(top_p)))
         if top_p_name not in self._post_processors:
             self._post_processors[top_p_name] = TopPLogitProcessor(top_p=top_p)
         post_processing.append(top_p_name)
 
-        top_k = kwargs.pop(TOP_K_KWARG, None)
+        top_k = generate_params.top_k
         if top_k is not None:
             top_k_name = "_".join((TOP_K_NAME, str(top_k)))
             if top_k_name not in self._post_processors:
                 self._post_processors[top_k_name] = TopKLogitProcessor(top_k=top_k)
             post_processing.append(top_k_name)
 
-        temp = kwargs.pop(TEMPERATURE_KWARG, None)
+        temp = generate_params.temperature
         if temp is not None:
             temp_name = "_".join((TEMP_NAME, str(temp)))
             if temp_name not in self._post_processors:
@@ -403,7 +397,7 @@ class RaggedBatchBase:
                     temperature=temp)
             post_processing.append(temp_name)
 
-        do_sample = kwargs.pop(DO_SAMPLE_KWARG, DO_SAMPLE_DEFAULT)
+        do_sample = generate_params.do_sample
         if do_sample:
             sampler_name = "_".join((SAMPLER_NAME, "logits"))
             if sampler_name not in self._post_processors:
@@ -414,9 +408,9 @@ class RaggedBatchBase:
                 self._post_processors[sampler_name] = GreedySampler()
         post_processing.append(sampler_name)
 
-        stop = kwargs.pop(STOP_KWARG, None)
-        if stop is not None:
-            stop_name = "_".join((STOP_NAME, stop))
+        stop = generate_params.stop
+        if stop != []:
+            stop_name = "_".join([STOP_NAME] + stop)
             if stop_name not in self._post_processors:
                 self._post_processors[stop_name] = TokenStopCriterion(
                     token=stop,
@@ -428,22 +422,15 @@ class RaggedBatchBase:
                     tokenizer=self.tokenizer)
         post_processing.append(stop_name)
 
-        assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
-
         return Request(
             tid=tid,
             uid=uid,
             input_tokens=input_tokens,
             prompt_tokens=input_tokens,
             seq_length=0,
-            max_length=max_length,
-            max_new_tokens=max_new_tokens,
-            min_new_tokens=min_new_tokens,
             last_in_prompt=True,
             post_processing=post_processing,
-            stream=stream,
-            ignore_eos=ignore_eos,
-            return_full_text=return_full_text,
+            generate_params=generate_params,
         )
 
     def make_response(self,
@@ -457,7 +444,8 @@ class RaggedBatchBase:
                         finish_reason=finish_reason)
 
     def put(self, uids: List[int], tokenized_input: List[torch.Tensor]) -> torch.Tensor:
-        return self.inference_engine.put(uids, tokenized_input)
+        # Call inference engine. You can skip checking schedulability because we already checked when scheduling
+        return self.inference_engine.put(uids, tokenized_input, do_checks=False)
 
     def flush(self, uids: List[int]) -> None:
         for uid in uids:
@@ -495,7 +483,7 @@ class MIIPipeline(RaggedBatchBase):
                     uid, response = self._get_response()
                     outputs.append(response)
                     self._queue_flush_request(uid)
-                    uids_complete_order.append(uids_running.index(uid))
+                    uids_complete_order.append(uid)
                     uids_running.remove(uid)
             # Ensure final flush requests broadcast and
             # kick ranks 1 -> n out of the while loop
