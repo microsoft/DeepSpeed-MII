@@ -28,6 +28,19 @@ def test_streaming(deployment, query):
     assert outputs, "output is empty"
 
 
+def test_streaming_consistency(deployment, query):
+    expected_output = deployment(query, do_sample=False)
+    streaming_parts = []
+
+    def callback(response):
+        streaming_parts.append(response[0].generated_text)
+
+    deployment(query, do_sample=False, streaming_fn=callback)
+    streaming_output = "".join(streaming_parts)
+
+    assert streaming_output == expected_output[0].generated_text, "outputs w and w/o streaming are not equal"
+
+
 def test_multi_prompt(deployment, query):
     outputs = deployment([query] * 4)
     for r in outputs:
