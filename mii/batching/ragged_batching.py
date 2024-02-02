@@ -356,7 +356,7 @@ class RaggedBatchBase:
         for r in self.buffer:
             if r.seq_length > 0:
                 last_r = r
-        assert last_r is not None
+        assert last_r is not None, "Function to clear the KV cache is invoked, but no request consumes KV cache"
 
         ## Schedule flushing r
         self.scheduled_requests.append(
