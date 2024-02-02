@@ -269,9 +269,10 @@ class RaggedBatchBase:
 
             max_blocks = free_blocks - self.scheduled_req_blocks
 
-            # Check capacity to mitigate the deadlock risk
-            # We don't schedule requests when we find that a prompt is too long to fit to the KV cache
             if len(r.input_tokens) > 1:
+                # When the KV cache is out of capacity, we release KV cache blocks for a request.
+                # However, we can immediately schedule the request again if we split the request.
+                # So we make sure that we have capacity for the entire prompt (+tokens already generated).
                 req_tokens, _ = self.inference_engine.query(r.uid, len(r.input_tokens), max_blocks)
                 if req_tokens < len(r.input_tokens):
                     break
@@ -325,9 +326,6 @@ class RaggedBatchBase:
         self._schedule_prompts(prompt_reqs)
 
         if len(self.buffer) > 0 and len(self.scheduled_requests) == 0:
-            print(
-                "Deadlock detected. Resetting KV cache and recomputing requests. Consider limiting number of concurrent requests or decreasing max lengths of prompts/generations."
-            )
             self.scheduled_requests = RequestBatch()
             self.reset_request_status()
         else:
@@ -349,20 +347,45 @@ class RaggedBatchBase:
             ))
 
     def reset_request_status(self):
+        ## Get the last request that consumes KV cache
+        last_r = None
         for r in self.buffer:
             if r.seq_length > 0:
-                self._queue_flush_request(r.uid)
+                last_r = r
+        assert last_r is not None
 
+        ## Schedule flushing r
+        self.scheduled_requests.append(
+            Request(
+                tid=None,
+                uid=last_r.uid,
+                input_tokens=None,
+                prompt_tokens=None,
+                seq_length=None,
+                last_in_prompt=None,
+                post_processing=None,
+                generate_params=None,
+            ))
+
+        ## Rebuild the request
+        new_req = copy.copy(last_r)
+        new_req.prompt_tokens = new_req.input_tokens = torch.concat(
+            [last_r.prompt_tokens] + [t.unsqueeze(0) for t in last_r.generated_tokens])
+        new_req.seq_length = 0
+        new_req.max_new_tokens = last_r.max_new_tokens - len(last_r.generated_tokens)
+        new_req.clear_generated_token()
+
+        ## Remove the requests from buffer and queue
         new_buffer = deque()
         for r in self.buffer:
-            new_req = copy.copy(r)
-            new_req.prompt_tokens = new_req.input_tokens = torch.concat(
-                [r.prompt_tokens] + [t.unsqueeze(0) for t in r.generated_tokens])
-            new_req.seq_length = 0
-            new_req.max_new_tokens = r.max_new_tokens - len(r.generated_tokens)
-            new_req.clear_generated_token()
-            new_buffer.append(new_req)
+            if r.uid != last_r.uid:
+                new_buffer.append(r)
 
+        while not self.request_queue.empty():
+            r = self.request_queue.get_nowait()
+            if r.uid != last_r.uid:
+                new_buffer.append(r)
+        new_buffer.append(new_req)
         self.buffer = new_buffer
 
     def make_request(self,
