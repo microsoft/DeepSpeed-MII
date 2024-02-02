@@ -4,21 +4,20 @@
 # DeepSpeed Team
 
 # Adapted from: https://github.com/lm-sys/FastChat/blob/af4dfe3f0ed481700265914af61b86e0856ac2d9/fastchat/serve/openai_api_server.py
-# Chat template adapte from: https://github.com/vllm-project/vllm/pull/1756
+# Chat template adapted from: https://github.com/vllm-project/vllm/pull/1756
 
 import grpc
 import argparse
 import json
 import os
-from typing import AsyncGenerator, Optional, List, Union
+from typing import Optional, List, Union
 from transformers import AutoTokenizer
 import codecs
 
-import fastapi
 from fastapi import FastAPI, Depends, HTTPException, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 
 import shortuuid
@@ -32,16 +31,16 @@ from fastchat.constants import ErrorCode
 from .data_models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
-    ChatCompletionResponseStreamChoice,
-    ChatCompletionStreamResponse,
+    # ChatCompletionResponseStreamChoice,
+    # ChatCompletionStreamResponse,
     ChatMessage,
     ChatCompletionResponseChoice,
     CompletionRequest,
     CompletionResponse,
     CompletionResponseChoice,
-    DeltaMessage,
-    CompletionResponseStreamChoice,
-    CompletionStreamResponse,
+    # DeltaMessage,
+    # CompletionResponseStreamChoice,
+    # CompletionStreamResponse,
     ErrorResponse,
     ModelCard,
     ModelList,
@@ -56,8 +55,9 @@ tokenizer = None
 app_settings = AppSettings()
 get_bearer_token = HTTPBearer(auto_error=False)
 
+
 async def check_api_key(
-    auth: Optional[HTTPAuthorizationCredentials] = Depends(get_bearer_token),
+        auth: Optional[HTTPAuthorizationCredentials] = Depends(get_bearer_token),
 ) -> str:
     if app_settings.api_keys:
         if auth is None or (token := auth.credentials) not in app_settings.api_keys:
@@ -79,9 +79,10 @@ async def check_api_key(
 
 
 def create_error_response(code: int, message: str) -> JSONResponse:
-    return JSONResponse(
-        ErrorResponse(message=message, code=code).dict(), status_code=400
-    )
+    return JSONResponse(ErrorResponse(message=message,
+                                      code=code).dict(),
+                        status_code=400)
+
 
 def countTokens(prompt: Union[str, List[str]]) -> int:
     if isinstance(prompt, str):
@@ -92,6 +93,7 @@ def countTokens(prompt: Union[str, List[str]]) -> int:
         total_tokens += len(tokenizer(p).input_ids)
 
     return total_tokens
+
 
 def load_chat_template(args, tokenizer):
     if args.chat_template is not None:
@@ -121,7 +123,10 @@ async def validation_exception_handler(request, exc):
 async def show_available_models():
     # TODO: return real model permission details
     model_cards = []
-    model_cards.append(ModelCard(id=app_settings.model_id, root=app_settings.model_id, permission=[ModelPermission()]))
+    model_cards.append(
+        ModelCard(id=app_settings.model_id,
+                  root=app_settings.model_id,
+                  permission=[ModelPermission()]))
     return ModelList(data=model_cards)
 
 
@@ -150,18 +155,14 @@ async def create_chat_completion(request: ChatCompletionRequest):
         )
 
     # Set up the generation arguments
-    generate_args = {
-        "ignore_eos": False,
-        "do_sample": True,
-        "return_full_text": False
-    }
+    generate_args = {"ignore_eos": False, "do_sample": True, "return_full_text": False}
 
     if request.min_tokens is not None:
         generate_args["min_new_tokens"] = request.min_tokens
-    
+
     if request.max_tokens is not None:
         generate_args["max_new_tokens"] = request.max_tokens
-    
+
     if request.top_p is not None:
         generate_args["top_p"] = request.top_p
 
@@ -170,9 +171,9 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     if request.temperature is not None:
         generate_args["temperature"] = request.temperature
-    
+
     if request.stop is not None:
-        generate_args["stop"] = request.stop    
+        generate_args["stop"] = request.stop
 
     if request.stream:
         generate_args["stream"] = True
@@ -237,7 +238,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
         #         yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
         #     yield "data: [DONE]\n\n"
         # return StreamingResponse(StreamResults(), media_type="text/event-stream")
-    
+
     # Non-streaming case
     responseData = await stub.GeneratorReply(requestData)
     choices = []
@@ -245,19 +246,25 @@ async def create_chat_completion(request: ChatCompletionRequest):
     for c in responseData.response:
         choice = ChatCompletionResponseChoice(
             index=len(choices),
-            message=ChatMessage(role=response_role, content=c.response),
+            message=ChatMessage(role=response_role,
+                                content=c.response),
             finish_reason=None if c.finish_reason == "none" else c.finish_reason,
         )
         choices.append(choice)
 
-    prompt_tokens = countTokens([message['content'] for message in request.messages if 'content' in message]) * request.n
+    prompt_tokens = countTokens(
+        [message['content']
+         for message in request.messages if 'content' in message]) * request.n
     completion_tokens = countTokens([r.response for r in responseData.response])
 
-    return ChatCompletionResponse(model=app_settings.model_id, choices=choices, usage=UsageInfo(
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        total_tokens=prompt_tokens + completion_tokens,
-    ))
+    return ChatCompletionResponse(model=app_settings.model_id,
+                                  choices=choices,
+                                  usage=UsageInfo(
+                                      prompt_tokens=prompt_tokens,
+                                      completion_tokens=completion_tokens,
+                                      total_tokens=prompt_tokens + completion_tokens,
+                                  ))
+
 
 @app.post("/v1/completions", dependencies=[Depends(check_api_key)])
 async def create_completion(request: CompletionRequest):
@@ -287,22 +294,18 @@ async def create_completion(request: CompletionRequest):
         request.prompt = [request.prompt]
 
     # Set up the generation arguments
-    generate_args = {
-        "ignore_eos": False,
-        "do_sample": True,
-        "return_full_text": False
-    }
+    generate_args = {"ignore_eos": False, "do_sample": True, "return_full_text": False}
 
     # Set optional generation arguments
     if request.max_length is not None:
         generate_args["max_length"] = request.max_length
-    
+
     if request.min_tokens is not None:
         generate_args["min_new_tokens"] = request.min_tokens
-    
+
     if request.max_tokens is not None:
         generate_args["max_new_tokens"] = request.max_tokens
-    
+
     if request.top_p is not None:
         generate_args["top_p"] = request.top_p
 
@@ -311,9 +314,9 @@ async def create_completion(request: CompletionRequest):
 
     if request.temperature is not None:
         generate_args["temperature"] = request.temperature
-    
+
     if request.stop is not None:
-        generate_args["stop"] = request.stop    
+        generate_args["stop"] = request.stop
 
     if request.stream:
         generate_args["stream"] = True
@@ -372,13 +375,14 @@ async def create_completion(request: CompletionRequest):
     prompt_tokens = countTokens(request.prompt)
     completion_tokens = countTokens([r.response for r in responseData.response])
 
-    return CompletionResponse(
-        model=app_settings.model_id, choices=choices, usage=UsageInfo(
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=prompt_tokens + completion_tokens,
-        )
-    )
+    return CompletionResponse(model=app_settings.model_id,
+                              choices=choices,
+                              usage=UsageInfo(
+                                  prompt_tokens=prompt_tokens,
+                                  completion_tokens=completion_tokens,
+                                  total_tokens=prompt_tokens + completion_tokens,
+                              ))
+
 
 @app.get("/health")
 async def health() -> Response:
@@ -392,102 +396,80 @@ if __name__ == "__main__":
         "--model",
         type=str,
         default="mistralai/Mistral-7B-Instruct-v0.1",
-        help="model name or path to model directory (defaults to mistralai/Mistral-7B-Instruct-v0.1)"
+        help=
+        "model name or path to model directory (defaults to mistralai/Mistral-7B-Instruct-v0.1)"
     )
     parser.add_argument(
         '--deployment-name',
         type=str,
         default="deepspeed-mii",
-        help='A unique identifying string for the persistent model (defaults to f"deepspeed-mii")'
+        help=
+        'A unique identifying string for the persistent model (defaults to f"deepspeed-mii")'
     )
-    parser.add_argument(
-        "--load-balancer",
-        type=str,
-        default=None,
-        help="load balancer address (defaults to None)"
-    )
-    parser.add_argument(
-        "--max-length",
-        type=int,
-        default=32768,
-        help="maximum token length (defaults to 32768)"
-    )
-    parser.add_argument(
-        "--host",
-        type=str,
-        default="0.0.0.0",
-        help="host address (defaults to 0.0.0.0)"
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=8000,
-        help="port (defaults to 8000)"
-    )
+    parser.add_argument("--load-balancer",
+                        type=str,
+                        default=None,
+                        help="load balancer address (defaults to None)")
+    parser.add_argument("--max-length",
+                        type=int,
+                        default=32768,
+                        help="maximum token length (defaults to 32768)")
+    parser.add_argument("--host",
+                        type=str,
+                        default="0.0.0.0",
+                        help="host address (defaults to 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=8000, help="port (defaults to 8000)")
     parser.add_argument(
         "--allow-credentials",
         action="store_true",\
         help="allow credentials"
     )
-    parser.add_argument(
-        "--allowed-origins",
-        type=json.loads,
-        default=["*"],
-        help="allowed origins"
-    )
-    parser.add_argument(
-        "--allowed-methods",
-        type=json.loads,
-        default=["*"],
-        help="allowed methods"
-    )
-    parser.add_argument(
-        "--allowed-headers",
-        type=json.loads,
-        default=["*"],
-        help="allowed headers"
-    )
+    parser.add_argument("--allowed-origins",
+                        type=json.loads,
+                        default=["*"],
+                        help="allowed origins")
+    parser.add_argument("--allowed-methods",
+                        type=json.loads,
+                        default=["*"],
+                        help="allowed methods")
+    parser.add_argument("--allowed-headers",
+                        type=json.loads,
+                        default=["*"],
+                        help="allowed headers")
     parser.add_argument(
         '--max_length',
         type=int,
         default=None,
-        help='Sets the default maximum token length for the prompt + response (defaults to maximum sequence length in model config)'
+        help=
+        'Sets the default maximum token length for the prompt + response (defaults to maximum sequence length in model config)'
     )
-    parser.add_argument(
-        '--tensor-parallel',
-        type=int,
-        default=1,
-        help='Number of GPUs to split the model across (defaults to 1)'
-    )
-    parser.add_argument(
-        '--replica-num',
-        type=int,
-        default=1,
-        help='The number of model replicas to stand up (defaults to 1)'
-    )
+    parser.add_argument('--tensor-parallel',
+                        type=int,
+                        default=1,
+                        help='Number of GPUs to split the model across (defaults to 1)')
+    parser.add_argument('--replica-num',
+                        type=int,
+                        default=1,
+                        help='The number of model replicas to stand up (defaults to 1)')
     parser.add_argument(
         "--chat-template",
         type=str,
         default=None,
-        help="Path to chat template file,, or chat template string (defaults to None)"
-    )
-    parser.add_argument(
-        "--response-role",
-        type=str,
-        default="assistant",
-        help="Role for the response"
-    )
-    parser.add_argument(
-        "--api-keys",
-        type=lambda s: s.split(","),
-        help="Optional list of comma separated API keys"
-    )
+        help="Path to chat template file,, or chat template string (defaults to None)")
+    parser.add_argument("--response-role",
+                        type=str,
+                        default="assistant",
+                        help="Role for the response")
+    parser.add_argument("--api-keys",
+                        type=lambda s: s.split(","),
+                        help="Optional list of comma separated API keys")
     parser.add_argument(
         "--ssl",
         action="store_true",
         required=False,
         default=False,
-        help="Enable SSL. Requires OS Environment variables 'SSL_KEYFILE' and 'SSL_CERTFILE'."
+        help=
+        "Enable SSL. Requires OS Environment variables 'SSL_KEYFILE' and 'SSL_CERTFILE'."
     )
     args = parser.parse_args()
 
@@ -512,14 +494,20 @@ if __name__ == "__main__":
     # Check if a load balancer is specified else start the DeepSpeed-MII instance
     if args.load_balancer is not None:
         # Set the load balancer
-        print(f"Using existing DeepSpeed-MII instance for model {app_settings.model_id}...")
+        print(
+            f"Using existing DeepSpeed-MII instance for model {app_settings.model_id}..."
+        )
         print(f"Load balancer: {args.load_balancer}")
         load_balancer = args.load_balancer
     else:
         # Initialize the DeepSpeed-MII instance
         print(f"Starting DeepSpeed-MII instance for model {app_settings.model_id}...")
         print(f"Deployment name: {app_settings.deployment_name}")
-        mii.serve(app_settings.model_id, deployment_name=app_settings.deployment_name, tensor_parallel=args.tensor_parallel, replica_num=args.replica_num, max_length=args.max_length)
+        mii.serve(app_settings.model_id,
+                  deployment_name=app_settings.deployment_name,
+                  tensor_parallel=args.tensor_parallel,
+                  replica_num=args.replica_num,
+                  max_length=args.max_length)
 
     tokenizer = AutoTokenizer.from_pretrained(app_settings.model_id)
     load_chat_template(args, tokenizer)
@@ -532,11 +520,9 @@ if __name__ == "__main__":
         "ssl_certfile": os.environ["SSL_CERTFILE"]
     } if args.ssl else {}
 
-    uvicorn.run(
-        app,
-        host=args.host,
-        port=args.port,
-        log_level="info",
-        timeout_keep_alive=300,
-        **ssl_config
-    )
+    uvicorn.run(app,
+                host=args.host,
+                port=args.port,
+                log_level="info",
+                timeout_keep_alive=300,
+                **ssl_config)
