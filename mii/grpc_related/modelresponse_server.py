@@ -65,12 +65,13 @@ class ModelResponse(ServiceBase):
         task_methods = self._get_task_methods("GeneratorReply")
 
         prompts, kwargs = task_methods.unpack_request_from_proto(request)
-        uids_running, uids_complete_order, responses = [], [], []
+        uids_put_order, uids_running, uids_complete_order, responses = [], [], [], []
 
         # Put requests for all prompts into the pipeline
         for p in prompts:
             request_kwargs = kwargs.copy()
             uid = self.inference_pipeline.put_request(p, request_kwargs)
+            uids_put_order.append(uid)
             uids_running.append(uid)
 
         # Get responses from the pipeline as they are ready, flush finished uids
@@ -82,7 +83,7 @@ class ModelResponse(ServiceBase):
                 uid = uids_running[0]
             responses.append(response)
             self.inference_pipeline.flush_uid(uid)
-            uids_complete_order.append(uids_running.index(uid))
+            uids_complete_order.append(uids_put_order.index(uid))
             uids_running.remove(uid)
 
         # Sort responses in the order of prompts
