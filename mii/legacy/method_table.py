@@ -240,7 +240,9 @@ class Text2ImgMethods(TaskMethods):
 
     def run_inference(self, inference_pipeline, args, kwargs):
         prompt, negative_prompt = args
-        return inference_pipeline(prompt=prompt, negative_prompt=negative_prompt, **kwargs)
+        return inference_pipeline(prompt=prompt,
+                                  negative_prompt=negative_prompt,
+                                  **kwargs)
 
     def pack_request_to_proto(self, request_dict, **query_kwargs):
         prompt = request_dict["prompt"]
