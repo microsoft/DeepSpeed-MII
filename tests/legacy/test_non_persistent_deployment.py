@@ -76,6 +76,14 @@ import mii.legacy as mii
                                      "landscape"],
             },
         ),
+        (
+            "text-to-image",
+            "runwayml/stable-diffusion-v1-5",
+            {
+                "prompt": "a photo of an astronaut riding a horse on mars",
+                "negative_prompt": "night",
+            },
+        ),
     ],
 )
 def test_single_GPU(deployment, query):
