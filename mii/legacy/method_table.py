@@ -238,8 +238,25 @@ class Text2ImgMethods(TaskMethods):
     def method(self):
         return "Txt2ImgReply"
 
-    pack_request_to_proto = multi_string_request_to_proto
-    unpack_request_from_proto = proto_request_to_list
+    def run_inference(self, inference_pipeline, args, kwargs):
+        prompt, negative_prompt = args
+        return inference_pipeline(prompt=prompt, negative_prompt=negative_prompt, **kwargs)
+
+    def pack_request_to_proto(self, request_dict, **query_kwargs):
+        prompt = request_dict["prompt"]
+        if "negative_prompt" not in request_dict:
+            if isinstance(prompt, str):
+                negative_prompt = ""
+            elif isinstance(prompt, list):
+                negative_prompt = [""] * len(prompt)
+        else:
+            negative_prompt = request_dict["negative_prompt"]
+
+        return modelresponse_pb2.Text2ImageRequest(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            query_kwargs=kwarg_dict_to_proto(query_kwargs),
+        )
 
     def pack_response_to_proto(self, response, time_taken, model_time_taken):
         images_bytes = []
@@ -265,6 +282,11 @@ class Text2ImgMethods(TaskMethods):
 
     def unpack_response_from_proto(self, response):
         return ImageResponse(response)
+
+    def unpack_request_from_proto(self, request):
+        kwargs = unpack_proto_query_kwargs(request.query_kwargs)
+        args = (list(request.prompt), list(request.negative_prompt))
+        return args, kwargs
 
 
 class ZeroShotImgClassificationMethods(TaskMethods):
