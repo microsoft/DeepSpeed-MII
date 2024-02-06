@@ -437,17 +437,19 @@ class RaggedBatchBase:
 
         stop = generate_params.stop
         if stop != []:
-            stop_name = "_".join([STOP_NAME] + stop)
-            if stop_name not in self._post_processors:
-                self._post_processors[stop_name] = TokenStopCriterion(
-                    token=stop,
-                    tokenizer=self.tokenizer)
+            for each_stop in stop:
+                stop_name = STOP_NAME + '_' + each_stop
+                if stop_name not in self._post_processors:
+                    self._post_processors[stop_name] = TokenStopCriterion(
+                        token=each_stop,
+                        tokenizer=self.tokenizer)
+                post_processing.append(stop_name)
         else:
             stop_name = STOP_NAME
             if STOP_NAME not in self._post_processors:
                 self._post_processors[stop_name] = EosGenerationStopCriterion(
                     tokenizer=self.tokenizer)
-        post_processing.append(stop_name)
+            post_processing.append(stop_name)
 
         return Request(
             tid=tid,

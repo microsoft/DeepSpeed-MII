@@ -60,6 +60,9 @@ class HFTokenizer(MIITokenizerWrapper):
     def encode(self, input: str) -> torch.Tensor:
         return self.tokenizer.encode(input, return_tensors="pt").flatten()
 
+    def convert_tokens_to_ids(self, input: str) -> int:
+        return self.tokenizer.convert_tokens_to_ids(input)
+
     def decode(self, tokens: torch.Tensor) -> str:
         return self.tokenizer.decode(tokens)
 
