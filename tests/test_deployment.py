@@ -111,7 +111,6 @@ def test_do_sample(deployment, query):
 
 
 def test_stop_token(deployment, query):
-    pytest.skip("not working yet")
     output = deployment(query, stop=".", max_length=512)
     print(str(output.response))
     assert str(output.response[0]).endswith("."), "output should end with 'the'"
