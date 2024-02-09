@@ -37,7 +37,6 @@ jobs:
         run: |
           pip install git+https://github.com/microsoft/DeepSpeed.git
           pip install git+https://github.com/huggingface/transformers.git
-          pip install git+https://github.com/huggingface/diffusers.git
           pip install -U accelerate
           ds_report
 
