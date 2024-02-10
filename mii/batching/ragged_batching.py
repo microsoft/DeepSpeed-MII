@@ -537,12 +537,21 @@ class MIIPipeline(RaggedBatchBase):
         self.tid = threading.get_ident()
         self._destroyed = False
 
-    def __call__(self, inputs: Union[str, List[str]], **kwargs) -> List[Response]:
+    def __call__(self,
+                 prompts: Union[str,
+                                List[str]],
+                 all_rank_output: bool = False,
+                 **generate_kwargs) -> List[Response]:
         """
         Generates text for the given prompts
 
-        :param inputs: The string or list of strings used as prompts for generation.
-        :param \**generate_kwargs: Generation keywords. A full list can be found here.
+        :param prompts: The string or list of strings used as prompts for generation.
+        :param all_rank_output: Whether to return generated text on all ranks
+            (when using `tensor_parallel>1`). If `True`, all ranks will return the
+            same output. If `False`, only rank 0 will return output and the rest
+            will return `None`.
+        :param \**generate_kwargs: Generation keywords. A full list can be found
+            in :class:`GenerateParamsConfig <mii.config.GenerateParamsConfig>`.
 
         :return: A list of :class:`Response` objects containing the generated
             text for all prompts.
@@ -551,8 +560,8 @@ class MIIPipeline(RaggedBatchBase):
             raise RuntimeError(
                 "The inference engine of this pipeline has been destroyed.")
 
-        if isinstance(inputs, str):
-            inputs = [inputs]
+        if isinstance(prompts, str):
+            prompts = [prompts]
         outputs: List[Response] = []
         uids_running: List[int] = list(range(len(prompts)))
         uids_complete_order: List[int] = []

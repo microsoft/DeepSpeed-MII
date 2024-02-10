@@ -63,9 +63,10 @@ As ``model_config`` and ``mii_config`` dictionaries:
 Text-Generation Configuration
 -----------------------------
 
-The :class:`GenerateConfig <mii.config.GenerateConfig>` is used to process
-user-provided keyword arguments passed to :class:`MIIPipeline
+The :class:`GenerateParamsConfig <mii.config.GenerateParamsConfig>` is used to
+process user-provided keyword arguments passed to :class:`MIIPipeline
 <mii.batching.ragged_batching.MIIPipeline>` and :class:`MIIClient
 <mii.backend.client.MIIClient>` when doing text-generation.
 
-.. autopydantic_model:: mii.config.GenerateConfig
+.. autopydantic_model:: mii.config.GenerateParamsConfig
+    :exclude-members: prompt_length
