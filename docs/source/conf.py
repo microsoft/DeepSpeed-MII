@@ -25,37 +25,23 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.linkcode',
+    'sphinx.ext.viewcode',
     'sphinx_autodoc_typehints',
     'sphinx_copybutton',
     'sphinx-prompt',
     'sphinxcontrib.autodoc_pydantic',
 ]
 
-#intersphinx_mapping = {
-#    'python': ('https://docs.python.org/3/',
-#               None),
-#    'sphinx': ('https://www.sphinx-doc.org/en/master/',
-#               None),
-#}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/',
+               None),
+    'sphinx': ('https://www.sphinx-doc.org/en/master/',
+               None),
+}
 intersphinx_disabled_domains = ['std']
 
 # sphinx_autodoc_typehints config
 typehints_defaults = "braces"
-
-
-# linkcode config
-def linkcode_resolve(domain, info):
-    if domain != 'py':
-        return None
-    if not info['module']:
-        return None
-    filename = info['module'].replace('.', '/')
-    #return f"https://github.com/Microsoft/DeepSpeed-MII/tree/v{release}/{filename}.py"
-    if filename == "mii":
-        filename = "mii/api.py"
-    return f"https://github.com/Microsoft/DeepSpeed-MII/tree/main/{filename}.py"
-
 
 # autodoc_pyandtic config
 autodoc_pydantic_model_show_field_summary = False
@@ -83,6 +69,11 @@ templates_path = ['_templates']
 # -- Options for HTML output
 
 html_theme = 'sphinx_rtd_theme'
+html_theme_options = {
+    "logo_only": True,
+}
+html_logo = "../images/mii-dark.svg"
+logo_only = True
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'

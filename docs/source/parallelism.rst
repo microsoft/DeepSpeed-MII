@@ -1,4 +1,4 @@
-Model parallelism
+Model Parallelism
 =================
 
 DeepSpeed-MII supports model parallelism via tensor parallelism for splitting models across multiple GPUs.

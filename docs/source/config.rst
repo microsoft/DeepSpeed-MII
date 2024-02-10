@@ -36,11 +36,11 @@ As a ``model_config`` dictionary:
 MII Server Configuration
 ------------------------
 
-The :class:`mii.config.MIIConfig` is used to stand up a DeepSpeed-MII `gRPC
-<https://grpc.io/>`_ server and provide a large amount of control to users. This
-class is automatically generated from user-provided arguments to
-:func:`mii.serve`. The fields can be provided in a ``mii_config`` dictionary or
-as keyword arguments.
+The :class:`MIIConfig <mii.config.MIIConfig>` is used to stand up a
+DeepSpeed-MII `gRPC <https://grpc.io/>`_ server and provide a large amount of
+control to users. This class is automatically generated from user-provided
+arguments to :func:`mii.serve`. The fields can be provided in a ``mii_config``
+dictionary or as keyword arguments.
 
 For example, to change the base port number used to to communicate with a
 persistent deployment and the default ``max_length`` for token generation, the
@@ -62,5 +62,10 @@ As ``model_config`` and ``mii_config`` dictionaries:
 
 Text-Generation Configuration
 -----------------------------
+
+The :class:`GenerateConfig <mii.config.GenerateConfig>` is used to process
+user-provided keyword arguments passed to :class:`MIIPipeline
+<mii.batching.ragged_batching.MIIPipeline>` and :class:`MIIClient
+<mii.backend.client.MIIClient>` when doing text-generation.
 
 .. autopydantic_model:: mii.config.GenerateConfig
