@@ -1,3 +1,4 @@
+autodoc_pydantic
 deepspeed
 grpcio
 sphinx==7.1.2
