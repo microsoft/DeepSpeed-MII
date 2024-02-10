@@ -6,7 +6,6 @@ import os
 import string
 from typing import List, Optional, Union, Dict, Any, Literal
 
-from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
 from deepspeed.inference import RaggedInferenceEngineConfig
 
@@ -19,7 +18,17 @@ from mii.utils import generate_deployment_name, get_default_task, import_score_f
 DEVICE_MAP_DEFAULT = "auto"
 
 
-class GenerateParamsConfig(BaseModel):
+class MIIConfigModel(BaseModel):
+    class Config:
+        validate_all = True
+        validate_assignment = True
+        use_enum_values = True
+        allow_population_by_field_name = True
+        extra = "forbid"
+        arbitrary_types_allowed = True
+
+
+class GenerateParamsConfig(MIIConfigModel):
     """
     Options for changing text-generation behavior.
     """
@@ -89,7 +98,7 @@ class GenerateParamsConfig(BaseModel):
         extra = Extra.forbid
 
 
-class ReplicaConfig(DeepSpeedConfigModel):
+class ReplicaConfig(MIIConfigModel):
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
     torch_dist_port: int = None
@@ -97,7 +106,7 @@ class ReplicaConfig(DeepSpeedConfigModel):
     zmq_port: int = None
 
 
-class ModelConfig(DeepSpeedConfigModel):
+class ModelConfig(MIIConfigModel):
     model_name_or_path: str
     """
     Model name or path of the model to HuggingFace model to be deployed.
@@ -209,7 +218,7 @@ class ModelConfig(DeepSpeedConfigModel):
         return values
 
 
-class MIIConfig(DeepSpeedConfigModel):
+class MIIConfig(MIIConfigModel):
     deployment_name: str = ""
     """
     Name of the deployment. Used as an identifier for obtaining a inference
