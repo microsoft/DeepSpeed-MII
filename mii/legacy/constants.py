@@ -61,7 +61,11 @@ REQUIRED_KEYS_PER_TASK = {
     TaskType.TEXT2IMG: ["query"],
     TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image",
                                               "candidate_labels"],
-    TaskType.INPAINTING: ["prompt", "image", "mask_image",]
+    TaskType.INPAINTING: [
+        "prompt",
+        "image",
+        "mask_image",
+    ]
 }
 
 MII_CACHE_PATH = "MII_CACHE_PATH"

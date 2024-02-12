@@ -295,7 +295,7 @@ class InpaintingMethods(Text2ImgMethods):
     @property
     def method(self):
         return "InpaintingReply"
-    
+
     def run_inference(self, inference_pipeline, args, kwargs):
         prompt, image, mask_image, negative_prompt = args
         return inference_pipeline(prompt=prompt,
@@ -308,7 +308,8 @@ class InpaintingMethods(Text2ImgMethods):
         prompt = request_dict["prompt"]
         prompt = [prompt] if isinstance(prompt, str) else prompt
         negative_prompt = request_dict.get("negative_prompt", [""] * len(prompt))
-        negative_prompt = [negative_prompt] if isinstance(negative_prompt, str) else negative_prompt
+        negative_prompt = [negative_prompt] if isinstance(negative_prompt,
+                                                          str) else negative_prompt
         image = request_dict["image"]
         mask_image = request_dict["mask_image"]
 
@@ -322,7 +323,10 @@ class InpaintingMethods(Text2ImgMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        args = (list(request.prompt), list(request.image), list(request.mask_image), list(request.negative_prompt))
+        args = (list(request.prompt),
+                list(request.image),
+                list(request.mask_image),
+                list(request.negative_prompt))
         return args, kwargs
 
 

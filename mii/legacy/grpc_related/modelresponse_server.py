@@ -125,7 +125,7 @@ class ModelResponse(ServiceBase):
 
     def ZeroShotImgClassificationReply(self, request, context):
         return self._run_inference("ZeroShotImgClassificationReply", request)
-    
+
     def InpaintingReply(self, request, context):
         return self._run_inference("InpaintingReply", request)
 
