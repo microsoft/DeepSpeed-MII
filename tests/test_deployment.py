@@ -111,8 +111,8 @@ def test_do_sample(deployment, query):
 
 
 def test_stop_token(deployment, query):
-    output = deployment(query, stop=".", max_length=512)
-    assert output.response[0].generated_text.endswith("."), "output should end with '.'"
+    outputs = deployment(query, stop=".", max_length=512)
+    assert outputs[0].generated_text.endswith("."), "output should end with '.'"
 
 
 def test_return_full_text(deployment, query):
