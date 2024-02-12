@@ -106,6 +106,7 @@ def model_config(
     replace_with_kernel_inject: bool,
 ):
     config = SimpleNamespace(
+        skip_model_check=True, # TODO: remove this once conversation task check is fixed
         task=task_name,
         model=model_name,
         dtype=dtype,
@@ -113,6 +114,7 @@ def model_config(
         model_path=os.getenv("TRANSFORMERS_CACHE",
                              ""),
         meta_tensor=meta_tensor,
+        load_with_sys_mem=load_with_sys_mem,
         replica_num=replica_num,
         enable_deepspeed=enable_deepspeed,
         enable_zero=enable_zero,
