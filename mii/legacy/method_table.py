@@ -248,7 +248,8 @@ class Text2ImgMethods(TaskMethods):
         prompt = request_dict["prompt"]
         prompt = [prompt] if isinstance(prompt, str) else prompt
         negative_prompt = request_dict.get("negative_prompt", [""] * len(prompt))
-        negative_prompt = [negative_prompt] if isinstance(negative_prompt, str) else negative_prompt
+        negative_prompt = [negative_prompt] if isinstance(negative_prompt,
+                                                          str) else negative_prompt
 
         return modelresponse_pb2.Text2ImageRequest(
             prompt=prompt,
