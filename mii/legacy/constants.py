@@ -20,7 +20,7 @@ class TaskType(str, Enum):
     CONVERSATIONAL = "conversational"
     TEXT2IMG = "text-to-image"
     ZERO_SHOT_IMAGE_CLASSIFICATION = "zero-shot-image-classification"
-    INPAINTING = "inpainting"
+    INPAINTING = "text-to-image-inpainting"
 
 
 class ModelProvider(str, Enum):
