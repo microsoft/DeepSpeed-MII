@@ -4,7 +4,7 @@
 # DeepSpeed Team
 import os
 import string
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union, Dict, Any, Literal
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
@@ -13,8 +13,80 @@ from deepspeed.inference import RaggedInferenceEngineConfig
 from mii.constants import DeploymentType, TaskType, ModelProvider
 from mii.errors import DeploymentNotFoundError
 from mii.modeling.tokenizers import MIITokenizerWrapper
-from mii.pydantic_v1 import Field, root_validator
+from mii.pydantic_v1 import BaseModel, Field, root_validator, validator, Extra
 from mii.utils import generate_deployment_name, get_default_task, import_score_file
+
+DEVICE_MAP_DEFAULT = "auto"
+
+
+class GenerateParamsConfig(BaseModel):
+    """
+    Options for changing text-generation behavior.
+    """
+
+    prompt_length: int
+    """ Length of the input prompt. Autopopulated when creating requests, any user-provided values will be ignored."""
+
+    max_length: int = 1024
+    """ Maximum length of ``input_tokens`` + ``generated_tokens``. """
+
+    max_new_tokens: int = None
+    """ Maximum number of new tokens generated. ``max_length`` takes precedent. """
+
+    min_new_tokens: int = 0
+    """ Minimum number of new tokens generated. """
+
+    stream: bool = False
+    """ Enable streaming output. """
+
+    ignore_eos: bool = False
+    """ Ignore EoS token and continue generating text until we reach ``max_length`` or ``max_new_tokens``. """
+
+    return_full_text: bool = False
+    """ Prepends the input prompt to the generated text. """
+
+    do_sample: bool = True
+    """ When ``False``, do greedy sampling. """
+
+    top_p: float = Field(0.9, gt=0, le=1)
+    """ Top P value. """
+
+    top_k: Optional[int] = Field(None, gt=0)
+    """ Top K value. """
+
+    temperature: Optional[float] = Field(None, gt=0)
+    """ Temperature value. """
+
+    stop: List[str] = []
+    """ List of strings to stop generation at."""
+    @validator("stop", pre=True)
+    def make_stop_string_list(cls, field_value: Union[str, List[str]]) -> List[str]:
+        if isinstance(field_value, str):
+            return [field_value]
+        return field_value
+
+    @validator("stop")
+    def sort_stop_strings(cls, field_value: List[str]) -> List[str]:
+        return sorted(field_value)
+
+    @root_validator
+    def check_prompt_length(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        prompt_length = values.get("prompt_length")
+        max_length = values.get("max_length")
+        assert max_length > prompt_length, f"max_length ({max_length}) must be greater than prompt_length ({prompt_length})"
+        return values
+
+    @root_validator
+    def set_max_new_tokens(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        max_length = values.get("max_length")
+        max_new_tokens = values.get("max_new_tokens")
+        prompt_length = values.get("prompt_length")
+        if max_new_tokens is None:
+            values["max_new_tokens"] = max_length - prompt_length
+        return values
+
+    class Config:
+        extra = Extra.forbid
 
 
 class GenerateConfig(DeepSpeedConfigModel):
@@ -116,6 +188,12 @@ class ModelConfig(DeepSpeedConfigModel):
     generated, but you can provide a set of custom configs.
     """
 
+    device_map: Union[Literal["auto"], Dict[str, List[List[int]]]] = DEVICE_MAP_DEFAULT
+    """
+    GPU indices a model is deployed on. Note that CUDA_VISIBLE_DEVICES does not
+    work with DeepSpeed-MII.
+    """
+
     max_length: Optional[int] = None
     """
     The maximum number of tokens DeepSpeed-Inference can work with, including
@@ -134,6 +212,16 @@ class ModelConfig(DeepSpeedConfigModel):
     @property
     def provider(self) -> ModelProvider:
         return ModelProvider.HUGGING_FACE
+
+    @validator("device_map", pre=True)
+    def make_device_map_dict(cls, v):
+        if isinstance(v, int):
+            return {"localhost": [[v]]}
+        if isinstance(v, list) and isinstance(v[0], int):
+            return {"localhost": [v]}
+        if isinstance(v, list) and isinstance(v[0], list):
+            return {"localhost": v}
+        return v
 
     @root_validator
     def auto_fill_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -186,9 +274,19 @@ class MIIConfig(DeepSpeedConfigModel):
     Enables a RESTful API that can be queries with via http POST method.
     """
 
+    restful_api_host: str = "localhost"
+    """
+    Hostname to use for the RESTful API.
+    """
+
     restful_api_port: int = 51080
     """
     Port number to use for the RESTful API.
+    """
+
+    restful_processes: int = Field(32, ge=1)
+    """
+    Number of processes to use for the RESTful API.
     """
 
     hostfile: str = DLTS_HOSTFILE
@@ -229,19 +327,17 @@ class MIIConfig(DeepSpeedConfigModel):
     def generate_replica_configs(self) -> None:
         if self.model_config.replica_configs:
             return
-        # TODO: refactor this function
-        hostfile = self.hostfile
-        port_number = self.port_number
         torch_dist_port = self.model_config.torch_dist_port
         tensor_parallel = self.model_config.tensor_parallel
-        zmq_port = self.model_config.zmq_port_number
-        replica_num = self.model_config.replica_num
-        replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
+        replica_pool = _allocate_devices(self.hostfile,
+                                         tensor_parallel,
+                                         self.model_config.replica_num,
+                                         self.model_config.device_map)
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
             port_offset = 1
-            base_port = port_number + i * tensor_parallel + port_offset
+            base_port = self.port_number + i * tensor_parallel + port_offset
             tensor_parallel_ports = list(range(base_port, base_port + tensor_parallel))
             replica_torch_dist_port = torch_dist_port + (100 * i)
             replica_configs.append(
@@ -250,48 +346,56 @@ class MIIConfig(DeepSpeedConfigModel):
                     tensor_parallel_ports=tensor_parallel_ports,
                     torch_dist_port=replica_torch_dist_port,
                     gpu_indices=gpu_indices,
-                    zmq_port=zmq_port + i,
+                    zmq_port=self.model_config.zmq_port_number + i,
                 ))
 
         self.model_config.replica_configs = replica_configs
 
 
-def _allocate_processes(hostfile_path: str, tensor_parallel: int, replica_num: int):
+def _allocate_devices(hostfile_path: str,
+                      tensor_parallel: int,
+                      replica_num: int,
+                      device_map: Dict[str,
+                                       List[List[int]]] = DEVICE_MAP_DEFAULT):
     resource_pool = fetch_hostfile(hostfile_path)
     assert (
         resource_pool is not None and len(resource_pool) > 0
     ), f"No hosts found in {hostfile_path}"
 
-    replica_pool = []
-    allocated_num = 0
-    for host, slots in resource_pool.items():
-        available_on_host = slots
-        while available_on_host >= tensor_parallel:
-            if allocated_num >= replica_num:
-                break
-            if slots < tensor_parallel:
-                raise ValueError(
-                    f"Host {host} has {slots} slot(s), but {tensor_parallel} slot(s) are required"
-                )
+    # If no device map was provided, we generate one based on the resources we find in the hostfile
+    if device_map == DEVICE_MAP_DEFAULT:
+        device_map = {}
+        filled_slots = 0
+        for host, slots in resource_pool.items():
+            slots_to_fill = min(slots // tensor_parallel, replica_num - filled_slots)
+            filled_slots += slots_to_fill
+            device_map[host] = [
+                list(range(i * tensor_parallel,
+                           (i + 1) * tensor_parallel)) for i in range(slots_to_fill)
+            ]
 
-            allocated_num_on_host = slots - available_on_host
-            replica_pool.append((
-                host,
-                [
-                    i for i in range(
-                        allocated_num_on_host,
-                        allocated_num_on_host + tensor_parallel,
-                    )
-                ],
-            ))
-            allocated_num += 1
-
-            available_on_host -= tensor_parallel
-
-    if allocated_num < replica_num:
+    # Assert that we have the correct number of mappings
+    device_map_slots = sum([len(slots_list) for slots_list in device_map.values()])
+    if device_map_slots < replica_num:
         raise ValueError(
-            f"Not sufficient GPUs for {replica_num} replica(s), only {allocated_num} replica(s) can be deployed"
+            f"Only able to place {device_map_slots} replicas, but {replica_num} replicas were requested."
         )
+    if device_map_slots > replica_num:
+        raise ValueError(
+            f"Device map contains {device_map_slots} mappings, but only {replica_num} replicas were requested. There must be a 1:1 mapping."
+        )
+
+    replica_pool = []
+    # Fill the available slots with replicas
+    for host, slots_list in device_map.items():
+        if host not in resource_pool:
+            raise ValueError(f"Host {host} not found in hostfile")
+        for slots in slots_list:
+            if len(slots) != tensor_parallel:
+                raise ValueError(
+                    f"Number of devices must match tensor_parallel. Found {len(slots)} devices for host {host}, but tensor_parallel={tensor_parallel}"
+                )
+            replica_pool.append((host, slots))
 
     return replica_pool
 

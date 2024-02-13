@@ -71,9 +71,15 @@ class ModelResponseStub(object):
         )
         self.Txt2ImgReply = channel.unary_unary(
             '/legacymodelresponse.ModelResponse/Txt2ImgReply',
-            request_serializer=legacymodelresponse__pb2.MultiStringRequest.
+            request_serializer=legacymodelresponse__pb2.Text2ImageRequest.
             SerializeToString,
             response_deserializer=legacymodelresponse__pb2.ImageReply.FromString,
+        )
+        self.ZeroShotImgClassificationReply = channel.unary_unary(
+            '/legacymodelresponse.ModelResponse/ZeroShotImgClassificationReply',
+            request_serializer=legacymodelresponse__pb2.ZeroShotImgClassificationRequest.
+            SerializeToString,
+            response_deserializer=legacymodelresponse__pb2.SingleStringReply.FromString,
         )
 
 
@@ -134,6 +140,12 @@ class ModelResponseServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def Txt2ImgReply(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ZeroShotImgClassificationReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -208,8 +220,16 @@ def add_ModelResponseServicer_to_server(servicer, server):
         'Txt2ImgReply':
         grpc.unary_unary_rpc_method_handler(
             servicer.Txt2ImgReply,
-            request_deserializer=legacymodelresponse__pb2.MultiStringRequest.FromString,
+            request_deserializer=legacymodelresponse__pb2.Text2ImageRequest.FromString,
             response_serializer=legacymodelresponse__pb2.ImageReply.SerializeToString,
+        ),
+        'ZeroShotImgClassificationReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.ZeroShotImgClassificationReply,
+            request_deserializer=legacymodelresponse__pb2.
+            ZeroShotImgClassificationRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.SingleStringReply.
+            SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -470,8 +490,34 @@ class ModelResponse(object):
             request,
             target,
             '/legacymodelresponse.ModelResponse/Txt2ImgReply',
-            legacymodelresponse__pb2.MultiStringRequest.SerializeToString,
+            legacymodelresponse__pb2.Text2ImageRequest.SerializeToString,
             legacymodelresponse__pb2.ImageReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
+    @staticmethod
+    def ZeroShotImgClassificationReply(request,
+                                       target,
+                                       options=(),
+                                       channel_credentials=None,
+                                       call_credentials=None,
+                                       insecure=False,
+                                       compression=None,
+                                       wait_for_ready=None,
+                                       timeout=None,
+                                       metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/legacymodelresponse.ModelResponse/ZeroShotImgClassificationReply',
+            legacymodelresponse__pb2.ZeroShotImgClassificationRequest.SerializeToString,
+            legacymodelresponse__pb2.SingleStringReply.FromString,
             options,
             channel_credentials,
             insecure,

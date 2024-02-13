@@ -8,7 +8,7 @@ import requests
 import mii.legacy as mii
 from .grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
 from .grpc_related.proto import legacymodelresponse_pb2_grpc as modelresponse_pb2_grpc
-from .constants import GRPC_MAX_MSG_SIZE, TaskType, DeploymentType
+from .constants import GRPC_MAX_MSG_SIZE, TaskType, DeploymentType, REQUIRED_KEYS_PER_TASK
 from .method_table import GRPC_METHOD_TABLE
 from .config import MIIConfig
 from .utils import import_score_file
@@ -119,20 +119,21 @@ class MIINonPersistentClient:
         task_methods = GRPC_METHOD_TABLE[self.task]
         inference_pipeline = mii.non_persistent_models[self.deployment_name][0]
 
-        # TODO: refactor so this code is shared between non-persistent and
-        # persistent deployments in method_table.py
+        for key in REQUIRED_KEYS_PER_TASK[self.task]:
+            assert key in request_dict, f"Task '{self.task}' requires '{key}' key"
         if self.task == TaskType.QUESTION_ANSWERING:
-            if "question" not in request_dict or "context" not in request_dict:
-                raise Exception(
-                    "Question Answering Task requires 'question' and 'context' keys")
             args = (request_dict["question"], request_dict["context"])
             kwargs = query_kwargs
-
         elif self.task == TaskType.CONVERSATIONAL:
             conv = task_methods.create_conversation(request_dict)
             args = (conv, )
             kwargs = query_kwargs
-
+        elif self.task == TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION:
+            args = (request_dict["image"], request_dict["candidate_labels"])
+            kwargs = query_kwargs
+        elif self.task == TaskType.TEXT2IMG:
+            args = (request_dict["prompt"], request_dict.get("negative_prompt", None))
+            kwargs = query_kwargs
         else:
             args = (request_dict["query"], )
             kwargs = query_kwargs

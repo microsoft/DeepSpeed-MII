@@ -3,11 +3,13 @@
 
 # DeepSpeed Team
 import copy
-import queue
+import gc
 import os
+import queue
 import random
 import threading
 import time
+from dataclasses import dataclass
 from collections import deque, defaultdict
 from functools import cached_property
 from typing import Dict, Tuple, List, Any, Union, DefaultDict
@@ -18,28 +20,7 @@ import zmq
 from deepspeed.accelerator import get_accelerator
 from deepspeed.utils.timer import SynchronizedWallClockTimer
 
-from mii.batching.constants import (MAX_LENGTH_KWARG,
-                                    MAX_NEW_TOKENS_KWARG,
-                                    MIN_NEW_TOKENS_KWARG,
-                                    STREAM_KWARG,
-                                    IGNORE_EOS_KWARG,
-                                    TOP_P_KWARG,
-                                    TOP_K_KWARG,
-                                    TEMPERATURE_KWARG,
-                                    RETURN_FULL_TEXT_KWARG,
-                                    DO_SAMPLE_KWARG,
-                                    STOP_KWARG,
-                                    MIN_NEW_TOKENS_DEFAULT,
-                                    STREAM_DEFAULT,
-                                    IGNORE_EOS_DEFAULT,
-                                    TOP_P_DEFAULT,
-                                    RETURN_FULL_TEXT_DEFAULT,
-                                    DO_SAMPLE_DEFAULT,
-                                    TOP_K_NAME,
-                                    TOP_P_NAME,
-                                    TEMP_NAME,
-                                    SAMPLER_NAME,
-                                    STOP_NAME)
+from mii.batching.constants import TOP_K_NAME, TOP_P_NAME, TEMP_NAME, SAMPLER_NAME, STOP_NAME
 from mii.batching.data_classes import Response, Request, RequestBatch
 from mii.batching.generation.logit_processors import TopPLogitProcessor, TopKLogitProcessor, TemperatureLogitProcessor
 from mii.batching.generation.samplers import LogitsSampler, GreedySampler
@@ -50,8 +31,10 @@ from mii.batching.postprocess import (
     run_batch_stop_criterion,
 )
 from mii.batching.utils import sync_debug, profiler
+from mii.config import GenerateParamsConfig
 from mii.constants import GenerationFinishReason, ZMQ_RECV_TIMEOUT
 from mii.logging import logger
+from mii.modeling.tokenizers import MIITokenizerWrapper
 
 
 class RaggedBatchBase:
@@ -74,9 +57,7 @@ class RaggedBatchBase:
         self.buffer = deque()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks = torch.zeros(inference_engine.n_kv_cache_groups,
-                                                dtype=torch.int32,
-                                                device="cpu")
+        self.scheduled_req_blocks = 0
 
         # TODO: we will need to prune self._post_processors for long running deployments
         self._post_processors = {}
@@ -89,14 +70,14 @@ class RaggedBatchBase:
         self._iters: int = 0
         self._num_generated_tokens: int = 0
 
-        context = zmq.Context()
+        self._zmq_context = zmq.Context()
         torch.cuda.synchronize()
         if self.is_rank_0:
-            self.socket = context.socket(zmq.PUB)
+            self.socket = self._zmq_context.socket(zmq.PUB)
             self.socket.bind(f"tcp://*:{self.zmq_port}")
             time.sleep(1)  # Give the subscriber a change to connect
         else:
-            self.socket = context.socket(zmq.SUB)
+            self.socket = self._zmq_context.socket(zmq.SUB)
             self.socket.connect(f"tcp://localhost:{self.zmq_port}")
             self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
             self.socket.setsockopt(zmq.RCVTIMEO, ZMQ_RECV_TIMEOUT)
@@ -194,7 +175,7 @@ class RaggedBatchBase:
         self.scheduled_requests = RequestBatch()
         self.scheduled_length = 0
         self.scheduled_seq_num = 0
-        self.scheduled_req_blocks.zero_()
+        self.scheduled_req_blocks = 0
 
     @sync_debug
     def _process_logits(
@@ -213,6 +194,7 @@ class RaggedBatchBase:
                                           running_requests,
                                           self._post_processors)
         next_tokens = next_tokens.to(torch.device("cpu"), non_blocking=False)
+        done_tokens = done_tokens.to(torch.device("cpu"), non_blocking=False)
         return next_tokens, done_tokens
 
     @sync_debug
@@ -225,6 +207,7 @@ class RaggedBatchBase:
                 r.prompt_length,
                 r.num_generated_tokens,
                 GenerationFinishReason.NONE,
+                r.stream,
             ))
         if r.finish_reason != GenerationFinishReason.NONE:
             if r.stream or not r.generated_tokens:
@@ -241,16 +224,40 @@ class RaggedBatchBase:
                 r.prompt_length,
                 r.num_generated_tokens,
                 r.finish_reason,
+                r.stream,
             ))
         for output in outputs:
             self.result_queues[r.tid].put_nowait(output)
 
-    def _do_schedule_requests(self, requests: List[Request]) -> None:
-
-        free_blocks = self.inference_engine.free_blocks
+    def _schedule_token_gen(self, requests: List[Request]) -> None:
+        free_blocks = min(self.inference_engine.free_blocks)
         conf_manager = self.inference_engine._config.state_manager
+
+        num_schedulable = min([
+            len(requests),
+            conf_manager.max_ragged_sequence_count,
+            conf_manager.max_ragged_batch_size
+        ])
+
+        for r in requests[:num_schedulable]:
+            block_capacity = self.inference_engine.get_remaining_block_capacity(r.uid)
+            # We can schedule token generation if the last block has a capacity
+            if block_capacity > 0:
+                self.scheduled_length += 1
+                self.scheduled_requests.append(r)
+            elif free_blocks > 0:
+                # We need a new block
+                free_blocks -= 1
+                self.scheduled_length += 1
+                self.scheduled_req_blocks += 1
+                self.scheduled_requests.append(r)
+
+    def _schedule_prompts(self, requests: List[Request]) -> None:
+        free_blocks = min(self.inference_engine.free_blocks)
+        conf_manager = self.inference_engine._config.state_manager
+
         for r in requests:
-            if free_blocks.min().item() == 0:
+            if free_blocks == 0:
                 break
 
             if r.max_length <= r.seq_length:
@@ -266,9 +273,10 @@ class RaggedBatchBase:
 
             max_blocks = free_blocks - self.scheduled_req_blocks
 
-            # Check capacity to mitigate the deadlock risk
-            # We don't schedule requests when we find that a prompt is too long to fit to the KV cache
             if len(r.input_tokens) > 1:
+                # When the KV cache is out of capacity, we release KV cache blocks for a request.
+                # However, we can immediately schedule the request again if we split the request.
+                # So we make sure that we have capacity for the entire prompt (+tokens already generated).
                 req_tokens, _ = self.inference_engine.query(r.uid, len(r.input_tokens), max_blocks)
                 if req_tokens < len(r.input_tokens):
                     break
@@ -304,7 +312,6 @@ class RaggedBatchBase:
             r = self.request_queue.get_nowait()
             self.buffer.append(r)
 
-        # Run next token generation first
         next_token_gen_reqs = []
         prompt_reqs = []
 
@@ -312,19 +319,17 @@ class RaggedBatchBase:
             if r.is_flush_request:
                 self.scheduled_requests.append(r)
             else:
-                if len(r.input_tokens) == 1:
-                    next_token_gen_reqs.append(r)
+                if r.num_generated_tokens > 0:
+                    if r.max_length > r.seq_length:
+                        next_token_gen_reqs.append(r)
                 else:
                     prompt_reqs.append(r)
 
         # We want to process next token generation first
-        self._do_schedule_requests(next_token_gen_reqs)
-        self._do_schedule_requests(prompt_reqs)
+        self._schedule_token_gen(next_token_gen_reqs)
+        self._schedule_prompts(prompt_reqs)
 
         if len(self.buffer) > 0 and len(self.scheduled_requests) == 0:
-            print(
-                "Deadlock detected. Resetting KV cache and recomputing requests. Consider limiting number of concurrent requests or decreasing max lengths of prompts/generations."
-            )
             self.scheduled_requests = RequestBatch()
             self.reset_request_status()
         else:
@@ -340,29 +345,51 @@ class RaggedBatchBase:
                 input_tokens=None,
                 prompt_tokens=None,
                 seq_length=None,
-                max_length=None,
-                max_new_tokens=None,
-                min_new_tokens=None,
                 last_in_prompt=None,
                 post_processing=None,
-                stream=None,
+                generate_params=None,
             ))
 
     def reset_request_status(self):
+        ## Get the last request that consumes KV cache
+        last_r = None
         for r in self.buffer:
             if r.seq_length > 0:
-                self._queue_flush_request(r.uid)
+                last_r = r
+        assert last_r is not None, "Function to clear the KV cache is invoked, but no request consumes KV cache"
 
+        ## Schedule flushing r
+        self.scheduled_requests.append(
+            Request(
+                tid=None,
+                uid=last_r.uid,
+                input_tokens=None,
+                prompt_tokens=None,
+                seq_length=None,
+                last_in_prompt=None,
+                post_processing=None,
+                generate_params=None,
+            ))
+
+        ## Rebuild the request
+        new_req = copy.copy(last_r)
+        new_req.prompt_tokens = new_req.input_tokens = torch.concat(
+            [last_r.prompt_tokens] + [t.unsqueeze(0) for t in last_r.generated_tokens])
+        new_req.seq_length = 0
+        new_req.max_new_tokens = last_r.max_new_tokens - len(last_r.generated_tokens)
+        new_req.clear_generated_token()
+
+        ## Remove the requests from buffer and queue
         new_buffer = deque()
         for r in self.buffer:
-            new_req = copy.copy(r)
-            new_req.prompt_tokens = new_req.input_tokens = torch.concat(
-                [r.prompt_tokens] + [t.unsqueeze(0) for t in r.generated_tokens])
-            new_req.seq_length = 0
-            new_req.max_new_tokens = r.max_new_tokens - len(r.generated_tokens)
-            new_req.clear_generated_token()
-            new_buffer.append(new_req)
+            if r.uid != last_r.uid:
+                new_buffer.append(r)
 
+        while not self.request_queue.empty():
+            r = self.request_queue.get_nowait()
+            if r.uid != last_r.uid:
+                new_buffer.append(r)
+        new_buffer.append(new_req)
         self.buffer = new_buffer
 
     def make_request(self,
@@ -370,31 +397,26 @@ class RaggedBatchBase:
                      uid: int,
                      input_tokens: torch.Tensor,
                      kwargs: Dict) -> Request:
-        prompt_length = len(input_tokens)
-        max_length = kwargs.pop(MAX_LENGTH_KWARG, self.max_length)
-        assert max_length > prompt_length, f"prompt length must be less than {MAX_LENGTH_KWARG}"
-        max_new_tokens = kwargs.pop(MAX_NEW_TOKENS_KWARG, max_length - prompt_length)
-        min_new_tokens = kwargs.pop(MIN_NEW_TOKENS_KWARG, MIN_NEW_TOKENS_DEFAULT)
-        stream = kwargs.pop(STREAM_KWARG, STREAM_DEFAULT)
-        ignore_eos = kwargs.pop(IGNORE_EOS_KWARG, IGNORE_EOS_DEFAULT)
-        return_full_text = kwargs.pop(RETURN_FULL_TEXT_KWARG, RETURN_FULL_TEXT_DEFAULT)
+        kwargs["prompt_length"] = len(input_tokens)
+        kwargs["max_length"] = kwargs.get("max_length", self.max_length)
+        generate_params = GenerateParamsConfig(**kwargs)
 
         post_processing = []
 
-        top_p = kwargs.pop(TOP_P_KWARG, TOP_P_DEFAULT)
+        top_p = generate_params.top_p
         top_p_name = "_".join((TOP_P_NAME, str(top_p)))
         if top_p_name not in self._post_processors:
             self._post_processors[top_p_name] = TopPLogitProcessor(top_p=top_p)
         post_processing.append(top_p_name)
 
-        top_k = kwargs.pop(TOP_K_KWARG, None)
+        top_k = generate_params.top_k
         if top_k is not None:
             top_k_name = "_".join((TOP_K_NAME, str(top_k)))
             if top_k_name not in self._post_processors:
                 self._post_processors[top_k_name] = TopKLogitProcessor(top_k=top_k)
             post_processing.append(top_k_name)
 
-        temp = kwargs.pop(TEMPERATURE_KWARG, None)
+        temp = generate_params.temperature
         if temp is not None:
             temp_name = "_".join((TEMP_NAME, str(temp)))
             if temp_name not in self._post_processors:
@@ -402,7 +424,7 @@ class RaggedBatchBase:
                     temperature=temp)
             post_processing.append(temp_name)
 
-        do_sample = kwargs.pop(DO_SAMPLE_KWARG, DO_SAMPLE_DEFAULT)
+        do_sample = generate_params.do_sample
         if do_sample:
             sampler_name = "_".join((SAMPLER_NAME, "logits"))
             if sampler_name not in self._post_processors:
@@ -413,21 +435,21 @@ class RaggedBatchBase:
                 self._post_processors[sampler_name] = GreedySampler()
         post_processing.append(sampler_name)
 
-        stop = kwargs.pop(STOP_KWARG, None)
-        if stop is not None:
-            stop_name = "_".join((STOP_NAME, stop))
-            if stop_name not in self._post_processors:
-                self._post_processors[stop_name] = TokenStopCriterion(
-                    token=stop,
-                    tokenizer=self.tokenizer)
+        stop = generate_params.stop
+        if stop != []:
+            for each_stop in stop:
+                stop_name = STOP_NAME + '_' + each_stop
+                if stop_name not in self._post_processors:
+                    self._post_processors[stop_name] = TokenStopCriterion(
+                        token=each_stop,
+                        tokenizer=self.tokenizer)
+                post_processing.append(stop_name)
         else:
             stop_name = STOP_NAME
             if STOP_NAME not in self._post_processors:
                 self._post_processors[stop_name] = EosGenerationStopCriterion(
                     tokenizer=self.tokenizer)
-        post_processing.append(stop_name)
-
-        assert kwargs == {}, f"Unknown keyword arguments {kwargs}"
+            post_processing.append(stop_name)
 
         return Request(
             tid=tid,
@@ -435,14 +457,9 @@ class RaggedBatchBase:
             input_tokens=input_tokens,
             prompt_tokens=input_tokens,
             seq_length=0,
-            max_length=max_length,
-            max_new_tokens=max_new_tokens,
-            min_new_tokens=min_new_tokens,
             last_in_prompt=True,
             post_processing=post_processing,
-            stream=stream,
-            ignore_eos=ignore_eos,
-            return_full_text=return_full_text,
+            generate_params=generate_params,
         )
 
     def make_response(self,
@@ -456,11 +473,57 @@ class RaggedBatchBase:
                         finish_reason=finish_reason)
 
     def put(self, uids: List[int], tokenized_input: List[torch.Tensor]) -> torch.Tensor:
-        return self.inference_engine.put(uids, tokenized_input)
+        # Call inference engine. You can skip checking schedulability because we already checked when scheduling
+        return self.inference_engine.put(uids, tokenized_input, do_checks=False)
 
     def flush(self, uids: List[int]) -> None:
         for uid in uids:
             self.inference_engine.flush(uid)
+
+
+@dataclass
+class StreamState:
+    prev_token_size: int
+    token_ids: List[int]
+
+
+class ReadableStream:
+    def __init__(self, tokenizer: MIITokenizerWrapper) -> None:
+        self.tokenizer = tokenizer
+        self.stream_state: Dict[int, StreamState] = {}
+
+    def init_state(self, thread_id: int) -> StreamState:
+        if thread_id not in self.stream_state:
+            self.stream_state[thread_id] = StreamState(token_ids=[], prev_token_size=0)
+            return self.stream_state[thread_id]
+        return self.stream_state[thread_id]
+
+    def flush_state(self, thread_id: int) -> None:
+        if thread_id in self.stream_state:
+            del self.stream_state[thread_id]
+
+    def decode(self, thread_id: int, token_ids: List[int]) -> str:
+        state = self.init_state(thread_id)
+        output = []
+
+        for token_id in token_ids:
+            state.token_ids.append(token_id)
+            decoded = self.tokenizer.decode(state.token_ids)
+
+            # We don't have enough token_ids in the buffer and
+            # tokenizer returned unicode 'U+FFFD REPLACEMENT CHARACTER'
+            if "\ufffd" in decoded:
+                continue
+
+            if state.prev_token_size > 0:
+                prev_token = state.token_ids[:state.prev_token_size]
+                state.token_ids = state.token_ids[state.prev_token_size:]
+                decoded = decoded.replace(self.tokenizer.decode(prev_token), "", 1)
+
+            output.append(decoded)
+            state.prev_token_size = len(state.token_ids)
+
+        return "".join(output)
 
 
 class MIIPipeline(RaggedBatchBase):
@@ -472,27 +535,24 @@ class MIIPipeline(RaggedBatchBase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.tid = threading.get_ident()
+        self._destroyed = False
 
-    def __call__(self,
-                 prompts: Union[str,
-                                List[str]],
-                 all_rank_output: bool = False,
-                 **generate_kwargs) -> List[Response]:
+    def __call__(self, inputs: Union[str, List[str]], **kwargs) -> List[Response]:
         """
         Generates text for the given prompts
 
-        :param prompts: The string or list of strings used as prompts for generation.
-        :param all_rank_output: Whether to return generated text on all ranks
-            (when using `tensor_parallel>1`). If `True`, all ranks will return the
-            same output. If `False`, only rank 0 will return output and the rest
-            will return `None`.
+        :param inputs: The string or list of strings used as prompts for generation.
         :param \**generate_kwargs: Generation keywords. A full list can be found here.
 
         :return: A list of :class:`Response` objects containing the generated
             text for all prompts.
         """ # noqa: W605
-        if isinstance(prompts, str):
-            prompts = [prompts]
+        if self._destroyed:
+            raise RuntimeError(
+                "The inference engine of this pipeline has been destroyed.")
+
+        if isinstance(inputs, str):
+            inputs = [inputs]
         outputs: List[Response] = []
         uids_running: List[int] = list(range(len(prompts)))
         uids_complete_order: List[int] = []
@@ -511,7 +571,7 @@ class MIIPipeline(RaggedBatchBase):
                     uid, response = self._get_response()
                     outputs.append(response)
                     self._queue_flush_request(uid)
-                    uids_complete_order.append(uids_running.index(uid))
+                    uids_complete_order.append(uid)
                     uids_running.remove(uid)
             # Ensure final flush requests broadcast and
             # kick ranks 1 -> n out of the while loop
@@ -557,6 +617,14 @@ class MIIPipeline(RaggedBatchBase):
             responses = [Response.from_msg_dict(msg) for msg in data_dicts]
         return responses
 
+    def destroy(self) -> None:
+        del self.inference_engine
+        self.socket.close()
+        self._zmq_context.term()
+        gc.collect()
+        get_accelerator().empty_cache()
+        self._destroyed = True
+
 
 class MIIAsyncPipeline(RaggedBatchBase):
     def __init__(self, *args, **kwargs):
@@ -568,6 +636,7 @@ class MIIAsyncPipeline(RaggedBatchBase):
         self._is_shutdown = False
         self.UID_RANGE_LB = 1
         self.UID_RANGE_UB = 10000
+        self.readable_stream = ReadableStream(self.tokenizer)
 
     def __call__(self) -> None:
         # CUDA device gets reset, must set it again to avoid problems
@@ -625,14 +694,22 @@ class MIIAsyncPipeline(RaggedBatchBase):
                             generated_length=None,
                             finish_reason=None)
         tid = threading.get_ident()
-        result = self.result_queues[tid].get()
-        uid = result[0]
-        generated_token_ids = result[1]
+        uid, generated_token_ids, prompt_length, generated_length, finish_reason, streaming = self.result_queues[tid].get()
+
         if len(generated_token_ids) == 0:
             generated_text = ""
+            self.readable_stream.flush_state(tid)
+        elif streaming:
+            generated_text = self.readable_stream.decode(tid, generated_token_ids)
         else:
             generated_text = self.tokenizer.decode(generated_token_ids)
-        response = self.make_response(generated_text, result[2], result[3], result[4])
+
+        response = self.make_response(
+            generated_text=generated_text,
+            prompt_length=prompt_length,
+            generated_length=generated_length,
+            finish_reason=finish_reason,
+        )
         return uid, response
 
     def start(self) -> None:

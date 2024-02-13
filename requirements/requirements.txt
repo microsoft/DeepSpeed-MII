@@ -1,10 +1,12 @@
 asyncio
-deepspeed>=0.12.4
+deepspeed>=0.13.0
 deepspeed-kernels
 Flask-RESTful
 grpcio
 grpcio-tools
+Pillow
 pydantic
+safetensors
 torch
 transformers
 ujson

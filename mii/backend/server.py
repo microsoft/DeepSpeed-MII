@@ -135,6 +135,8 @@ class MIIServer:
             f"--deployment-name {mii_config.deployment_name}",
             f"--load-balancer-port {mii_config.port_number}",
             f"--restful-gateway-port {mii_config.restful_api_port}",
+            f"--restful-gateway-host {mii_config.restful_api_host}",
+            f"--restful-gateway-procs {mii_config.restful_processes}"
         ]
 
         host_gpus = defaultdict(list)

@@ -85,6 +85,13 @@ def ds_config(request):
 
 
 @pytest.fixture(scope="function")
+def replace_with_kernel_inject(model_name):
+    if "clip-vit" in model_name:
+        return False
+    return True
+
+
+@pytest.fixture(scope="function")
 def model_config(
     task_name: str,
     model_name: str,
@@ -96,8 +103,10 @@ def model_config(
     enable_deepspeed: bool,
     enable_zero: bool,
     ds_config: dict,
+    replace_with_kernel_inject: bool,
 ):
     config = SimpleNamespace(
+        skip_model_check=True, # TODO: remove this once conversation task check is fixed
         task=task_name,
         model=model_name,
         dtype=dtype,
@@ -105,10 +114,12 @@ def model_config(
         model_path=os.getenv("TRANSFORMERS_CACHE",
                              ""),
         meta_tensor=meta_tensor,
+        load_with_sys_mem=load_with_sys_mem,
         replica_num=replica_num,
         enable_deepspeed=enable_deepspeed,
         enable_zero=enable_zero,
         ds_config=ds_config,
+        replace_with_kernel_inject=replace_with_kernel_inject,
     )
     return config.__dict__
 

@@ -1,5 +1,6 @@
-<!-- [![Build Status](https://github.com/microsoft/deepspeed-mii/workflows/Build/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions) -->
-[![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
+[![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg?branch=main)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
+[![nv-v100-legacy](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-v100-legacy.yml/badge.svg?branch=main)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-v100-legacy.yml)
+[![nv-a6000-fastgen](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-a6000-fastgen.yml/badge.svg?branch=main)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/nv-a6000-fastgen.yml)
 [![License Apache 2.0](https://badgen.net/badge/license/apache2.0/blue)](https://github.com/Microsoft/DeepSpeed/blob/master/LICENSE)
 [![PyPI version](https://badge.fury.io/py/deepspeed-mii.svg)](https://pypi.org/project/deepspeed-mii/)
 <!-- [![Documentation Status](https://readthedocs.org/projects/deepspeed/badge/?version=latest)](https://deepspeed.readthedocs.io/en/latest/?badge=latest) -->
@@ -11,15 +12,16 @@
 
 ## Latest News
 
+* [2024/01] [DeepSpeed-FastGen: Introducting Mixtral, Phi-2, and Falcon support with major performance and feature enhancements.](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen/2024-01-19)
 * [2023/11] [DeepSpeed-FastGen: High-throughput Text Generation for LLMs via MII and DeepSpeed-Inference](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen)
-* [2022/11] [Stable Diffusion Image Generation under 1 second w. DeepSpeed MII](examples/benchmark/txt2img)
+* [2022/11] [Stable Diffusion Image Generation under 1 second w. DeepSpeed MII](mii/legacy/examples/benchmark/txt2img)
 * [2022/10] [Announcing DeepSpeed Model Implementations for Inference (MII)](https://www.deepspeed.ai/2022/10/10/mii.html)
 
 # Contents
 
 <!-- toc -->
 
-- [DeepSpeed-MII](#deepspeed-model-implementations-for-inference)
+- [DeepSpeed-MII](#deepspeed-mii)
 - [Key Technologies](#key-technologies)
 - [How does MII work?](#how-does-mii-work)
 - [Supported Models](#supported-models)
@@ -27,11 +29,16 @@
 
 <!-- tocstop -->
 
-# DeepSpeed Model Implementations for Inference (MII)
+# DeepSpeed Model Implementations for Inference (MII) <a name="deepspeed-mii"></a>
 
 Introducing MII, an open-source Python library designed by DeepSpeed to democratize powerful model inference with a focus on high-throughput, low latency, and cost-effectiveness.
 
-* MII v0.1 introduces several features such as blocked KV-caching, continuous batching, Dynamic SplitFuse, tensor parallelism, and high-performance CUDA kernels to support fast high throughput text-generation for LLMs such as Llama-2-70B. MII delivers up to 2.3 times higher effective throughput compared to leading systems such as vLLM. For detailed performance results please see our [DeepSpeed-FastGen blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen).
+* MII features include blocked KV-caching, continuous batching, Dynamic SplitFuse, tensor parallelism, and high-performance CUDA kernels to support fast high throughput text-generation for LLMs such as Llama-2-70B, Mixtral (MoE) 8x7B, and Phi-2. The latest updates in v0.2 add new model families, performance optimizations, and feature enhancements. MII now delivers up to 2.5 times higher effective throughput compared to leading systems such as vLLM. For detailed performance results please see our [latest DeepSpeed-FastGen blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen/2024-01-19) and [DeepSpeed-FastGen release blog](https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen).
+
+<div align="center">
+ <img src="docs/images/fastgen-24-01-hero-light.png#gh-light-mode-only" width="850px">
+ <img src="docs/images/fastgen-24-01-hero-dark.png#gh-dark-mode-only" width="850px">
+</div>
 
 <div align="center">
  <img src="docs/images/fastgen-hero-light.png#gh-light-mode-only" width="800px">
@@ -78,14 +85,18 @@ Under-the-hood MII is powered by [DeepSpeed-Inference](https://github.com/micros
 
 # Supported Models
 
-MII currently supports over 13,000 models across three popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
+MII currently supports over 20,000 models across eight popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
 
 model family | size range | ~model count
 ------ | ------ | ------
-[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 11,000
-[llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 800
-[mistral](https://huggingface.co/models?other=mistral) | 7B | 1,100
-[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 900
+[falcon](https://huggingface.co/models?other=falcon) | 7B - 180B | 300
+[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 19,000
+[llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 900
+[mistral](https://huggingface.co/models?other=mistral) | 7B | 6,000
+[mixtral (MoE)](https://huggingface.co/models?other=mixtral) | 8x7B | 1,100
+[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 1,300
+[phi-2](https://huggingface.co/models?other=phi) | 2.7B | 200
+[qwen](https://huggingface.co/models?other=qwen) | 7B - 72B | 200
 
 ## MII Legacy Model Support
 
@@ -126,6 +137,12 @@ The returned `response` is a list of `Response` objects. We can access several d
 - `prompt_length: int` Number of tokens in the original prompt.
 - `generated_length: int` Number of tokens generated.
 - `finish_reason: str` Reason for stopping generation. `stop` indicates the EOS token was generated and `length` indicates the generation reached `max_new_tokens` or `max_length`.
+
+If you want to free device memory and destroy the pipeline, use the `destroy` method:
+
+```python
+pipe.destroy()
+```
 
 ### Tensor parallelism
 

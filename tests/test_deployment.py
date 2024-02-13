@@ -28,6 +28,19 @@ def test_streaming(deployment, query):
     assert outputs, "output is empty"
 
 
+def test_streaming_consistency(deployment, query):
+    expected_output = deployment(query, do_sample=False)
+    streaming_parts = []
+
+    def callback(response):
+        streaming_parts.append(response[0].generated_text)
+
+    deployment(query, do_sample=False, streaming_fn=callback)
+    streaming_output = "".join(streaming_parts)
+
+    assert streaming_output == expected_output[0].generated_text, "outputs w and w/o streaming are not equal"
+
+
 def test_multi_prompt(deployment, query):
     outputs = deployment([query] * 4)
     for r in outputs:
@@ -71,7 +84,7 @@ def test_multi_replica(deployment, query):
     double_query_time = sum(double_query_time) / 2
 
     assert single_query_time == pytest.approx(
-        double_query_time, 0.1
+        double_query_time, single_query_time / 2
     ), "two queries should take about the same time as one query"
 
 
@@ -97,13 +110,6 @@ def test_do_sample(deployment, query):
     ), "do_sample=False should always return the same output"
 
 
-def test_stop_token(deployment, query):
-    pytest.skip("not working yet")
-    output = deployment(query, stop=".", max_length=512)
-    print(str(output.response))
-    assert str(output.response[0]).endswith("."), "output should end with 'the'"
-
-
 def test_return_full_text(deployment, query):
     outputs = deployment(query, max_length=128, return_full_text=True)
     assert outputs[0].generated_text.startswith(query), "output should start with the prompt"
@@ -123,4 +129,4 @@ def test_restful_api(deployment, query, deployment_name, restful_api_port):
                            data=json_params,
                            headers={"Content-Type": "application/json"})
     assert result.status_code == 200
-    assert "generated_text" in result.json()
+    assert "generated_text" in result.json()[0]

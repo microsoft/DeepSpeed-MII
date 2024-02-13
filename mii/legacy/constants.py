@@ -19,6 +19,7 @@ class TaskType(str, Enum):
     TOKEN_CLASSIFICATION = "token-classification"
     CONVERSATIONAL = "conversational"
     TEXT2IMG = "text-to-image"
+    ZERO_SHOT_IMAGE_CLASSIFICATION = "zero-shot-image-classification"
 
 
 class ModelProvider(str, Enum):
@@ -39,7 +40,8 @@ SUPPORTED_MODEL_TYPES = {
     'bloom': ModelProvider.HUGGING_FACE,
     'gpt-neox': ModelProvider.ELEUTHER_AI,
     'stable-diffusion': ModelProvider.DIFFUSERS,
-    'llama': ModelProvider.HUGGING_FACE
+    'llama': ModelProvider.HUGGING_FACE,
+    'clip': ModelProvider.HUGGING_FACE
 }
 
 REQUIRED_KEYS_PER_TASK = {
@@ -55,7 +57,9 @@ REQUIRED_KEYS_PER_TASK = {
         "past_user_inputs",
         "generated_responses",
     ],
-    TaskType.TEXT2IMG: ["query"],
+    TaskType.TEXT2IMG: ["prompt"],
+    TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image",
+                                              "candidate_labels"],
 }
 
 MII_CACHE_PATH = "MII_CACHE_PATH"

@@ -9,6 +9,7 @@ from typing_extensions import Self
 import torch
 
 from mii.constants import GenerationFinishReason
+from mii.config import GenerateParamsConfig
 
 
 @dataclass
@@ -68,14 +69,9 @@ class Request:
     input_tokens: torch.Tensor
     prompt_tokens: torch.Tensor
     seq_length: int
-    max_length: int
-    max_new_tokens: int
-    min_new_tokens: int
     last_in_prompt: bool
     post_processing: List[object]
-    stream: bool = False
-    ignore_eos: bool = False
-    return_full_text: bool = False
+    generate_params: GenerateParamsConfig
 
     _next_token: Union[None, torch.Tensor] = None
     _is_done: bool = False
@@ -89,6 +85,34 @@ class Request:
     @property
     def next_token(self) -> Union[None, torch.Tensor]:
         return self._next_token
+
+    @property
+    def ignore_eos(self) -> bool:
+        return self.generate_params.ignore_eos
+
+    @property
+    def min_new_tokens(self) -> int:
+        return self.generate_params.min_new_tokens
+
+    @property
+    def max_new_tokens(self) -> int:
+        return self.generate_params.max_new_tokens
+
+    @max_new_tokens.setter
+    def max_new_tokens(self, max_new_tokens: int) -> None:
+        self.generate_params.max_new_tokens = max_new_tokens
+
+    @property
+    def stream(self) -> bool:
+        return self.generate_params.stream
+
+    @property
+    def return_full_text(self) -> bool:
+        return self.generate_params.return_full_text
+
+    @property
+    def max_length(self) -> int:
+        return self.generate_params.max_length
 
     @next_token.setter
     def next_token(self, next_token: Union[None, torch.Tensor]) -> None:
@@ -215,20 +239,20 @@ class RequestBatch:
         return [r.next_token for r in self.requests]
 
     @property
-    def done_tokens(self) -> List[torch.Tensor]:
+    def done_tokens(self) -> List[bool]:
         return [r.is_done for r in self.requests]
 
     @next_tokens.setter
-    def next_tokens(self, next_tokens: List[torch.Tensor]) -> None:
+    def next_tokens(self, next_tokens: torch.Tensor) -> None:
         assert len(next_tokens) == len(self.requests)
         for idx, r in enumerate(self.requests):
             r.next_token = next_tokens[idx]
 
     @done_tokens.setter
-    def done_tokens(self, done_tokens: List[torch.Tensor]) -> None:
+    def done_tokens(self, done_tokens: torch.Tensor) -> None:
         assert len(done_tokens) == len(self.requests)
         for idx, r in enumerate(self.requests):
-            r.is_done = done_tokens[idx]
+            r.is_done = done_tokens[idx].item()
 
     def to_msg_dicts(self) -> List[Dict[str, Any]]:
         return [r.to_msg_dict() for r in self.requests]
