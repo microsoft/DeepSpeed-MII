@@ -110,13 +110,6 @@ def test_do_sample(deployment, query):
     ), "do_sample=False should always return the same output"
 
 
-def test_stop_token(deployment, query):
-    pytest.skip("not working yet")
-    output = deployment(query, stop=".", max_length=512)
-    print(str(output.response))
-    assert str(output.response[0]).endswith("."), "output should end with 'the'"
-
-
 def test_return_full_text(deployment, query):
     outputs = deployment(query, max_length=128, return_full_text=True)
     assert outputs[0].generated_text.startswith(query), "output should start with the prompt"

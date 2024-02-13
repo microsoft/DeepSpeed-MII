@@ -76,4 +76,6 @@ def run_batch_stop_criterion(next_tokens: torch.Tensor,
                                                  Any]) -> torch.Tensor:
     stop_fns = {k: v for k, v in processor_map.items() if "Stop" in k}
     done_tokens = run_batch_processing(next_tokens, requests, stop_fns)
+    done_tokens = torch.any(done_tokens.view((len(requests), -1)), dim=1)
+
     return done_tokens
