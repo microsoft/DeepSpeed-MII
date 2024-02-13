@@ -61,10 +61,11 @@ class ModelResponseStub(object):
                 response_deserializer=legacymodelresponse__pb2.ConversationReply.FromString,
                 )
         self.Txt2ImgReply = channel.unary_unary(
-                '/legacymodelresponse.ModelResponse/Txt2ImgReply',
-                request_serializer=legacymodelresponse__pb2.MultiStringRequest.SerializeToString,
-                response_deserializer=legacymodelresponse__pb2.ImageReply.FromString,
-                )
+            '/legacymodelresponse.ModelResponse/Txt2ImgReply',
+            request_serializer=legacymodelresponse__pb2.Text2ImageRequest.
+            SerializeToString,
+            response_deserializer=legacymodelresponse__pb2.ImageReply.FromString,
+        )
         self.ZeroShotImgClassificationReply = channel.unary_unary(
                 '/legacymodelresponse.ModelResponse/ZeroShotImgClassificationReply',
                 request_serializer=legacymodelresponse__pb2.ZeroShotImgClassificationRequest.SerializeToString,
@@ -155,66 +156,83 @@ class ModelResponseServicer(object):
 
 def add_ModelResponseServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Terminate': grpc.unary_unary_rpc_method_handler(
-                    servicer.Terminate,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'CreateSession': grpc.unary_unary_rpc_method_handler(
-                    servicer.CreateSession,
-                    request_deserializer=legacymodelresponse__pb2.SessionID.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'DestroySession': grpc.unary_unary_rpc_method_handler(
-                    servicer.DestroySession,
-                    request_deserializer=legacymodelresponse__pb2.SessionID.FromString,
-                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            ),
-            'GeneratorReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.GeneratorReply,
-                    request_deserializer=legacymodelresponse__pb2.MultiStringRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.MultiStringReply.SerializeToString,
-            ),
-            'ClassificationReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.ClassificationReply,
-                    request_deserializer=legacymodelresponse__pb2.SingleStringRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.SingleStringReply.SerializeToString,
-            ),
-            'QuestionAndAnswerReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.QuestionAndAnswerReply,
-                    request_deserializer=legacymodelresponse__pb2.QARequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.SingleStringReply.SerializeToString,
-            ),
-            'FillMaskReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.FillMaskReply,
-                    request_deserializer=legacymodelresponse__pb2.SingleStringRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.SingleStringReply.SerializeToString,
-            ),
-            'TokenClassificationReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.TokenClassificationReply,
-                    request_deserializer=legacymodelresponse__pb2.SingleStringRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.SingleStringReply.SerializeToString,
-            ),
-            'ConversationalReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.ConversationalReply,
-                    request_deserializer=legacymodelresponse__pb2.ConversationRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.ConversationReply.SerializeToString,
-            ),
-            'Txt2ImgReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.Txt2ImgReply,
-                    request_deserializer=legacymodelresponse__pb2.MultiStringRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.ImageReply.SerializeToString,
-            ),
-            'ZeroShotImgClassificationReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.ZeroShotImgClassificationReply,
-                    request_deserializer=legacymodelresponse__pb2.ZeroShotImgClassificationRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.SingleStringReply.SerializeToString,
-            ),
-            'InpaintingReply': grpc.unary_unary_rpc_method_handler(
-                    servicer.InpaintingReply,
-                    request_deserializer=legacymodelresponse__pb2.InpaintingRequest.FromString,
-                    response_serializer=legacymodelresponse__pb2.ImageReply.SerializeToString,
-            ),
+        'Terminate':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.Terminate,
+            request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
+        ),
+        'CreateSession':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.CreateSession,
+            request_deserializer=legacymodelresponse__pb2.SessionID.FromString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
+        ),
+        'DestroySession':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.DestroySession,
+            request_deserializer=legacymodelresponse__pb2.SessionID.FromString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.
+            SerializeToString,
+        ),
+        'GeneratorReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.GeneratorReply,
+            request_deserializer=legacymodelresponse__pb2.MultiStringRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.MultiStringReply.
+            SerializeToString,
+        ),
+        'ClassificationReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.ClassificationReply,
+            request_deserializer=legacymodelresponse__pb2.SingleStringRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.SingleStringReply.
+            SerializeToString,
+        ),
+        'QuestionAndAnswerReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.QuestionAndAnswerReply,
+            request_deserializer=legacymodelresponse__pb2.QARequest.FromString,
+            response_serializer=legacymodelresponse__pb2.SingleStringReply.
+            SerializeToString,
+        ),
+        'FillMaskReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.FillMaskReply,
+            request_deserializer=legacymodelresponse__pb2.SingleStringRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.SingleStringReply.
+            SerializeToString,
+        ),
+        'TokenClassificationReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.TokenClassificationReply,
+            request_deserializer=legacymodelresponse__pb2.SingleStringRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.SingleStringReply.
+            SerializeToString,
+        ),
+        'ConversationalReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.ConversationalReply,
+            request_deserializer=legacymodelresponse__pb2.ConversationRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.ConversationReply.
+            SerializeToString,
+        ),
+        'Txt2ImgReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.Txt2ImgReply,
+            request_deserializer=legacymodelresponse__pb2.Text2ImageRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.ImageReply.SerializeToString,
+        ),
+        'ZeroShotImgClassificationReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.ZeroShotImgClassificationReply,
+            request_deserializer=legacymodelresponse__pb2.
+            ZeroShotImgClassificationRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.SingleStringReply.
+            SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'legacymodelresponse.ModelResponse', rpc_method_handlers)
@@ -380,17 +398,20 @@ class ModelResponse(object):
 
     @staticmethod
     def Txt2ImgReply(request,
+                     target,
+                     options=(),
+                     channel_credentials=None,
+                     call_credentials=None,
+                     insecure=False,
+                     compression=None,
+                     wait_for_ready=None,
+                     timeout=None,
+                     metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/legacymodelresponse.ModelResponse/Txt2ImgReply',
-            legacymodelresponse__pb2.MultiStringRequest.SerializeToString,
+            '/legacymodelresponse.ModelResponse/Txt2ImgReply',
+            legacymodelresponse__pb2.Text2ImageRequest.SerializeToString,
             legacymodelresponse__pb2.ImageReply.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
