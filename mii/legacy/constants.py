@@ -57,7 +57,7 @@ REQUIRED_KEYS_PER_TASK = {
         "past_user_inputs",
         "generated_responses",
     ],
-    TaskType.TEXT2IMG: ["query"],
+    TaskType.TEXT2IMG: ["prompt"],
     TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image",
                                               "candidate_labels"],
 }

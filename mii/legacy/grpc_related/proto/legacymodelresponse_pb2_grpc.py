@@ -71,7 +71,7 @@ class ModelResponseStub(object):
         )
         self.Txt2ImgReply = channel.unary_unary(
             '/legacymodelresponse.ModelResponse/Txt2ImgReply',
-            request_serializer=legacymodelresponse__pb2.MultiStringRequest.
+            request_serializer=legacymodelresponse__pb2.Text2ImageRequest.
             SerializeToString,
             response_deserializer=legacymodelresponse__pb2.ImageReply.FromString,
         )
@@ -220,7 +220,7 @@ def add_ModelResponseServicer_to_server(servicer, server):
         'Txt2ImgReply':
         grpc.unary_unary_rpc_method_handler(
             servicer.Txt2ImgReply,
-            request_deserializer=legacymodelresponse__pb2.MultiStringRequest.FromString,
+            request_deserializer=legacymodelresponse__pb2.Text2ImageRequest.FromString,
             response_serializer=legacymodelresponse__pb2.ImageReply.SerializeToString,
         ),
         'ZeroShotImgClassificationReply':
@@ -490,7 +490,7 @@ class ModelResponse(object):
             request,
             target,
             '/legacymodelresponse.ModelResponse/Txt2ImgReply',
-            legacymodelresponse__pb2.MultiStringRequest.SerializeToString,
+            legacymodelresponse__pb2.Text2ImageRequest.SerializeToString,
             legacymodelresponse__pb2.ImageReply.FromString,
             options,
             channel_credentials,

@@ -131,6 +131,9 @@ class MIINonPersistentClient:
         elif self.task == TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION:
             args = (request_dict["image"], request_dict["candidate_labels"])
             kwargs = query_kwargs
+        elif self.task == TaskType.TEXT2IMG:
+            args = (request_dict["prompt"], request_dict.get("negative_prompt", None))
+            kwargs = query_kwargs
         else:
             args = (request_dict["query"], )
             kwargs = query_kwargs

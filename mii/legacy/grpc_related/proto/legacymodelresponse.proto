@@ -33,7 +33,7 @@ service ModelResponse {
   rpc FillMaskReply(SingleStringRequest) returns (SingleStringReply) {}
   rpc TokenClassificationReply(SingleStringRequest) returns (SingleStringReply) {}
   rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
-  rpc Txt2ImgReply(MultiStringRequest) returns (ImageReply) {}
+  rpc Txt2ImgReply(Text2ImageRequest) returns (ImageReply) {}
   rpc ZeroShotImgClassificationReply (ZeroShotImgClassificationRequest) returns (SingleStringReply) {}
 }
 
@@ -101,6 +101,12 @@ message ImageReply {
   int64 size_w = 4;
   int64 size_h = 5;
   float time_taken = 6;
+}
+
+message Text2ImageRequest {
+  repeated string prompt = 1;
+  repeated string negative_prompt = 2;
+  map<string,Value> query_kwargs = 3;
 }
 
 message ZeroShotImgClassificationRequest {
