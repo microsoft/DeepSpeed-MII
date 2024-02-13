@@ -112,8 +112,8 @@ message ZeroShotImgClassificationRequest {
 
 message InpaintingRequest {
   repeated string prompt = 1;
-  repeated string image = 2;
-  repeated string mask_image = 3;
+  repeated bytes image = 2;
+  repeated bytes mask_image = 3;
   repeated string negative_prompt = 4;
   map<string,Value> query_kwargs = 5;
 }
