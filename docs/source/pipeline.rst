@@ -46,7 +46,7 @@ Generate Options
 The text-generation of the callable :class:`MIIPipeline
 <mii.batching.ragged_batching.MIIPipeline>` class can be modified with several
 keyword arguments. A full list of the available options can be found in
-:class:`GenerateConfig <mii.config.GenerateConfig>`.
+:class:`GenerateParamsConfig <mii.config.GenerateParamsConfig>`.
 
 The generate options affect only the prompt(s) passed in a given call to the
 pipeline. For example, you can control per-prompt generation length:
