@@ -347,14 +347,13 @@ class InpaintingMethods(Text2ImgMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
-        
+
         image = [convert_bytes_to_pil_image(img) for img in request.image]
-        mask_image = [convert_bytes_to_pil_image(mask_image) for mask_image in request.mask_image]
-        
-        args = (list(request.prompt),
-                image,
-                mask_image,
-                list(request.negative_prompt))
+        mask_image = [
+            convert_bytes_to_pil_image(mask_image) for mask_image in request.mask_image
+        ]
+
+        args = (list(request.prompt), image, mask_image, list(request.negative_prompt))
         return args, kwargs
 
 
