@@ -9,7 +9,7 @@ from transformers import Conversation
 from mii.legacy.constants import TaskType
 from mii.legacy.grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
 from mii.legacy.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
-from mii.legacy.models.utils import ImageResponse
+from mii.legacy.models.utils import ImageResponse, convert_bytes_to_pil_image
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
@@ -327,12 +327,15 @@ class InpaintingMethods(Text2ImgMethods):
 
     def pack_request_to_proto(self, request_dict, **query_kwargs):
         prompt = request_dict["prompt"]
-        prompt = [prompt] if isinstance(prompt, str) else prompt
+        prompt = prompt if isinstance(prompt, list) else [prompt]
         negative_prompt = request_dict.get("negative_prompt", [""] * len(prompt))
-        negative_prompt = [negative_prompt] if isinstance(negative_prompt,
-                                                          str) else negative_prompt
-        image = request_dict["image"]
-        mask_image = request_dict["mask_image"]
+        negative_prompt = negative_prompt if isinstance(negative_prompt,
+                                                        list) else [negative_prompt]
+        image = request_dict["image"] if isinstance(request_dict["image"],
+                                                    list) else [request_dict["image"]]
+        mask_image = request_dict["mask_image"] if isinstance(
+            request_dict["mask_image"],
+            list) else [request_dict["mask_image"]]
 
         return modelresponse_pb2.InpaintingRequest(
             prompt=prompt,
@@ -344,9 +347,13 @@ class InpaintingMethods(Text2ImgMethods):
 
     def unpack_request_from_proto(self, request):
         kwargs = unpack_proto_query_kwargs(request.query_kwargs)
+        
+        image = [convert_bytes_to_pil_image(img) for img in request.image]
+        mask_image = [convert_bytes_to_pil_image(mask_image) for mask_image in request.mask_image]
+        
         args = (list(request.prompt),
-                list(request.image),
-                list(request.mask_image),
+                image,
+                mask_image,
                 list(request.negative_prompt))
         return args, kwargs
 
