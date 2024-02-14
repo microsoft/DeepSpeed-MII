@@ -83,7 +83,7 @@ def test_single_GPU(deployment, query):
 
 
 @pytest.mark.parametrize(
-    "task_name, model_name, query",
+    "task_name, model_name, query, tensor_parallel",
     [
         (
             "text-generation",
@@ -92,6 +92,7 @@ def test_single_GPU(deployment, query):
                 "query": ["DeepSpeed is the greatest",
                           "Seattle is"]
             },
+            2,
         ),
     ],
 )
@@ -120,4 +121,25 @@ def test_session(deployment, query):
     generator.create_session(session_name)
     result = generator.query(query)
     generator.destroy_session(session_name)
+    assert result
+
+
+@pytest.mark.stable_diffusion
+@pytest.mark.parametrize(
+    "task_name, model_name, query",
+    [
+        (
+            "text-to-image",
+            "openskyml/midjourney-mini",
+            {
+                "query": ["a dog on a rocket"]
+            },
+        ),
+    ],
+)
+@pytest.mark.parametrize("min_compute_capability", [8])
+def test_stable_diffusion(deployment, query):
+    print(deployment)
+    generator = mii.mii_query_handle(deployment)
+    result = generator.query(query)
     assert result
