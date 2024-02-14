@@ -35,6 +35,7 @@ service ModelResponse {
   rpc ConversationalReply(ConversationRequest) returns (ConversationReply) {}
   rpc Txt2ImgReply(Text2ImageRequest) returns (ImageReply) {}
   rpc ZeroShotImgClassificationReply (ZeroShotImgClassificationRequest) returns (SingleStringReply) {}
+  rpc InpaintingReply(InpaintingRequest) returns (ImageReply) {}
 }
 
 message Value {
@@ -113,4 +114,12 @@ message ZeroShotImgClassificationRequest {
   string image = 1;
   repeated string candidate_labels = 2;
   map<string,Value> query_kwargs = 3;
+}
+
+message InpaintingRequest {
+  repeated string prompt = 1;
+  repeated bytes image = 2;
+  repeated bytes mask_image = 3;
+  repeated string negative_prompt = 4;
+  map<string,Value> query_kwargs = 5;
 }

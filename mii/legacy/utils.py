@@ -190,7 +190,7 @@ def get_num_gpus(mii_config):
 def get_provider(model_name, task):
     if model_name == "gpt-neox":
         provider = ModelProvider.ELEUTHER_AI
-    elif task == TaskType.TEXT2IMG:
+    elif task in [TaskType.TEXT2IMG, TaskType.INPAINTING]:
         provider = ModelProvider.DIFFUSERS
     else:
         provider = ModelProvider.HUGGING_FACE

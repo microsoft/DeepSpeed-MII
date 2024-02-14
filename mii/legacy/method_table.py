@@ -9,7 +9,7 @@ from transformers import Conversation
 from mii.legacy.constants import TaskType
 from mii.legacy.grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
 from mii.legacy.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
-from mii.legacy.models.utils import ImageResponse
+from mii.legacy.models.utils import ImageResponse, convert_bytes_to_pil_image
 
 
 def single_string_request_to_proto(self, request_dict, **query_kwargs):
@@ -312,6 +312,51 @@ class ZeroShotImgClassificationMethods(TaskMethods):
         return inference_pipeline(image, candidate_labels=candidate_labels, **kwargs)
 
 
+class InpaintingMethods(Text2ImgMethods):
+    @property
+    def method(self):
+        return "InpaintingReply"
+
+    def run_inference(self, inference_pipeline, args, kwargs):
+        prompt, image, mask_image, negative_prompt = args
+        return inference_pipeline(prompt=prompt,
+                                  image=image,
+                                  mask_image=mask_image,
+                                  negative_prompt=negative_prompt,
+                                  **kwargs)
+
+    def pack_request_to_proto(self, request_dict, **query_kwargs):
+        prompt = request_dict["prompt"]
+        prompt = prompt if isinstance(prompt, list) else [prompt]
+        negative_prompt = request_dict.get("negative_prompt", [""] * len(prompt))
+        negative_prompt = negative_prompt if isinstance(negative_prompt,
+                                                        list) else [negative_prompt]
+        image = request_dict["image"] if isinstance(request_dict["image"],
+                                                    list) else [request_dict["image"]]
+        mask_image = request_dict["mask_image"] if isinstance(
+            request_dict["mask_image"],
+            list) else [request_dict["mask_image"]]
+
+        return modelresponse_pb2.InpaintingRequest(
+            prompt=prompt,
+            image=image,
+            mask_image=mask_image,
+            negative_prompt=negative_prompt,
+            query_kwargs=kwarg_dict_to_proto(query_kwargs),
+        )
+
+    def unpack_request_from_proto(self, request):
+        kwargs = unpack_proto_query_kwargs(request.query_kwargs)
+
+        image = [convert_bytes_to_pil_image(img) for img in request.image]
+        mask_image = [
+            convert_bytes_to_pil_image(mask_image) for mask_image in request.mask_image
+        ]
+
+        args = (list(request.prompt), image, mask_image, list(request.negative_prompt))
+        return args, kwargs
+
+
 GRPC_METHOD_TABLE = {
     TaskType.TEXT_GENERATION: TextGenerationMethods(),
     TaskType.TEXT_CLASSIFICATION: TextClassificationMethods(),
@@ -321,4 +366,5 @@ GRPC_METHOD_TABLE = {
     TaskType.CONVERSATIONAL: ConversationalMethods(),
     TaskType.TEXT2IMG: Text2ImgMethods(),
     TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ZeroShotImgClassificationMethods(),
+    TaskType.INPAINTING: InpaintingMethods(),
 }

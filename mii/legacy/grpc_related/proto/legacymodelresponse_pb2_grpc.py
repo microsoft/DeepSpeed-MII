@@ -81,6 +81,12 @@ class ModelResponseStub(object):
             SerializeToString,
             response_deserializer=legacymodelresponse__pb2.SingleStringReply.FromString,
         )
+        self.InpaintingReply = channel.unary_unary(
+            '/legacymodelresponse.ModelResponse/InpaintingReply',
+            request_serializer=legacymodelresponse__pb2.InpaintingRequest.
+            SerializeToString,
+            response_deserializer=legacymodelresponse__pb2.ImageReply.FromString,
+        )
 
 
 class ModelResponseServicer(object):
@@ -146,6 +152,12 @@ class ModelResponseServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def ZeroShotImgClassificationReply(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def InpaintingReply(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -230,6 +242,12 @@ def add_ModelResponseServicer_to_server(servicer, server):
             ZeroShotImgClassificationRequest.FromString,
             response_serializer=legacymodelresponse__pb2.SingleStringReply.
             SerializeToString,
+        ),
+        'InpaintingReply':
+        grpc.unary_unary_rpc_method_handler(
+            servicer.InpaintingReply,
+            request_deserializer=legacymodelresponse__pb2.InpaintingRequest.FromString,
+            response_serializer=legacymodelresponse__pb2.ImageReply.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -518,6 +536,32 @@ class ModelResponse(object):
             '/legacymodelresponse.ModelResponse/ZeroShotImgClassificationReply',
             legacymodelresponse__pb2.ZeroShotImgClassificationRequest.SerializeToString,
             legacymodelresponse__pb2.SingleStringReply.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata)
+
+    @staticmethod
+    def InpaintingReply(request,
+                        target,
+                        options=(),
+                        channel_credentials=None,
+                        call_credentials=None,
+                        insecure=False,
+                        compression=None,
+                        wait_for_ready=None,
+                        timeout=None,
+                        metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/legacymodelresponse.ModelResponse/InpaintingReply',
+            legacymodelresponse__pb2.InpaintingRequest.SerializeToString,
+            legacymodelresponse__pb2.ImageReply.FromString,
             options,
             channel_credentials,
             insecure,
