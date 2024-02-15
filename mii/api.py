@@ -173,6 +173,7 @@ def serve(
 def pipeline(
     model_name_or_path: str = "",
     model_config: Optional[Dict] = None,
+    all_rank_output: bool = False,
     **kwargs,
 ) -> MIIPipeline:
     """
@@ -185,6 +186,10 @@ def pipeline(
         :class:`ModelConfig <mii.config.ModelConfig>` for a full list of options.
         Users can pass these options in a dictionary here or as keyword arguments to
         the function.
+    :param all_rank_output: Whether to return generated text on all ranks
+        (when using `tensor_parallel>1`). If `True`, all ranks will return the
+        same output. If `False`, only rank 0 will return output and the rest
+        will return `None`.
 
     :raises UnknownArgument: Raised when provided keyword argument does not
         match any field in :class:`ModelConfig <mii.config.ModelConfig>`.

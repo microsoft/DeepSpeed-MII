@@ -133,13 +133,13 @@ def expected_failure(request):
 
 
 @pytest.fixture(scope="function")
-def pipeline(model_config, expected_failure):
+def pipeline(model_config, all_rank_output, expected_failure):
     if expected_failure is not None:
         with pytest.raises(expected_failure) as excinfo:
-            mii.pipeline(model_config=model_config)
+            mii.pipeline(model_config=model_config, all_rank_output=all_rank_output)
         yield excinfo
     else:
-        pipe = mii.pipeline(model_config=model_config)
+        pipe = mii.pipeline(model_config=model_config, all_rank_output=all_rank_output)
         yield pipe
         pipe.destroy()
         dist.destroy_process_group()

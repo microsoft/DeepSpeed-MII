@@ -109,8 +109,8 @@ with ``deepspeed --num_gpus 2 example.py`` the following output is produced:
     rank 0 response: [a library for parallelizing and accelerating PyTorch.]
     rank 1 response: []
 
-This behavior can be changed by enabling ``all_rank_output`` when passing a
-prompt to the pipeline (i.e., ``response = pipe("DeepSpeed is", max_length=16,
+This behavior can be changed by enabling ``all_rank_output`` when creating the
+pipeline (i.e., ``pipe = mii.pipeline("mistralai/Mistral-7B-v0.1",
 all_rank_output=True)``):
 
 .. code-block:: console

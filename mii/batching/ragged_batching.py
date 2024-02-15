@@ -532,24 +532,20 @@ class MIIPipeline(RaggedBatchBase):
     functionality of ragged batching and dynamic splitfuse. This class is
     returned from :func:`mii.pipeline`.
     """
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, all_rank_output: bool = False, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.tid = threading.get_ident()
+        self._all_rank_output = all_rank_output
         self._destroyed = False
 
     def __call__(self,
                  prompts: Union[str,
                                 List[str]],
-                 all_rank_output: bool = False,
                  **generate_kwargs) -> List[Response]:
         """
         Generates text for the given prompts
 
         :param prompts: The string or list of strings used as prompts for generation.
-        :param all_rank_output: Whether to return generated text on all ranks
-            (when using `tensor_parallel>1`). If `True`, all ranks will return the
-            same output. If `False`, only rank 0 will return output and the rest
-            will return `None`.
         :param \**generate_kwargs: Generation keywords. A full list can be found
             in :class:`GenerateParamsConfig <mii.config.GenerateParamsConfig>`.
 
@@ -597,7 +593,7 @@ class MIIPipeline(RaggedBatchBase):
                         key=lambda pair: pair[0])
         ]
 
-        if all_rank_output:
+        if self._all_rank_output:
             outputs = self._bcast_responses(outputs)
 
         return outputs
