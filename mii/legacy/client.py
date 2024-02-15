@@ -134,6 +134,13 @@ class MIINonPersistentClient:
         elif self.task == TaskType.TEXT2IMG:
             args = (request_dict["prompt"], request_dict.get("negative_prompt", None))
             kwargs = query_kwargs
+        elif self.task == TaskType.INPAINTING:
+            negative_prompt = request_dict.get("negative_prompt", None)
+            args = (request_dict["prompt"],
+                    request_dict["image"],
+                    request_dict["mask_image"],
+                    negative_prompt)
+            kwargs = query_kwargs
         else:
             args = (request_dict["query"], )
             kwargs = query_kwargs
