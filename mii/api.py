@@ -209,6 +209,7 @@ def pipeline(
         inference_engine=inference_engine,
         tokenizer=tokenizer,
         model_config=model_config,
+        all_rank_output=all_rank_output,
     )
     return inference_pipeline
 
