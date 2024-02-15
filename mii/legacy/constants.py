@@ -20,6 +20,7 @@ class TaskType(str, Enum):
     CONVERSATIONAL = "conversational"
     TEXT2IMG = "text-to-image"
     ZERO_SHOT_IMAGE_CLASSIFICATION = "zero-shot-image-classification"
+    INPAINTING = "text-to-image-inpainting"
 
 
 class ModelProvider(str, Enum):
@@ -60,6 +61,11 @@ REQUIRED_KEYS_PER_TASK = {
     TaskType.TEXT2IMG: ["prompt"],
     TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image",
                                               "candidate_labels"],
+    TaskType.INPAINTING: [
+        "prompt",
+        "image",
+        "mask_image",
+    ]
 }
 
 MII_CACHE_PATH = "MII_CACHE_PATH"

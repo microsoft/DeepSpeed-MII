@@ -3,6 +3,7 @@
 
 # DeepSpeed Team
 import os
+import io
 from mii.legacy.utils import mii_cache_path
 
 
@@ -59,3 +60,13 @@ class ImageResponse:
                 images.append(img)
             self._deserialized_images = images
         return self._deserialized_images
+
+
+def convert_bytes_to_pil_image(image_bytes: bytes):
+    """Converts bytes to a PIL Image object."""
+    if not isinstance(image_bytes, bytes):
+        return image_bytes
+
+    from PIL import Image
+    image = Image.open(io.BytesIO(image_bytes))
+    return image
