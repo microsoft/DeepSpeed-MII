@@ -17,7 +17,7 @@ def diffusers_provider(model_config: ModelConfig):
     kwargs = model_config.pipeline_kwargs
     if model_config.dtype == torch.half:
         kwargs["torch_dtype"] = torch.float16
-        kwargs["revision"] = "fp16"
+        #kwargs["revision"] = "fp16"
 
     pipeline = attempt_load(DiffusionPipeline.from_pretrained,
                             model_config.model,
