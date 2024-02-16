@@ -86,8 +86,17 @@ def ds_config(request):
     return request.param
 
 
-@pytest.fixture(scope="function", params=[True])
-def replace_with_kernel_inject(request):
+@pytest.fixture(scope="function", params=[None])
+def replace_with_kernel_inject(request, model_name):
+    if request.param is not None:
+        return request.param
+    if model_name == "openai/clip-vit-base-patch32":
+        return False
+    return True
+
+
+@pytest.fixture(scope="function", params=[False])
+def enable_cuda_graph(request):
     return request.param
 
 
@@ -104,6 +113,7 @@ def model_config(
     enable_zero: bool,
     ds_config: dict,
     replace_with_kernel_inject: bool,
+    enable_cuda_graph: bool,
 ):
     config = SimpleNamespace(
         skip_model_check=True, # TODO: remove this once conversation task check is fixed
@@ -120,6 +130,7 @@ def model_config(
         enable_zero=enable_zero,
         ds_config=ds_config,
         replace_with_kernel_inject=replace_with_kernel_inject,
+        enable_cuda_graph=enable_cuda_graph,
     )
     return config.__dict__
 
