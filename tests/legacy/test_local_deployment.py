@@ -73,16 +73,16 @@ from PIL import Image
       "stabilityai/stable-diffusion-2-inpainting",
       {
           "prompt":
-          "the head of a dog",
+          "a black cat with glowing eyes",
           "image":
           Image.open(
               requests.get(
-                  "https://huggingface.co/datasets/Narsil/image_dummy/raw/main/parrots.png",
+                  "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/inpaint.png",
                   stream=True).raw),
           "mask_image":
           Image.open(
               requests.get(
-                  "https://huggingface.co/datasets/Narsil/image_dummy/raw/main/parrots.png",
+                  "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/inpaint_mask.png",
                   stream=True).raw),
       })],
 )
