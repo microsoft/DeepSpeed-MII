@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-from typing import Optional, Any, Dict, Tuple, Union
+from typing import Optional, Any, Dict, Tuple
 
 import mii
 from mii.backend import MIIClient  # , MIIServer
@@ -18,8 +18,7 @@ from mii.utils import import_score_file
 
 def _parse_kwargs_to_model_config(
     model_name_or_path: str = "",
-    model_config: Optional[Dict[str,
-                                Any]] = None,
+    model_config: Optional[Dict] = None,
     **kwargs,
 ) -> Tuple[ModelConfig,
            Dict[str,
@@ -56,10 +55,8 @@ def _parse_kwargs_to_model_config(
 
 def _parse_kwargs_to_mii_config(
     model_name_or_path: str = "",
-    model_config: Optional[Dict[str,
-                                Any]] = None,
-    mii_config: Optional[Dict[str,
-                              Any]] = None,
+    model_config: Optional[Dict] = None,
+    mii_config: Optional[Dict] = None,
     **kwargs,
 ) -> MIIConfig:
     if mii_config is None:
@@ -94,6 +91,20 @@ def _parse_kwargs_to_mii_config(
 
 
 def client(model_or_deployment_name: str) -> MIIClient:
+    """
+    Creates a client object for interfacing with an existing persistent model deployment.
+
+    :param model_or_deployment_name: Name of the HuggingFace model name for the
+        persistent model deployment. If `deployment_name` was provided input to
+        :func:`mii.serve`, users should provide the `deployment_name` string instead.
+
+    :raises UnknownArgument: Raised when provided keyword argument does not
+        match any field in :class:`ModelConfig <mii.config.ModelConfig>` or
+        :class:`MIIConfig <mii.config.MIIConfig>`.
+
+    :return: Client object that can be used to interface with the deployed
+        persistent model server, which uses ragged batching and dynamic splitfuse.
+    """
     mii_config = get_mii_config(model_or_deployment_name)
 
     return MIIClient(mii_config)
@@ -101,13 +112,32 @@ def client(model_or_deployment_name: str) -> MIIClient:
 
 def serve(
     model_name_or_path: str = "",
-    model_config: Optional[Dict[str,
-                                Any]] = None,
-    mii_config: Optional[Dict[str,
-                              Any]] = None,
+    model_config: Optional[Dict] = None,
+    mii_config: Optional[Dict] = None,
     **kwargs,
-) -> Union[None,
-           MIIClient]:
+) -> MIIClient:
+    """
+    Creates a persistent MII model deployment from a locally stored model path
+    or HuggingFace model name.
+
+    :param model_name_or_path: HuggingFace model name or path to locally stored
+        model. This must be provided here or in the `model_config` dictionary.
+    :param model_config: Dictionary containing model configuration fields. See
+        :class:`ModelConfig <mii.config.ModelConfig>` for a full list of options.
+        Users can pass these options in a dictionary here or as keyword arguments to
+        the function.
+    :param mii_config: Dictionary containing DeepSpeed-MII configuration fields.
+        See :class:`MIIConfig <mii.config.MIIConfig>` for a full list of options.
+        Users can pass these options in a dictionary here or as keyword arguments to
+        the function.
+
+    :raises UnknownArgument: Raised when provided keyword argument does not
+        match any field in :class:`ModelConfig <mii.config.ModelConfig>` or
+        :class:`MIIConfig <mii.config.MIIConfig>`.
+
+    :return: Client object that can be used to interface with the deployed
+        persistent model server, which uses ragged batching and dynamic splitfuse.
+    """
     mii_config = _parse_kwargs_to_mii_config(
         model_name_or_path=model_name_or_path,
         model_config=model_config,
@@ -142,10 +172,30 @@ def serve(
 
 def pipeline(
     model_name_or_path: str = "",
-    model_config: Optional[Dict[str,
-                                Any]] = None,
+    model_config: Optional[Dict] = None,
+    all_rank_output: bool = False,
     **kwargs,
 ) -> MIIPipeline:
+    """
+    Creates a non-persistent MII model pipeline from a locally stored model path
+    or HuggingFace model name.
+
+    :param model_name_or_path: HuggingFace model name or path to locally stored
+        model. This must be provided here or in the `model_config` dictionary.
+    :param model_config: Dictionary containing model configuration fields. See
+        :class:`ModelConfig <mii.config.ModelConfig>` for a full list of options.
+        Users can pass these options in a dictionary here or as keyword arguments to
+        the function.
+    :param all_rank_output: Whether to return generated text on all ranks
+        (when using `tensor_parallel>1`). If `True`, all ranks will return the
+        same output. If `False`, only rank 0 will return output and the rest
+        will return `None`.
+
+    :raises UnknownArgument: Raised when provided keyword argument does not
+        match any field in :class:`ModelConfig <mii.config.ModelConfig>`.
+
+    :return: Non-persistent model pipeline using ragged batching and dynamic splitfuse.
+    """
     model_config, remaining_kwargs = _parse_kwargs_to_model_config(
         model_name_or_path=model_name_or_path, model_config=model_config, **kwargs
     )
@@ -159,6 +209,7 @@ def pipeline(
         inference_engine=inference_engine,
         tokenizer=tokenizer,
         model_config=model_config,
+        all_rank_output=all_rank_output,
     )
     return inference_pipeline
 

@@ -14,11 +14,21 @@ from mii.config import GenerateParamsConfig
 
 @dataclass
 class Response:
-    generated_text: str
-    prompt_length: int
-    generated_length: int
-    finish_reason: GenerationFinishReason
+    """
+    Response object returns from text-generation pipelines and persistent deployments.
+    """
 
+    generated_text: str
+    """ The generated text. """
+
+    prompt_length: int
+    """ Number of tokens in the prompt. """
+
+    generated_length: int
+    """ Number of generated tokens. """
+
+    finish_reason: GenerationFinishReason
+    """ Reason for ending generation. One of :class:`mii.constants.GenerationFinishReason`. """
     @staticmethod
     def from_msg_dict(msg: Dict[str, Union[str, int]]) -> Self:
         return Response(**msg)

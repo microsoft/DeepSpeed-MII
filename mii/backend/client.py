@@ -28,7 +28,12 @@ def create_channel(host, port):
 
 class MIIClient:
     """
-    Client to send queries to a single endpoint.
+    Client for sending generation requests to a persistent deployment created
+    with :func:`mii.serve`. Use :func:`mii.client` to create an instance of this
+    class.
+
+    :param mii_config: MII config for the persistent deployment to connect with.
+    :param host: hostname where the persistent deployment is running.
     """
     def __init__(self, mii_config: MIIConfig, host: str = "localhost") -> None:
         self.mii_config = mii_config
@@ -39,6 +44,13 @@ class MIIClient:
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
 
     def __call__(self, *args, **kwargs) -> List[Response]:
+        """
+        All args and kwargs get passed directly to
+        :meth:`~mii.backend.client.MIIClient.generate`.
+
+        :return: A list of :class:`Response` objects containing the generated
+            text for all prompts.
+        """
         return self.generate(*args, **kwargs)
 
     async def _request_async_response(self, prompts, **query_kwargs):
@@ -59,21 +71,29 @@ class MIIClient:
                  prompts: Union[str,
                                 List[str]],
                  streaming_fn: Callable = None,
-                 **query_kwargs: Dict[str,
-                                      Any]) -> Union[None,
-                                                     List[Response]]:
+                 **generate_kwargs: Dict) -> List[Response]:
+        """
+        Generates text for the given prompts.
+
+        :param prompts: The string or list of strings used as prompts for generation.
+        :param streaming_fn: Streaming support is currently a WIP.
+        :param \**generate_kwargs: Generation keywords. A full list can be found here.
+
+        :return: A list of :class:`Response` objects containing the generated
+            text for all prompts.
+        """ # noqa: W605
         if isinstance(prompts, str):
             prompts = [prompts]
         if streaming_fn is not None:
             if len(prompts) > 1:
                 raise RuntimeError(
                     "MII client streaming only supports a single prompt input.")
-            query_kwargs["stream"] = True
-            return self._generate_stream(streaming_fn, prompts, **query_kwargs)
+            generate_kwargs["stream"] = True
+            return self._generate_stream(streaming_fn, prompts, **generate_kwargs)
 
         return self.asyncio_loop.run_until_complete(
             self._request_async_response(prompts,
-                                         **query_kwargs))
+                                         **generate_kwargs))
 
     def _generate_stream(self,
                          callback,
@@ -99,6 +119,10 @@ class MIIClient:
             modelresponse_pb2.google_dot_protobuf_dot_empty__pb2.Empty())
 
     def terminate_server(self) -> None:
+        """
+        Terminates the persistent deployment server. This can be called from any
+        client.
+        """
         self.asyncio_loop.run_until_complete(self.terminate_async())
         if self.mii_config.enable_restful_api:
             requests.get(

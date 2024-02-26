@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import grpc
 from .api import client, serve, pipeline
 
 from .legacy import MIIServer, MIIClient, mii_query_handle, deploy, terminate, DeploymentType, TaskType, aml_output_path, MIIConfig, ModelConfig, get_supported_models

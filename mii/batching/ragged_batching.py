@@ -527,24 +527,43 @@ class ReadableStream:
 
 
 class MIIPipeline(RaggedBatchBase):
-    def __init__(self, *args, **kwargs):
+    """
+    Pipeline class that inherits from :class:`RaggedBatchBase` and provides
+    functionality of ragged batching and dynamic splitfuse. This class is
+    returned from :func:`mii.pipeline`.
+    """
+    def __init__(self, all_rank_output: bool = False, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.tid = threading.get_ident()
+        self._all_rank_output = all_rank_output
         self._destroyed = False
 
-    def __call__(self, inputs: Union[str, List[str]], **kwargs) -> List[Response]:
+    def __call__(self,
+                 prompts: Union[str,
+                                List[str]],
+                 **generate_kwargs) -> List[Response]:
+        """
+        Generates text for the given prompts
+
+        :param prompts: The string or list of strings used as prompts for generation.
+        :param \**generate_kwargs: Generation keywords. A full list can be found
+            in :class:`GenerateParamsConfig <mii.config.GenerateParamsConfig>`.
+
+        :return: A list of :class:`Response` objects containing the generated
+            text for all prompts.
+        """ # noqa: W605
         if self._destroyed:
             raise RuntimeError(
                 "The inference engine of this pipeline has been destroyed.")
 
-        if isinstance(inputs, str):
-            inputs = [inputs]
+        if isinstance(prompts, str):
+            prompts = [prompts]
         outputs: List[Response] = []
-        uids_running: List[int] = list(range(len(inputs)))
+        uids_running: List[int] = list(range(len(prompts)))
         uids_complete_order: List[int] = []
 
-        for uid, input in zip(uids_running, inputs):
-            request_kwargs = kwargs.copy()
+        for uid, input in zip(uids_running, prompts):
+            request_kwargs = generate_kwargs.copy()
             self._put_request(uid, input, request_kwargs)
 
         self.schedule_requests()
@@ -574,7 +593,7 @@ class MIIPipeline(RaggedBatchBase):
                         key=lambda pair: pair[0])
         ]
 
-        if self.model_config.all_rank_output:
+        if self._all_rank_output:
             outputs = self._bcast_responses(outputs)
 
         return outputs

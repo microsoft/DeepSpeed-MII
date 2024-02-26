@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from typing import Union
 from deepspeed.launcher.runner import DLTS_HOSTFILE
 import deepspeed.comm as dist
+from huggingface_hub import snapshot_download
 
 
 @pytest.fixture(scope="function", params=[None])
@@ -71,6 +72,29 @@ def model_name(request):
     return request.param
 
 
+@pytest.fixture(scope="function", params=[False])
+def local_model(request):
+    return request.param
+
+
+@pytest.fixture(scope="function")
+def model_path(model_name, local_model, tmpdir):
+    if not local_model:
+        return None
+
+    base_dir = os.getenv("HF_HOME", tmpdir)
+    download_dir = os.path.join(base_dir, "mii-ci-models", model_name)
+    snapshot_download(model_name, local_dir=download_dir)
+    return download_dir
+
+
+@pytest.fixture(scope="function")
+def model_name_or_path(model_name, model_path):
+    if model_path is not None:
+        return model_path
+    return model_name
+
+
 @pytest.fixture(scope="function", params=["test-dep"])
 def deployment_name(request):
     return request.param
@@ -88,21 +112,19 @@ def all_rank_output(request):
 
 @pytest.fixture(scope="function")
 def model_config(
+    model_name_or_path: str,
     task_name: str,
-    model_name: str,
     tensor_parallel: int,
     replica_num: int,
     device_map: Union[str,
                       dict],
-    all_rank_output: bool,
 ):
     config = SimpleNamespace(
-        model_name_or_path=model_name,
+        model_name_or_path=model_name_or_path,
         task=task_name,
         tensor_parallel=tensor_parallel,
         replica_num=replica_num,
         device_map=device_map,
-        all_rank_output=all_rank_output,
     )
     return config.__dict__
 
@@ -135,13 +157,13 @@ def expected_failure(request):
 
 
 @pytest.fixture(scope="function")
-def pipeline(model_config, expected_failure):
+def pipeline(model_config, all_rank_output, expected_failure):
     if expected_failure is not None:
         with pytest.raises(expected_failure) as excinfo:
-            mii.pipeline(model_config=model_config)
+            mii.pipeline(model_config=model_config, all_rank_output=all_rank_output)
         yield excinfo
     else:
-        pipe = mii.pipeline(model_config=model_config)
+        pipe = mii.pipeline(model_config=model_config, all_rank_output=all_rank_output)
         yield pipe
         pipe.destroy()
         dist.destroy_process_group()
