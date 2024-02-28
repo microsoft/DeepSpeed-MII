@@ -5,7 +5,7 @@ Flask-RESTful
 grpcio
 grpcio-tools
 Pillow
-pydantic
+pydantic>=2.0.0
 safetensors
 torch
 transformers

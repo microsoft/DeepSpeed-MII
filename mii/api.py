@@ -39,7 +39,7 @@ def _parse_kwargs_to_model_config(
     # Fill model_config dict with relevant kwargs, store remaining kwargs in a new dict
     remaining_kwargs = {}
     for key, val in kwargs.items():
-        if key in ModelConfig.__dict__["__fields__"]:
+        if key in ModelConfig.model_fields.keys():
             if key in model_config:
                 assert (
                     model_config.get(key) == val
@@ -76,7 +76,7 @@ def _parse_kwargs_to_mii_config(
 
     # Fill mii_config dict with relevant kwargs, raise error on unknown kwargs
     for key, val in remaining_kwargs.items():
-        if key in MIIConfig.__dict__["__fields__"]:
+        if key in MIIConfig.model_fields.keys():
             if key in mii_config:
                 assert (
                     mii_config.get(key) == val
@@ -158,9 +158,9 @@ def serve(
         mii.aml_related.utils.generate_aml_scripts(
             acr_name=acr_name,
             deployment_name=mii_config.deployment_name,
-            model_name=mii_config.model_config.model,
-            task_name=mii_config.model_config.task,
-            replica_num=mii_config.model_config.replica_num,
+            model_name=mii_config.model_conf.model,
+            task_name=mii_config.model_conf.task,
+            replica_num=mii_config.model_conf.replica_num,
             instance_type=mii_config.instance_type,
             version=mii_config.version,
         )
