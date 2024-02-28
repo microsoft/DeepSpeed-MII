@@ -7,7 +7,7 @@ import pytest
 import json
 import requests
 import mii.legacy as mii
-from mii.legacy import pydantic_v1
+from pydantic import ValidationError
 
 
 @pytest.mark.deepspeed
@@ -81,7 +81,7 @@ def test_zero_config(deployment, query):
 
 
 @pytest.mark.deepspeed
-@pytest.mark.parametrize("expected_failure", [pydantic_v1.ValidationError])
+@pytest.mark.parametrize("expected_failure", [ValidationError])
 @pytest.mark.parametrize(
     "enable_deepspeed, enable_zero, dtype",
     [(True,

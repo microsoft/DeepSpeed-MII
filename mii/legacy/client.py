@@ -37,7 +37,7 @@ def mii_query_handle(deployment_name):
         return MIINonPersistentClient(task, deployment_name)
 
     mii_config = _get_mii_config(deployment_name)
-    return MIIClient(mii_config.model_config.task,
+    return MIIClient(mii_config.model_conf.task,
                      "localhost", # TODO: This can probably be removed
                      mii_config.port_number)
 

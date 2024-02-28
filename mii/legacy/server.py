@@ -28,7 +28,7 @@ class MIIServer:
     """Initialize the model, setup the server for the model under model_path"""
     def __init__(self, mii_config):
 
-        self.task = mii_config.model_config.task
+        self.task = mii_config.model_conf.task
         self.num_gpus = get_num_gpus(mii_config)
         assert self.num_gpus > 0, "GPU count must be greater than 0"
 
@@ -44,8 +44,7 @@ class MIIServer:
         mii_config.generate_replica_configs()
 
         processes = self._initialize_service(mii_config)
-        self._wait_until_server_is_live(processes,
-                                        mii_config.model_config.replica_configs)
+        self._wait_until_server_is_live(processes, mii_config.model_conf.replica_configs)
 
     def _wait_until_server_is_live(self, processes, deployment):
         for process, repl_config in zip(processes, deployment):
@@ -128,11 +127,11 @@ class MIIServer:
         ]
 
         host_gpus = defaultdict(list)
-        for repl_config in mii_config.model_config.replica_configs:
+        for repl_config in mii_config.model_conf.replica_configs:
             host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
         # Start replica instances
-        for repl_config in mii_config.model_config.replica_configs:
+        for repl_config in mii_config.model_conf.replica_configs:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             hostfile.write(
                 f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
@@ -140,7 +139,7 @@ class MIIServer:
             ds_launch_str = self._generate_ds_launch_str(repl_config, hostfile.name)
             processes.append(
                 self._launch_server_process(
-                    mii_config.model_config,
+                    mii_config.model_conf,
                     "MII server",
                     ds_launch_str=ds_launch_str,
                     server_args=server_args +
@@ -153,7 +152,7 @@ class MIIServer:
             # expected to assign one GPU to one process.
         processes.append(
             self._launch_server_process(
-                mii_config.model_config,
+                mii_config.model_conf,
                 "load balancer",
                 server_args=server_args + ["--load-balancer"],
             ))
@@ -161,7 +160,7 @@ class MIIServer:
         if mii_config.enable_restful_api:
             processes.append(
                 self._launch_server_process(
-                    mii_config.model_config,
+                    mii_config.model_conf,
                     "restful api gateway",
                     server_args=server_args + ["--restful-gateway"],
                 ))

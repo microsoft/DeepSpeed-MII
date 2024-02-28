@@ -213,23 +213,21 @@ class ModelConfig(DeepSpeedConfigModel):
             assert not self.enable_cuda_graph, "Bloom models do not support CUDA Graph."
         return self
 
-    @model_validator(mode="before")
-    @classmethod
-    def deploy_rank_valid(cls, values):
-        tensor_parallel = values.get("tensor_parallel")
-        deploy_rank = values.get("deploy_rank")
+    @model_validator(mode="after")
+    def deploy_rank_valid(self):
+        deploy_rank = self.deploy_rank
 
         # if deploy rank is not given, default to align with TP value
         if deploy_rank is None:
-            deploy_rank = list(range(tensor_parallel))
+            deploy_rank = list(range(self.tensor_parallel))
 
         # number of ranks provided must be equal to TP size, DP is handled outside MII currently
-        assert tensor_parallel == len(
+        assert self.tensor_parallel == len(
             deploy_rank
-        ), f"{len(deploy_rank)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {tensor_parallel}"
+        ), f"{len(deploy_rank)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {self.tensor_parallel}"
 
-        values["deploy_rank"] = deploy_rank
-        return values
+        self.__dict__["deploy_rank"] = deploy_rank
+        return self
 
     @model_validator(mode="before")
     @classmethod
@@ -253,18 +251,12 @@ class ModelConfig(DeepSpeedConfigModel):
         values["model_path"] = model_path
         return values
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_model_and_task(cls, values):
-        task = values.get("task")
-        model = values.get("model")
-        if not values.get("skip_model_check"):
-            mii.utils.check_if_task_and_model_is_valid(task, model)
-            if values.get("enable_deepspeed"):
-                mii.utils.check_if_task_and_model_is_supported(task, model)
-        # Skip any future checks
-        values["skip_model_check"] = True
-        return values
+    @model_validator(mode="after")
+    def validate_model_and_task(self):
+        if not self.skip_model_check:
+            mii.utils.check_if_task_and_model_is_valid(self.task, self.model)
+            mii.utils.check_if_task_and_model_is_supported(self.task, self.model)
+        return self
 
     @model_validator(mode="after")
     def meta_tensor_or_sys_mem(self):
@@ -317,7 +309,7 @@ class MIIConfig(DeepSpeedConfigModel):
     * `AML` will generate the assets necessary to deploy on AML resources.
     """
 
-    model_config: ModelConfig
+    model_conf: ModelConfig
     """
     Configuration for the deployed model(s).
     """
@@ -366,9 +358,9 @@ class MIIConfig(DeepSpeedConfigModel):
         # TODO: refactor this function
         hostfile = self.hostfile
         port_number = self.port_number
-        torch_dist_port = self.model_config.torch_dist_port
-        tensor_parallel = self.model_config.tensor_parallel
-        replica_num = self.model_config.replica_num
+        torch_dist_port = self.model_conf.torch_dist_port
+        tensor_parallel = self.model_conf.tensor_parallel
+        replica_num = self.model_conf.replica_num
         replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
@@ -385,7 +377,7 @@ class MIIConfig(DeepSpeedConfigModel):
                     gpu_indices=gpu_indices,
                 ))
 
-        self.model_config.replica_configs = replica_configs
+        self.model_conf.replica_configs = replica_configs
 
 
 def _allocate_processes(hostfile_path, tensor_parallel, replica_num):
