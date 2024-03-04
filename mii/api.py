@@ -158,8 +158,7 @@ def serve(
     create_score_file(mii_config)
 
     if mii_config.deployment_type == DeploymentType.LOCAL:
-        import_score_file(mii_config.deployment_name,
-                          DeploymentType.LOCAL).init()
+        import_score_file(mii_config.deployment_name, DeploymentType.LOCAL).init()
         return MIIClient(mii_config=mii_config)
     if mii_config.deployment_type == DeploymentType.AML:
         acr_name = mii.aml_related.utils.get_acr_name()
