@@ -131,6 +131,12 @@ class ModelConfig(MIIConfigModel):
     `inference_engine_config`.
     """
 
+    quantization_mode: Optional[str] = None
+    """
+    The quantization mode in string format. The supported modes are as follows:
+        - 'wf6af16', weight-only quantization with FP6 weight and FP16 activation.
+    """
+
     inference_engine_config: RaggedInferenceEngineConfig = {}
     """
     DeepSpeed inference engine config. This is automatically generated, but you
@@ -208,6 +214,12 @@ class ModelConfig(MIIConfigModel):
     def propagate_tp_size(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         tensor_parallel = values.get("tensor_parallel")
         values.get("inference_engine_config").tensor_parallel.tp_size = tensor_parallel
+        return values
+
+    @root_validator
+    def propagate_quantization_mode(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        quantization_mode = values.get("quantization_mode")
+        values.get("inference_engine_config").quantization_mode = quantization_mode
         return values
 
     @root_validator
