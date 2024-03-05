@@ -56,8 +56,8 @@ def inject_checkpoint_engine():
     "model_name",
     [
         "tiiuae/falcon-7b",
-        "NousResearch/Llama-2-7b-hf",
         "huggyllama/llama-7b",
+        "NousResearch/Llama-2-7b-hf",
         "mistralai/Mistral-7B-v0.1",
         "cloudyu/Mixtral_11Bx2_MoE_19B",
         "facebook/opt-125m",
