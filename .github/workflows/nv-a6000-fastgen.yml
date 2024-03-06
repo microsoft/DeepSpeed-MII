@@ -44,6 +44,7 @@ jobs:
           python -m pip install pydantic==1.10.11
           git clone --depth=1 https://github.com/microsoft/DeepSpeed
           cd DeepSpeed
+          git checkout features/rebase-quant-fp6
           python -m pip install .
           ds_report
       - name: Install MII
