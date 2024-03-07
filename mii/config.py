@@ -219,7 +219,7 @@ class ModelConfig(MIIConfigModel):
     @root_validator
     def propagate_quantization_mode(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         quantization_mode = values.get("quantization_mode")
-        values.get("inference_engine_config").quantization_mode = quantization_mode
+        values.get("inference_engine_config").quantization.quantization_mode = quantization_mode
         return values
 
     @root_validator
