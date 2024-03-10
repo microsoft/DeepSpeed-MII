@@ -38,13 +38,6 @@ import mii.legacy as mii
         ),
         (
             "text-generation",
-            "distilgpt2",
-            {
-                "query": ["DeepSpeed is the greatest"]
-            },
-        ),
-        (
-            "text-generation",
             "bigscience/bloom-560m",
             {
                 "query": ["DeepSpeed is the greatest",
