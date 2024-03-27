@@ -11,4 +11,4 @@ torch
 transformers
 ujson
 Werkzeug
-zmq
+pyzmq
