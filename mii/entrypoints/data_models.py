@@ -9,9 +9,8 @@ from typing import Literal, Optional, List, Dict, Any, Union
 import time
 
 import shortuuid
-from pydantic import BaseModel, BaseSettings, Field
-
-
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings
 class ErrorResponse(BaseModel):
     object: str = "error"
     message: str
