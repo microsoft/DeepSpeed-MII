@@ -6,9 +6,9 @@ grpcio
 grpcio-tools
 Pillow
 pydantic
+pyzmq
 safetensors
 torch
 transformers
 ujson
 Werkzeug
-pyzmq
