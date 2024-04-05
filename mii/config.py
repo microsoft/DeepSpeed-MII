@@ -120,6 +120,12 @@ class ModelConfig(DeepSpeedConfigModel):
     `inference_engine_config`.
     """
 
+    quantization_mode: Optional[str] = None
+    """
+    The quantization mode in string format. The supported modes are as follows:
+        - 'wf6af16', weight-only quantization with FP6 weight and FP16 activation.
+    """
+
     inference_engine_config: RaggedInferenceEngineConfig = {}
     """
     DeepSpeed inference engine config. This is automatically generated, but you
@@ -207,6 +213,11 @@ class ModelConfig(DeepSpeedConfigModel):
         num_replica_config = len(self.replica_configs)
         if num_replica_config > 0:
             assert num_replica_config == self.replica_num, "Number of replica configs must match replica_num"
+        return self
+
+    @model_validator(mode="after")
+    def propagate_quantization_mode(self) -> "ModelConfig":
+        self.inference_engine_config.quantization.quantization_mode = self.quantization_mode
         return self
 
 

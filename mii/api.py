@@ -50,6 +50,7 @@ def _parse_kwargs_to_model_config(
 
     # Create the ModelConfig object and return it with remaining kwargs
     model_config = ModelConfig(**model_config)
+
     return model_config, remaining_kwargs
 
 

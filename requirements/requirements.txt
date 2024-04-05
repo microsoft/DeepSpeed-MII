@@ -1,14 +1,14 @@
 asyncio
-deepspeed>=0.13.0
+deepspeed>=0.14.0
 deepspeed-kernels
 Flask-RESTful
 grpcio
 grpcio-tools
 Pillow
 pydantic>=2.0.0
+pyzmq
 safetensors
 torch
 transformers
 ujson
 Werkzeug
-zmq
