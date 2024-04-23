@@ -273,24 +273,31 @@ class RaggedBatchBase:
 
             max_blocks = free_blocks - self.scheduled_req_blocks
 
-            if len(r.input_tokens) > 1:
+            cache_hit_length, block_ids = self.inference_engine.lookup_cache(r.uid, r.input_tokens)
+            input_tokens = r.input_tokens[cache_hit_length:]
+
+            if len(input_tokens) > 1:
                 # When the KV cache is out of capacity, we release KV cache blocks for a request.
                 # However, we can immediately schedule the request again if we split the request.
                 # So we make sure that we have capacity for the entire prompt (+tokens already generated).
-                req_tokens, _ = self.inference_engine.query(r.uid, len(r.input_tokens), max_blocks)
-                if req_tokens < len(r.input_tokens):
+                req_tokens, _ = self.inference_engine.query(r.uid, len(input_tokens), max_blocks)
+                if req_tokens < len(input_tokens):
                     break
 
-            req_tokens = min(len(r.input_tokens), max_batch_size)
+            req_tokens = min(len(input_tokens), max_batch_size)
             req_tokens, req_blocks = self.inference_engine.query(r.uid, req_tokens, max_blocks)
 
             if req_tokens <= 0:
                 continue
 
             # Decompose the prompt to fit to the max ragged batch size
-            decomposed = req_tokens < len(r.input_tokens)
-            remaining_tokens = r.input_tokens[req_tokens:]
-            r.input_tokens = r.input_tokens[:req_tokens]
+            if cache_hit_length > 0:
+                self.inference_engine.setup_cached_sequence(r.uid, r.input_tokens, block_ids)
+                r.seq_length = r.seq_length + cache_hit_length
+
+            decomposed = req_tokens < len(input_tokens)
+            remaining_tokens = input_tokens[req_tokens:]
+            r.input_tokens = input_tokens[:req_tokens]
             r.last_in_prompt = not decomposed
 
             # Schedule the request
