@@ -273,7 +273,7 @@ class RaggedBatchBase:
 
             max_blocks = free_blocks - self.scheduled_req_blocks
 
-            cache_hit_length, block_ids = self.inference_engine.lookup_cache(r.uid, r.input_tokens)
+            cache_hit_length, block_ids = self.inference_engine.lookup_cache(r.input_tokens)
             input_tokens = r.input_tokens[cache_hit_length:]
 
             if len(input_tokens) > 1:
