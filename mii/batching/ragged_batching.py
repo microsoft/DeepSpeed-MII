@@ -292,7 +292,7 @@ class RaggedBatchBase:
 
             # Decompose the prompt to fit to the max ragged batch size
             if cache_hit_length > 0:
-                self.inference_engine.setup_cached_sequence(r.uid, r.input_tokens, block_ids)
+                self.inference_engine.setup_cached_sequence(r.uid, r.input_tokens.numel(), block_ids)
                 r.seq_length = r.seq_length + cache_hit_length
 
             decomposed = req_tokens < len(input_tokens)
