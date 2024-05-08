@@ -82,6 +82,8 @@ class RaggedBatchBase:
             self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
             self.socket.setsockopt(zmq.RCVTIMEO, ZMQ_RECV_TIMEOUT)
 
+        self.enable_prefix_cache = self.inference_engine._config.enable_prefix_cache
+
     @cached_property
     def local_rank(self) -> int:
         return get_accelerator().current_device()
@@ -131,6 +133,11 @@ class RaggedBatchBase:
             if not r.stop_generation:
                 r.set_next_as_input()
                 self.request_queue.put(r)
+            if r.stop_generation:
+                if len(r.generated_tokens) > 0:
+                    all_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens], dim=0)
+                    all_tokens = torch.cat([r.prompt_tokens, all_tokens], dim=0)
+                    self.inference_engine.update_prefix_cache(r.uid, all_tokens)
 
         # 7. Update scheduled requests
         self.scheduled_requests.prune(running_requests.completed.uids)
@@ -273,8 +280,13 @@ class RaggedBatchBase:
 
             max_blocks = free_blocks - self.scheduled_req_blocks
 
-            cache_hit_length, block_ids = self.inference_engine.lookup_cache(r.input_tokens)
-            input_tokens = r.input_tokens[cache_hit_length:]
+            input_tokens = r.input_tokens
+            if r.seq_length == 0:
+                cache_hit_length, block_ids = self.inference_engine.lookup_cache(r.input_tokens)
+                input_tokens = input_tokens[cache_hit_length:]
+            else:
+                cache_hit_length = 0
+                block_ids = []
 
             if len(input_tokens) > 1:
                 # When the KV cache is out of capacity, we release KV cache blocks for a request.
@@ -292,7 +304,7 @@ class RaggedBatchBase:
 
             # Decompose the prompt to fit to the max ragged batch size
             if cache_hit_length > 0:
-                self.inference_engine.setup_cached_sequence(r.uid, r.input_tokens.numel(), block_ids)
+                self.inference_engine.setup_cached_sequence(r.uid, cache_hit_length, block_ids)
                 r.seq_length = r.seq_length + cache_hit_length
 
             decomposed = req_tokens < len(input_tokens)
