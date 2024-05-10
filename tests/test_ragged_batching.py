@@ -50,6 +50,7 @@ def test_readable_stream(model_config, query):
 
     assert "".join(decoded) == expected
 
+
 @pytest.mark.parametrize(
     "model_name,expected_size",
     [
