@@ -49,3 +49,24 @@ def test_readable_stream(model_config, query):
         decoded.append(stream.decode(thread_id, [token_id]))
 
     assert "".join(decoded) == expected
+
+@pytest.mark.parametrize(
+    "model_name,expected_size",
+    [
+        ("tiiuae/falcon-7b", 65024),
+        ("NousResearch/Llama-2-7b-hf", 32000),
+        ("mistralai/Mistral-7B-v0.1", 32000),
+        ("cloudyu/Mixtral_11Bx2_MoE_19B", 32000),
+        ("facebook/opt-125m", 50265),
+        ("nvidia/Llama3-ChatQA-1.5-8B", 128256),
+    ],
+    ids=["falcon",
+         "llama",
+         "mistral",
+         "mixtral",
+         "opt",
+         "llama3"],
+)
+def test_vocab_size(model_config, expected_size):
+    tokenizer = load_tokenizer(ModelConfig(**model_config))
+    assert tokenizer.vocab_size == expected_size
