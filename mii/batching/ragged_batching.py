@@ -264,7 +264,8 @@ class RaggedBatchBase:
                 continue
 
             # Make sure that the engine has enough capacity to process the batch
-            if len(self.scheduled_requests) > conf_manager.max_ragged_sequence_count:
+            if len(self.scheduled_requests.requests_to_run
+                   ) >= conf_manager.max_ragged_sequence_count:
                 break
 
             max_batch_size = conf_manager.max_ragged_batch_size - self.scheduled_length
