@@ -9,7 +9,6 @@ Pillow
 pydantic
 pyzmq
 safetensors
-sentencepiece
 torch
 transformers
 ujson
