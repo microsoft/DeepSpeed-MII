@@ -6,10 +6,13 @@ Flask-RESTful
 grpcio
 grpcio-tools
 Pillow
-pydantic
+pydantic==1.*
 pyzmq
 safetensors
 torch
 transformers
 ujson
 Werkzeug
+fastapi
+shortuuid
+fastchat
