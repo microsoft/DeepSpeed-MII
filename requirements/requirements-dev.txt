@@ -2,3 +2,4 @@ clang-format==16.0.2
 pre-commit>=2.20.0
 pytest
 pytest-forked
+sentencepiece

@@ -14,7 +14,7 @@ from mii.modeling.tokenizers import load_tokenizer
     [
         "tiiuae/falcon-7b",
         "NousResearch/Llama-2-7b-hf",
-        "mistralai/Mistral-7B-v0.1",
+        "NousResearch/Hermes-2-Pro-Mistral-7B",
         "cloudyu/Mixtral_11Bx2_MoE_19B",
         "facebook/opt-125m",
     ],

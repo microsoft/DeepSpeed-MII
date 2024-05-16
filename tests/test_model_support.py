@@ -82,7 +82,7 @@ def inject_checkpoint_engine():
     [
         "tiiuae/falcon-7b",
         "NousResearch/Llama-2-7b-hf",
-        "mistralai/Mistral-7B-v0.1",
+        "NousResearch/Hermes-2-Pro-Mistral-7B",
         "cloudyu/Mixtral_11Bx2_MoE_19B",
         "facebook/opt-125m",
     ],
@@ -95,3 +95,8 @@ def inject_checkpoint_engine():
 def test_model(pipeline, query):
     outputs = pipeline(query, max_new_tokens=16)
     assert outputs[0], "output is empty"
+
+
+@pytest.mark.parametrize("local_model", [True])
+def test_local_model_dir(pipeline):
+    assert pipeline
