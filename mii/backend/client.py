@@ -77,7 +77,7 @@ class MIIClient:
 
         :param prompts: The string or list of strings used as prompts for generation.
         :param streaming_fn: Streaming support is currently a WIP.
-        :param \**generate_kwargs: Generation keywords. A full list can be found here.
+        :param \\*\\*generate_kwargs: Generation keywords. A full list can be found here.
 
         :return: A list of :class:`Response` objects containing the generated
             text for all prompts.
