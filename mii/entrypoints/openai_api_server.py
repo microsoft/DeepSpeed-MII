@@ -202,6 +202,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     # Streaming case
     if request.stream:
+
         async def StreamResults() -> AsyncGenerator[bytes, None]:
             # First chunk with role
             firstChoices = []
@@ -213,9 +214,9 @@ async def create_chat_completion(request: ChatCompletionRequest):
                 )
                 firstChoices.append(firstChoice)
 
-            chunk = ChatCompletionStreamResponse(
-                id=id, choices=firstChoices, model=app_settings.model_id
-            )
+            chunk = ChatCompletionStreamResponse(id=id,
+                                                 choices=firstChoices,
+                                                 model=app_settings.model_id)
             yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
             async for response_chunk in stub.GeneratorReplyStream(requestData):
                 streamChoices = []
@@ -224,15 +225,17 @@ async def create_chat_completion(request: ChatCompletionRequest):
                     choice = ChatCompletionResponseStreamChoice(
                         index=len(streamChoices),
                         delta=DeltaMessage(content=c.response),
-                        finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+                        finish_reason=None
+                        if c.finish_reason == "none" else c.finish_reason,
                     )
                     streamChoices.append(choice)
 
-                chunk = ChatCompletionStreamResponse(
-                    id=id, choices=streamChoices, model=app_settings.model_id
-                )
+                chunk = ChatCompletionStreamResponse(id=id,
+                                                     choices=streamChoices,
+                                                     model=app_settings.model_id)
                 yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
+
         return StreamingResponse(StreamResults(), media_type="text/event-stream")
 
     # Non-streaming case
@@ -326,6 +329,7 @@ async def create_completion(request: CompletionRequest):
     id = f"cmpl-{shortuuid.random()}"
     # Streaming case
     if request.stream:
+
         async def StreamResults() -> AsyncGenerator[bytes, None]:
             # Send an empty chunk to start the stream and prevent timeout
             yield ""
@@ -337,7 +341,8 @@ async def create_completion(request: CompletionRequest):
                         index=len(streamChoices),
                         text=c.response,
                         logprobs=None,
-                        finish_reason=None if c.finish_reason == "none" else c.finish_reason,
+                        finish_reason=None
+                        if c.finish_reason == "none" else c.finish_reason,
                     )
                     streamChoices.append(choice)
 
@@ -349,6 +354,7 @@ async def create_completion(request: CompletionRequest):
                 )
                 yield f"data: {chunk.json(exclude_unset=True, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
+
         return StreamingResponse(StreamResults(), media_type="text/event-stream")
 
     # Non-streaming case

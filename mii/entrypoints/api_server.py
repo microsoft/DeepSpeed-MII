@@ -82,6 +82,7 @@ async def generate(request: CompletionRequest) -> Response:
 
     # Streaming case
     if request.stream:
+
         async def StreamResults() -> AsyncGenerator[bytes, None]:
             # Send an empty chunk to start the stream and prevent timeout
             yield ""
@@ -91,6 +92,7 @@ async def generate(request: CompletionRequest) -> Response:
                 dataOut = {"text": responses}
                 yield f"data: {json.dumps(dataOut)}\n\n"
             yield f"data: [DONE]\n\n"
+
         return StreamingResponse(StreamResults(), media_type="text/event-stream")
 
     # Non-streaming case
