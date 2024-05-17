@@ -135,7 +135,8 @@ class RaggedBatchBase:
                 self.request_queue.put(r)
             if r.stop_generation:
                 if len(r.generated_tokens) > 0:
-                    all_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens], dim=0)
+                    all_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens],
+                                           dim=0)
                     all_tokens = torch.cat([r.prompt_tokens, all_tokens], dim=0)
                     self.inference_engine.update_prefix_cache(r.uid, all_tokens)
 
@@ -304,7 +305,9 @@ class RaggedBatchBase:
 
             # Decompose the prompt to fit to the max ragged batch size
             if cache_hit_length > 0:
-                self.inference_engine.setup_cached_sequence(r.uid, cache_hit_length, block_ids)
+                self.inference_engine.setup_cached_sequence(r.uid,
+                                                            cache_hit_length,
+                                                            block_ids)
                 r.seq_length = r.seq_length + cache_hit_length
 
             decomposed = req_tokens < len(input_tokens)
@@ -589,11 +592,15 @@ class MIIPipeline(RaggedBatchBase):
 
         if self.is_rank_0:
             # Rank 0 runs generate() until all responses are returned
-            while uids_running:
+            while uids_running \
+                or not self.request_queue.empty() \
+                or self.scheduled_requests.requests_to_flush.uids:
                 self.generate()
                 while not self.result_queues[self.tid].empty():
                     uid, response = self._get_response()
                     outputs.append(response)
+                    # We can't directly call flush because the flush request is broadcasted
+                    # to other ranks after taken from the queue
                     self._queue_flush_request(uid)
                     uids_complete_order.append(uid)
                     uids_running.remove(uid)
