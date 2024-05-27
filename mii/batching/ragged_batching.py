@@ -272,7 +272,8 @@ class RaggedBatchBase:
                 continue
 
             # Make sure that the engine has enough capacity to process the batch
-            if len(self.scheduled_requests) > conf_manager.max_ragged_sequence_count:
+            if len(self.scheduled_requests.requests_to_run
+                   ) >= conf_manager.max_ragged_sequence_count:
                 break
 
             max_batch_size = conf_manager.max_ragged_batch_size - self.scheduled_length
@@ -568,7 +569,7 @@ class MIIPipeline(RaggedBatchBase):
         Generates text for the given prompts
 
         :param prompts: The string or list of strings used as prompts for generation.
-        :param \**generate_kwargs: Generation keywords. A full list can be found
+        :param \\*\\*generate_kwargs: Generation keywords. A full list can be found
             in :class:`GenerateParamsConfig <mii.config.GenerateParamsConfig>`.
 
         :return: A list of :class:`Response` objects containing the generated
