@@ -19,7 +19,7 @@ class ErrorResponse(BaseModel):
 
 
 class ModelPermission(BaseModel):
-    id: str = Field(default_factory=lambda: f"modelperm-{generate_short_uuid}")
+    id: str = Field(default_factory=lambda: f"modelperm-{generate_short_uuid()}")
     object: str = "model_permission"
     created: int = Field(default_factory=lambda: int(time.time()))
     allow_create_engine: bool = False
@@ -90,7 +90,7 @@ class ChatCompletionResponseChoice(BaseModel):
 
 
 class ChatCompletionResponse(BaseModel):
-    id: str = Field(default_factory=lambda: f"chatcmpl-{generate_short_uuid}")
+    id: str = Field(default_factory=lambda: f"chatcmpl-{generate_short_uuid()}")
     object: str = "chat.completion"
     created: int = Field(default_factory=lambda: int(time.time()))
     model: str
@@ -110,7 +110,7 @@ class ChatCompletionResponseStreamChoice(BaseModel):
 
 
 class ChatCompletionStreamResponse(BaseModel):
-    id: str = Field(default_factory=lambda: f"chatcmpl-{generate_short_uuid}")
+    id: str = Field(default_factory=lambda: f"chatcmpl-{generate_short_uuid()}")
     object: str = "chat.completion.chunk"
     created: int = Field(default_factory=lambda: int(time.time()))
     model: str
@@ -182,7 +182,7 @@ class CompletionResponseChoice(BaseModel):
 
 
 class CompletionResponse(BaseModel):
-    id: str = Field(default_factory=lambda: f"cmpl-{generate_short_uuid}")
+    id: str = Field(default_factory=lambda: f"cmpl-{generate_short_uuid()}")
     object: str = "text_completion"
     created: int = Field(default_factory=lambda: int(time.time()))
     model: str
@@ -198,7 +198,7 @@ class CompletionResponseStreamChoice(BaseModel):
 
 
 class CompletionStreamResponse(BaseModel):
-    id: str = Field(default_factory=lambda: f"cmpl-{generate_short_uuid}")
+    id: str = Field(default_factory=lambda: f"cmpl-{generate_short_uuid()}")
     object: str = "text_completion"
     created: int = Field(default_factory=lambda: int(time.time()))
     model: str
@@ -209,4 +209,4 @@ class AppSettings(BaseSettings):
     model_id: str = None
     api_keys: Optional[List[str]] = None
     deployment_name: str = "deepspeed-mii"
-    response_role: Optional[str] = "assiatant"
+    response_role: Optional[str] = "assistant"

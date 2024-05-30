@@ -170,7 +170,11 @@ async def create_chat_completion(request: ChatCompletionRequest):
         generate_args["top_k"] = request.top_k
 
     if request.temperature is not None:
-        generate_args["temperature"] = request.temperature
+        # inference engine requires temperature to be strictly greater than 0
+        if request.temperature == 0:
+            generate_args["temperature"] = 0.01
+        else:
+            generate_args["temperature"] = request.temperature
 
     if request.stop is not None:
         generate_args["stop"] = request.stop
