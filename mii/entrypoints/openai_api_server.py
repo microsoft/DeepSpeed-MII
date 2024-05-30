@@ -8,6 +8,7 @@
 
 import grpc
 import argparse
+from http import HTTPStatus
 import json
 import os
 from typing import Optional, List, Union
@@ -20,15 +21,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security.http import HTTPAuthorizationCredentials, HTTPBearer
 
-import shortuuid
 import uvicorn
 import mii
 from mii.grpc_related.proto.modelresponse_pb2_grpc import ModelResponseStub
 from mii.grpc_related.proto import modelresponse_pb2
 from mii.utils import kwarg_dict_to_proto
-from fastchat.constants import ErrorCode
 
-from .data_models import (
+from mii.entrypoints.data_models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     # ChatCompletionResponseStreamChoice,
@@ -48,6 +47,7 @@ from .data_models import (
     UsageInfo,
     AppSettings,
 )
+from mii.entrypoints.utils import generate_short_uuid
 
 app = FastAPI()
 load_balancer = "localhost:50050"
@@ -78,9 +78,9 @@ async def check_api_key(
         return None
 
 
-def create_error_response(code: int, message: str) -> JSONResponse:
+def create_error_response(code: HTTPStatus, message: str) -> JSONResponse:
     return JSONResponse(ErrorResponse(message=message,
-                                      code=code).dict(),
+                                      code=code.value).dict(),
                         status_code=400)
 
 
@@ -116,7 +116,7 @@ def load_chat_template(args, tokenizer):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
-    return create_error_response(ErrorCode.VALIDATION_TYPE_ERROR, str(exc))
+    return create_error_response(HTTPStatus.BAD_REQUEST, str(exc))
 
 
 @app.get("/v1/models", dependencies=[Depends(check_api_key)])
@@ -134,7 +134,7 @@ async def show_available_models():
 async def create_chat_completion(request: ChatCompletionRequest):
     if request.model != app_settings.model_id:
         return create_error_response(
-            ErrorCode.INVALID_MODEL,
+            HTTPStatus.BAD_REQUEST,
             f"Model \"{request.model}\" not found. Please use \"{app_settings.model_id}\".",
         )
 
@@ -150,7 +150,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     if request.messages is None:
         return create_error_response(
-            ErrorCode.VALIDATION_TYPE_ERROR,
+            HTTPStatus.BAD_REQUEST,
             "messages is required.",
         )
 
@@ -193,7 +193,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
         query_kwargs=kwarg_dict_to_proto(generate_args),
     )
 
-    id = f"chatcmpl-{shortuuid.random()}"
+    id = f"chatcmpl-{generate_short_uuid()}"
 
     response_role = "assistant"
 
@@ -203,7 +203,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
     # Streaming case
     if request.stream:
         return create_error_response(
-            ErrorCode.VALIDATION_TYPE_ERROR,
+            HTTPStatus.BAD_REQUEST,
             f"Streaming is not yet supported.",
         )
         # async def StreamResults() -> AsyncGenerator[bytes, None]:
@@ -270,7 +270,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 async def create_completion(request: CompletionRequest):
     if request.model != app_settings.model_id:
         return create_error_response(
-            ErrorCode.INVALID_MODEL,
+            HTTPStatus.BAD_REQUEST,
             f"Model {request.model} not found.",
         )
 
@@ -286,7 +286,7 @@ async def create_completion(request: CompletionRequest):
 
     if request.prompt is None:
         return create_error_response(
-            ErrorCode.VALIDATION_TYPE_ERROR,
+            HTTPStatus.BAD_REQUEST,
             "Prompt is required.",
         )
 
@@ -327,11 +327,11 @@ async def create_completion(request: CompletionRequest):
         request=request.prompt,
         query_kwargs=kwarg_dict_to_proto(generate_args),
     )
-    id = f"cmpl-{shortuuid.random()}"
+    id = f"cmpl-{generate_short_uuid()}"
     # Streaming case
     if request.stream:
         return create_error_response(
-            ErrorCode.VALIDATION_TYPE_ERROR,
+            HTTPStatus.BAD_REQUEST,
             f"Streaming is not yet supported.",
         )
         # async def StreamResults() -> AsyncGenerator[bytes, None]:
