@@ -133,12 +133,8 @@ class RaggedBatchBase:
             if not r.stop_generation:
                 r.set_next_as_input()
                 self.request_queue.put(r)
-            if r.stop_generation:
-                if len(r.generated_tokens) > 0:
-                    all_tokens = torch.cat([t.unsqueeze(0) for t in r.generated_tokens],
-                                           dim=0)
-                    all_tokens = torch.cat([r.prompt_tokens, all_tokens], dim=0)
-                    self.inference_engine.update_prefix_cache(r.uid, all_tokens)
+            if len(r.generated_tokens) > 0:
+                self.inference_engine.update_prefix_cache(r.uid, r.all_tokens)
 
         # 7. Update scheduled requests
         self.scheduled_requests.prune(running_requests.completed.uids)
