@@ -40,7 +40,7 @@ class ModelConfig(DeepSpeedConfigModel):
     'conversational', 'text-to-image']``
     """
 
-    dtype: DtypeEnum = DtypeEnum.fp32
+    dtype: torch.dtype = torch.float32
     """
     Desired model data type, will convert model to this type.  Supported target
     types: `torch.half`, `torch.float`, `torch.int8` (for BLOOM models)
@@ -195,6 +195,14 @@ class ModelConfig(DeepSpeedConfigModel):
         if field_value and not isinstance(field_value, list):
             field_value = [field_value]
         return field_value
+
+    @field_validator("dtype", mode="before")
+    def validate_dtype(cls, field_value, values):
+        if isinstance(field_value, str):
+            return DtypeEnum.from_str(field_value).value[0]
+        if isinstance(field_value, torch.dtype):
+            return field_value
+        raise TypeError(f"Invalid type for dtype: {type(field_value)}")
 
     @model_validator(mode="after")
     def zero_or_meta(self):
