@@ -126,6 +126,8 @@ class RaggedBatchBase:
 
         # 6. Accumulate generated tokens, check completion, and generate output
         for r in running_requests.last_in_prompt:
+            if len(r.generated_tokens) > 0:
+                self.inference_engine.update_prefix_cache(r.uid, r.all_tokens)
             r.accumulate_generated_token()
             self._num_generated_tokens += 1
             if r.stop_generation or r.stream:
@@ -133,8 +135,6 @@ class RaggedBatchBase:
             if not r.stop_generation:
                 r.set_next_as_input()
                 self.request_queue.put(r)
-            if len(r.generated_tokens) > 0:
-                self.inference_engine.update_prefix_cache(r.uid, r.all_tokens)
 
         # 7. Update scheduled requests
         self.scheduled_requests.prune(running_requests.completed.uids)
