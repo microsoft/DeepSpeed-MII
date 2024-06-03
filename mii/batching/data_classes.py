@@ -135,6 +135,12 @@ class Request:
         return self._generated_tokens
 
     @property
+    def all_tokens(self) -> List[torch.Tensor]:
+        return torch.cat([self.prompt_tokens] +
+                         [t.unsqueeze(0) for t in self.generated_tokens],
+                         dim=0)
+
+    @property
     def finish_reason(self) -> GenerationFinishReason:
         return self._finish_reason
 
