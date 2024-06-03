@@ -124,10 +124,11 @@ class RaggedBatchBase:
         # 5. Schedule requests while we wait for the forward pass to finish
         self._reset_scheduler_bookkeeping()
 
+        for r in running_requests:
+            self.inference_engine.update_prefix_cache(r.uid, r.all_tokens)
+
         # 6. Accumulate generated tokens, check completion, and generate output
         for r in running_requests.last_in_prompt:
-            if len(r.generated_tokens) > 0:
-                self.inference_engine.update_prefix_cache(r.uid, r.all_tokens)
             r.accumulate_generated_token()
             self._num_generated_tokens += 1
             if r.stop_generation or r.stream:
