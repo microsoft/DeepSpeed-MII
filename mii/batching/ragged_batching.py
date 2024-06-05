@@ -656,6 +656,8 @@ class MIIAsyncPipeline(RaggedBatchBase):
 
     def _get_uid(self) -> int:
         with self.lock:
+            if len(self.uids) >= self.UID_RANGE_UB - self.UID_RANGE_LB:
+                raise RuntimeError("No available choices for a new UID.")
             uid = random.randrange(self.UID_RANGE_LB, self.UID_RANGE_UB)
             while uid in self.uids:
                 uid = random.randrange(self.UID_RANGE_LB, self.UID_RANGE_UB)
