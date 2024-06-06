@@ -676,21 +676,28 @@ class MIIAsyncPipeline(RaggedBatchBase):
 
         uid = self._get_uid()
 
-        # Temporary hack to avoid non-rank 0 processes not shutting down. See
-        # related TODO above.
-        if not self.is_rank_0:
+        try:
+            # Temporary hack to avoid non-rank 0 processes not shutting down. See
+            # related TODO above.
+            if not self.is_rank_0:
+                return uid
+
+            tid = threading.get_ident()
+            with self.lock:
+                if tid not in self.result_queues:
+                    self.result_queues[tid] = queue.Queue()
+
+            input_tokens = self.tokenizer.encode(prompt)
+            request = self.make_request(tid, uid, input_tokens, kwargs)
+            self.request_queue.put(request)
+
             return uid
-
-        tid = threading.get_ident()
-        with self.lock:
-            if tid not in self.result_queues:
-                self.result_queues[tid] = queue.Queue()
-
-        input_tokens = self.tokenizer.encode(prompt)
-        request = self.make_request(tid, uid, input_tokens, kwargs)
-        self.request_queue.put(request)
-
-        return uid
+        except:
+            # It is OK to have `self.request_queue.put(request)` in the try block since
+            # it will never raise exceptions with unlimited queue size. If any exception
+            # occurred in the above block, the `request` obj was not enqueued.
+            self.flush_uid(uid)
+            raise
 
     def get_response(self) -> Tuple[int, Response]:
         # TODO: We should avoid any request/response work with non-rank 0, but
