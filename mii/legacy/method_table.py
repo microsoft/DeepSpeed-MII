@@ -5,7 +5,6 @@
 import uuid
 
 from abc import ABC, abstractmethod
-from transformers import Conversation
 from mii.legacy.constants import TaskType
 from mii.legacy.grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
 from mii.legacy.utils import kwarg_dict_to_proto, unpack_proto_query_kwargs
