@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
-import uuid
-
 from abc import ABC, abstractmethod
 from mii.legacy.constants import TaskType
 from mii.legacy.grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
