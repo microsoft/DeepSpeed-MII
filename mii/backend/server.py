@@ -43,6 +43,9 @@ class MIIServer:
 
         mii_config.generate_replica_configs()
 
+        # Spin up all the processes necessary for the server (i.e., load
+        # balancer process, each DeepSpeed model replica, and optionally the
+        # REST API process)
         processes = self._initialize_service(mii_config)
         self._wait_until_server_is_live(processes,
                                         mii_config.model_config.replica_configs)
