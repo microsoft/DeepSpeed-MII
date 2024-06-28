@@ -10,16 +10,6 @@ import mii.legacy as mii
     "task_name, model_name, query",
     [
         (
-            "conversational",
-            "microsoft/DialoGPT-small",
-            {
-                "text": "DeepSpeed is the greatest",
-                "conversation_id": 3,
-                "past_user_inputs": [],
-                "generated_responses": [],
-            },
-        ),
-        (
             "fill-mask",
             "bert-base-uncased",
             {

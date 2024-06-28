@@ -17,7 +17,6 @@ class TaskType(str, Enum):
     QUESTION_ANSWERING = "question-answering"
     FILL_MASK = "fill-mask"
     TOKEN_CLASSIFICATION = "token-classification"
-    CONVERSATIONAL = "conversational"
     TEXT2IMG = "text-to-image"
     ZERO_SHOT_IMAGE_CLASSIFICATION = "zero-shot-image-classification"
     INPAINTING = "text-to-image-inpainting"
@@ -52,12 +51,6 @@ REQUIRED_KEYS_PER_TASK = {
                                   "question"],
     TaskType.FILL_MASK: ["query"],
     TaskType.TOKEN_CLASSIFICATION: ["query"],
-    TaskType.CONVERSATIONAL: [
-        "text",
-        "conversation_id",
-        "past_user_inputs",
-        "generated_responses",
-    ],
     TaskType.TEXT2IMG: ["prompt"],
     TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION: ["image",
                                               "candidate_labels"],
