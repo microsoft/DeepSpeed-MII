@@ -43,6 +43,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/microsoft/DeepSpeed
           cd DeepSpeed
+          git checkout mrwyattii/pydantic-2-support
           python -m pip install .
           ds_report
       - name: Install MII
