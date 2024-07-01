@@ -37,7 +37,7 @@ class MIIClient:
     """
     def __init__(self, mii_config: MIIConfig, host: str = "localhost") -> None:
         self.mii_config = mii_config
-        self.task = mii_config.model_config.task
+        self.task = mii_config.model_conf.task
         self.port = mii_config.port_number
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, self.port)

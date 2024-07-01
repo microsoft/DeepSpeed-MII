@@ -1,5 +1,5 @@
 asyncio
-autodoc_pydantic<2.0.0
+autodoc_pydantic>=2.0.0
 deepspeed>=0.13.0
 grpcio
 grpcio-tools
