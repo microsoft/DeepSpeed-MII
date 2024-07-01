@@ -387,10 +387,16 @@ def _allocate_devices(hostfile_path: str,
 
 
 def get_mii_config(model_or_deployment_name: str) -> MIIConfig:
+    """
+    Looks for score file of given model or deployment name, loads the file and
+    returns the MIIConfig object.
+    """
     try:
         deployment_name = model_or_deployment_name
         mii_config = import_score_file(deployment_name, DeploymentType.LOCAL).mii_config
     except:
+        # If a deployment name is not given, then one was generated
+        # automatically from the model name, so try that
         try:
             deployment_name = generate_deployment_name(
                 model_name_or_path=model_or_deployment_name)
