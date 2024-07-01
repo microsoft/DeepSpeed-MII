@@ -124,10 +124,6 @@ class MIINonPersistentClient:
         if self.task == TaskType.QUESTION_ANSWERING:
             args = (request_dict["question"], request_dict["context"])
             kwargs = query_kwargs
-        elif self.task == TaskType.CONVERSATIONAL:
-            conv = task_methods.create_conversation(request_dict)
-            args = (conv, )
-            kwargs = query_kwargs
         elif self.task == TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION:
             args = (request_dict["image"], request_dict["candidate_labels"])
             kwargs = query_kwargs

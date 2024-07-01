@@ -37,7 +37,7 @@ class ModelConfig(DeepSpeedConfigModel):
     Name of the machine learning task to be deployed.Currently MII supports the
     following list of tasks ``['text-generation', 'text-classification',
     'question-answering', 'fill-mask', 'token-classification',
-    'conversational', 'text-to-image']``
+    'text-to-image']``
     """
 
     dtype: torch.dtype = torch.float32

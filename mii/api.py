@@ -146,12 +146,36 @@ def serve(
         **kwargs,
     )
 
-    # Eventually we will move away from generating score files, leaving this
-    # here as a placeholder for now.
+    # TODO: Creating a score file behavior should be changed as AML deployment
+    # support no longer works. Given the integration of MII/FastGen within AML
+    # deployment containers, we can remove that deployment type and the need to
+    # create a score file. Instead, we should create a config file (perhaps a
+    # pickled MIIConfig?) and save that where we would save the score file. This
+    # config can then be loaded and used similar to how the score file was used.
+    # Additionally, some code for standing up the deployment server will need to
+    # move from the score file template file to the `MIIServer` class:
     # MIIServer(mii_config)
     create_score_file(mii_config)
 
     if mii_config.deployment_type == DeploymentType.LOCAL:
+        # Imports the created score file and executes the init() function, then
+        # returns a MIIClient object. With the changes suggested in the comment
+        # above, importing the score file would not be necessary.
+
+        # How grpc server is created:
+        # 1. The score.py file init() function makes a call to mii.backend.server.MIIServer()
+        # 2. MIIServer.__init__() starts load balancer, REST API, and inference
+        #    model processes via the mii.launch.multi_gpu_server script.
+        #    Load balancer -> mii.grpc_related.modelresponse_server.serve_load_balancing
+        #    REST API -> mii.grpc_related.restful_gateway.RestfulGatewayThread
+        #    Inference model -> mii.api.async_pipeline & mii.grpc_related.modelresponse_server.serve_inference
+        # 3. Load balancer and inference model create grpc.server() processes
+        #    (via mii.grpc_related.modelresponse_server._do_serve)
+        # 4. An MIIClient() is created that uses a "stub" (via
+        #    mii.grpc_related.proto.modelresponse_pb2_grpc.ModelResponseStub) that
+        #    can send/receive messages to/from the load balancer process. The load
+        #    balancer process then acts as a middle layer between the client(s) and
+        #    the model inference server(s)
         import_score_file(mii_config.deployment_name, DeploymentType.LOCAL).init()
         return MIIClient(mii_config=mii_config)
     if mii_config.deployment_type == DeploymentType.AML:

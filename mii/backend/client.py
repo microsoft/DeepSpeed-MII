@@ -41,6 +41,8 @@ class MIIClient:
         self.port = mii_config.port_number
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, self.port)
+        # This stub allows interaction the client to send/receive messages with
+        # the load balancer process
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
 
     def __call__(self, *args, **kwargs) -> List[Response]:
