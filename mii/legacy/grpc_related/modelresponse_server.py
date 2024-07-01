@@ -120,9 +120,6 @@ class ModelResponse(ServiceBase):
     def TokenClassificationReply(self, request, context):
         return self._run_inference("TokenClassificationReply", request)
 
-    def ConversationalReply(self, request, context):
-        return self._run_inference("ConversationalReply", request)
-
     def ZeroShotImgClassificationReply(self, request, context):
         return self._run_inference("ZeroShotImgClassificationReply", request)
 
