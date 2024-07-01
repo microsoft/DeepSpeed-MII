@@ -20,7 +20,7 @@ from mii.logging import logger
 
 def config_to_b64_str(config: DeepSpeedConfigModel) -> str:
     # convert json str -> bytes
-    json_bytes = config.json().encode()
+    json_bytes = config.model_dump_json().encode()
     # base64 encoded bytes
     b64_config_bytes = base64.urlsafe_b64encode(json_bytes)
     # bytes -> str
@@ -31,7 +31,7 @@ class MIIServer:
     """Initialize the model, setup the server for the model"""
     def __init__(self, mii_config: MIIConfig) -> None:
 
-        self.task = mii_config.model_config.task
+        self.task = mii_config.model_conf.task
         self.port_number = mii_config.port_number
 
         if not os.path.isfile(mii_config.hostfile):
@@ -47,8 +47,7 @@ class MIIServer:
         # balancer process, each DeepSpeed model replica, and optionally the
         # REST API process)
         processes = self._initialize_service(mii_config)
-        self._wait_until_server_is_live(processes,
-                                        mii_config.model_config.replica_configs)
+        self._wait_until_server_is_live(processes, mii_config.model_conf.replica_configs)
 
     def _wait_until_server_is_live(self,
                                    processes: List[subprocess.Popen],
@@ -143,15 +142,15 @@ class MIIServer:
         ]
 
         host_gpus = defaultdict(list)
-        for repl_config in mii_config.model_config.replica_configs:
+        for repl_config in mii_config.model_conf.replica_configs:
             host_gpus[repl_config.hostname].extend(repl_config.gpu_indices)
 
         use_multiple_hosts = len(
             set(repl_config.hostname
-                for repl_config in mii_config.model_config.replica_configs)) > 1
+                for repl_config in mii_config.model_conf.replica_configs)) > 1
 
         # Start replica instances
-        for repl_config in mii_config.model_config.replica_configs:
+        for repl_config in mii_config.model_conf.replica_configs:
             hostfile = tempfile.NamedTemporaryFile(delete=False)
             hostfile.write(
                 f"{repl_config.hostname} slots={max(host_gpus[repl_config.hostname])+1}\n"
@@ -161,7 +160,7 @@ class MIIServer:
                                                          use_multiple_hosts)
             processes.append(
                 self._launch_server_process(
-                    mii_config.model_config,
+                    mii_config.model_conf,
                     "MII server",
                     ds_launch_str=ds_launch_str,
                     server_args=server_args + [
@@ -175,7 +174,7 @@ class MIIServer:
         # expected to assign one GPU to one process.
         processes.append(
             self._launch_server_process(
-                mii_config.model_config,
+                mii_config.model_conf,
                 "load balancer",
                 server_args=server_args + ["--load-balancer"],
             ))
@@ -183,7 +182,7 @@ class MIIServer:
         if mii_config.enable_restful_api:
             processes.append(
                 self._launch_server_process(
-                    mii_config.model_config,
+                    mii_config.model_conf,
                     "restful api gateway",
                     server_args=server_args + ["--restful-gateway"],
                 ))
