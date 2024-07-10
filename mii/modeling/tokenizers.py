@@ -47,7 +47,7 @@ class HFTokenizer(MIITokenizerWrapper):
 
     @property
     def vocab_size(self) -> int:
-        return self.tokenizer.vocab_size
+        return len(self.tokenizer)
 
     @property
     def eos_token_id(self) -> int:

@@ -44,6 +44,9 @@ class RaggedBatchBase:
         self.vocab_size = tokenizer.vocab_size
         self.model_config = model_config
         self.zmq_port = model_config.zmq_port_number
+
+        # Set max sequence length from either user-passed model_config or from
+        # HF model_config
         if model_config.max_length is not None:
             self.max_length = model_config.max_length
         else:
@@ -51,6 +54,7 @@ class RaggedBatchBase:
         self.sync_debug = model_config.sync_debug
         self.profile_model_time = model_config.profile_model_time
 
+        # Create queues and other values for scheduling of requests and results
         self.request_queue: queue.Queue = queue.Queue()
         self.result_queues: Dict[int, queue.Queue] = {}
         self.scheduled_requests: RequestBatch = RequestBatch()
@@ -59,23 +63,29 @@ class RaggedBatchBase:
         self.scheduled_seq_num = 0
         self.scheduled_req_blocks = 0
 
-        # TODO: we will need to prune self._post_processors for long running deployments
+        # TODO: Each request we process can have a unique post_processor (e.g.,
+        # different temperature value). We will need to prune
+        # self._post_processors for long running deployments
         self._post_processors = {}
         self.logit_processor = run_batch_logit_processing
         self.sampler = run_batch_sampler
         self.stop_criterion = run_batch_stop_criterion
 
+        # If profiling is enabled, these are used to capture/generate data
         self._timers: SynchronizedWallClockTimer = SynchronizedWallClockTimer()
         self._profiled_times: DefaultDict[str, List[int]] = defaultdict(list)
         self._iters: int = 0
         self._num_generated_tokens: int = 0
 
+        # Use ZMQ because it is light-weight and fast for passing simple
+        # messages (i.e., token sequences) between each TP process of the
+        # inference engine
         self._zmq_context = zmq.Context()
         torch.cuda.synchronize()
         if self.is_rank_0:
             self.socket = self._zmq_context.socket(zmq.PUB)
             self.socket.bind(f"tcp://*:{self.zmq_port}")
-            time.sleep(1)  # Give the subscriber a change to connect
+            time.sleep(1)  # Give the subscriber a chance to connect
         else:
             self.socket = self._zmq_context.socket(zmq.SUB)
             self.socket.connect(f"tcp://localhost:{self.zmq_port}")
@@ -92,6 +102,10 @@ class RaggedBatchBase:
 
     @profiler
     def generate(self) -> None:
+        """
+        This is the main loop of FastGen: puts requests and gets generated results.
+        """
+
         # 1. Get a batch of requests, broadcast to all ranks
         scheduled_requests = self._bcast_requests()
 
@@ -154,6 +168,9 @@ class RaggedBatchBase:
 
     @sync_debug
     def _bcast_requests(self, force=False) -> RequestBatch:
+        # Rank 0 is the main process that does scheduling of requests on the
+        # inference engine. When new requests are to be placed on the engine,
+        # the prompt tokens must be broadcast to all TP processes.
         if self.is_rank_0:
             if not self.scheduled_requests and not force:
                 return self.scheduled_requests
@@ -183,6 +200,8 @@ class RaggedBatchBase:
             next_token_logits: torch.Tensor,
             running_requests: RequestBatch) -> Tuple[torch.Tensor,
                                                      torch.Tensor]:
+        # Process generated logits, run post processing, gets next token, and
+        # checks for stop criteria at each round of generation for all requests.
         next_token_logits = next_token_logits[:, :self.vocab_size]
         next_token_logits = self.logit_processor(next_token_logits,
                                                  running_requests,
@@ -199,6 +218,9 @@ class RaggedBatchBase:
 
     @sync_debug
     def _generate_output(self, r: Request) -> bool:
+        # Gather generated tokens and put them in the result queue. For
+        # streaming, this happens at every generated token. For non-streaming,
+        # this happens only when a stop criteria is met.
         outputs = []
         if r.stream:
             outputs.append((
@@ -656,6 +678,8 @@ class MIIAsyncPipeline(RaggedBatchBase):
 
     def _get_uid(self) -> int:
         with self.lock:
+            if len(self.uids) >= self.UID_RANGE_UB - self.UID_RANGE_LB:
+                raise RuntimeError("No available choices for a new UID.")
             uid = random.randrange(self.UID_RANGE_LB, self.UID_RANGE_UB)
             while uid in self.uids:
                 uid = random.randrange(self.UID_RANGE_LB, self.UID_RANGE_UB)
@@ -674,21 +698,28 @@ class MIIAsyncPipeline(RaggedBatchBase):
 
         uid = self._get_uid()
 
-        # Temporary hack to avoid non-rank 0 processes not shutting down. See
-        # related TODO above.
-        if not self.is_rank_0:
+        try:
+            # Temporary hack to avoid non-rank 0 processes not shutting down. See
+            # related TODO above.
+            if not self.is_rank_0:
+                return uid
+
+            tid = threading.get_ident()
+            with self.lock:
+                if tid not in self.result_queues:
+                    self.result_queues[tid] = queue.Queue()
+
+            input_tokens = self.tokenizer.encode(prompt)
+            request = self.make_request(tid, uid, input_tokens, kwargs)
+            self.request_queue.put(request)
+
             return uid
-
-        tid = threading.get_ident()
-        with self.lock:
-            if tid not in self.result_queues:
-                self.result_queues[tid] = queue.Queue()
-
-        input_tokens = self.tokenizer.encode(prompt)
-        request = self.make_request(tid, uid, input_tokens, kwargs)
-        self.request_queue.put(request)
-
-        return uid
+        except:
+            # It is OK to have `self.request_queue.put(request)` in the try block since
+            # it will never raise exceptions with unlimited queue size. If any exception
+            # occurred in the above block, the `request` obj was not enqueued.
+            self.flush_uid(uid)
+            raise
 
     def get_response(self) -> Tuple[int, Response]:
         # TODO: We should avoid any request/response work with non-rank 0, but
