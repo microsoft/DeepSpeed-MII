@@ -89,14 +89,14 @@ MII currently supports over 37,000 models across eight popular model architectur
 
 model family | size range | ~model count
 ------ | ------ | ------
-[falcon](https://huggingface.co/models?other=falcon) | 7B - 180B | 300
-[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 23,000
-[llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 1,000
-[mistral](https://huggingface.co/models?other=mistral) | 7B | 9,000
-[mixtral (MoE)](https://huggingface.co/models?other=mixtral) | 8x7B | 1,600
-[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 1,500
-[phi-2](https://huggingface.co/models?other=phi) | 2.7B | 500
-[qwen](https://huggingface.co/models?other=qwen) | 7B - 72B | 600
+[falcon](https://huggingface.co/models?other=falcon) | 7B - 180B | 500
+[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 52,000
+[llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 1,200
+[mistral](https://huggingface.co/models?other=mistral) | 7B | 23,000
+[mixtral (MoE)](https://huggingface.co/models?other=mixtral) | 8x7B | 2,900
+[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 2,100
+[phi-2](https://huggingface.co/models?other=phi) | 2.7B | 1,500
+[qwen](https://huggingface.co/models?other=qwen) | 7B - 72B | 500
 
 ## MII Legacy Model Support
 
