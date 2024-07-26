@@ -9,7 +9,7 @@ from typing import Literal, Optional, List, Dict, Any, Union
 import time
 
 import shortuuid
-from pydantic import BaseModel, BaseSettings, Field
+from mii.pydantic_v1 import BaseModel, BaseSettings, Field
 
 
 class ErrorResponse(BaseModel):
