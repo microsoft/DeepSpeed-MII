@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install git+https://github.com/microsoft/DeepSpeed.git
-          pip install git+https://github.com/huggingface/transformers.git@cd0935dd55dcc1ba8d20305378d5f4e11126d225
+          pip install git+https://github.com/huggingface/transformers.git@ad35309a6299f61f043c78f1d41da7e61800a30f
           pip install -U accelerate
           ds_report
 
