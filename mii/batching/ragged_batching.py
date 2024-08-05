@@ -37,8 +37,6 @@ from mii.logging import logger
 from mii.modeling.tokenizers import MIITokenizerWrapper
 
 
-import deepspeed.comm as dist
-
 class RaggedBatchBase:
     def __init__(self, inference_engine, tokenizer, model_config):
         self.inference_engine = inference_engine
