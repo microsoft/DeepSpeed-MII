@@ -37,6 +37,8 @@ from mii.logging import logger
 from mii.modeling.tokenizers import MIITokenizerWrapper
 
 
+import deepspeed.comm as dist
+
 class RaggedBatchBase:
     def __init__(self, inference_engine, tokenizer, model_config):
         self.inference_engine = inference_engine
@@ -605,6 +607,7 @@ class MIIPipeline(RaggedBatchBase):
             # Ensure final flush requests broadcast and
             # kick ranks 1 -> n out of the while loop
             self._bcast_requests(force=True)
+            self.scheduled_requests = RequestBatch()
         else:
             # Ranks 1 -> n just run generate() until there are no more requests
             exit = False
