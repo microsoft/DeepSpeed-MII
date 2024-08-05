@@ -607,6 +607,7 @@ class MIIPipeline(RaggedBatchBase):
             # Ensure final flush requests broadcast and
             # kick ranks 1 -> n out of the while loop
             self._bcast_requests(force=True)
+            self.flush(self.scheduled_requests.requests_to_flush.uids)
             self.scheduled_requests = RequestBatch()
         else:
             # Ranks 1 -> n just run generate() until there are no more requests
