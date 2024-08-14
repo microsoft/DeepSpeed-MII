@@ -27,7 +27,7 @@ class HFModelNotFoundError(Exception):
 
 def hf_model(model_str):
     api = HfApi()
-    models = [m.modelId for m in api.list_models()]
+    models = [m.id for m in api.list_models()]
     if model_str in models:
         return model_str
     else:

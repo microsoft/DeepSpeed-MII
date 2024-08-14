@@ -42,4 +42,4 @@ class LoggerFactory:
         return logger_
 
 
-logger = LoggerFactory.create_logger(name="MII", level=logging.INFO)
+logger = LoggerFactory.create_logger(name="MII_legacy", level=logging.INFO)

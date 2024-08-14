@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class ModelInfo:
-    modelId: str
+    id: str
     pipeline_tag: str
     tags: List[str]
 
@@ -53,7 +53,7 @@ def _hf_model_list() -> List[ModelInfo]:
     if (model_data["cache_time"] + cache_expiration_seconds) < current_time:
         api = HfApi()
         model_data["model_list"] = [
-            ModelInfo(modelId=m.modelId,
+            ModelInfo(id=m.id,
                       pipeline_tag=m.pipeline_tag,
                       tags=m.tags) for m in api.list_models()
         ]
@@ -70,7 +70,7 @@ def get_default_task(model_name_or_path: str) -> str:
     model_name = get_model_name(model_name_or_path)
     models = _hf_model_list()
     for m in models:
-        if m.modelId == model_name:
+        if m.id == model_name:
             task = m.pipeline_tag
             logger.info(f"Detected default task as '{task}' for model '{model_name}'")
             return task
