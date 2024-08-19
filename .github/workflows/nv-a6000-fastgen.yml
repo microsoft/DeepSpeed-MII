@@ -41,7 +41,7 @@ jobs:
           python -m pip install .
       - name: Install deepspeed
         run: |
-          git clone --depth=1 https://github.com/microsoft/DeepSpeed@mrwyattii/pydantic-2-support
+          git clone --depth=1 https://github.com/microsoft/DeepSpeed.git@mrwyattii/pydantic-2-support
           cd DeepSpeed
           python -m pip install .
           ds_report
