@@ -14,6 +14,12 @@ def run_batch_processing(input_tensor: torch.Tensor,
                          requests: "RaggedRequestBatch",
                          processor_fns: Dict[str,
                                              Any]) -> torch.Tensor:
+    """
+    Runs the post-processing steps for batched requests. If we apply the
+    post-processing one-by-one for each request performance takes a big hit.
+    Instead, we identify all the requests that need to be processed by a given
+    post-processor, sampler, etc. and perform the action on a batch of requests.
+    """
     idx_list: List[int] = []
     output_list: List[torch.Tensor] = []
 
