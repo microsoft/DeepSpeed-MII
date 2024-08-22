@@ -92,7 +92,7 @@ model family | size range | ~model count
 [Falcon](https://huggingface.co/models?other=falcon) | 7B - 180B | 600
 [Llama](https://huggingface.co/models?other=llama) | 7B - 65B | 57,000
 [Llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 1,200
-[Llama-3](https://huggingface.co/models?other=llama-3) | 7B - 70B | 1,600
+[Llama-3](https://huggingface.co/models?other=llama-3) | 8B - 405B | 1,600
 [Mistral](https://huggingface.co/models?other=mistral) | 7B | 23,000
 [Mixtral (MoE)](https://huggingface.co/models?other=mixtral) | 8x7B | 2,900
 [OPT](https://huggingface.co/models?other=opt) | 0.1B - 66B | 2,200
