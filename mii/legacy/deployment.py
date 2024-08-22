@@ -37,7 +37,7 @@ def support_legacy_api(
     }
     # TODO do this in a single for loop
     for key, val in mii_config.items():
-        if key not in MIIConfig.__dict__["__fields__"]:
+        if key not in MIIConfig.fields.keys():
             model_config[key] = val
     mii_config = {
         k: v
@@ -68,10 +68,10 @@ def deploy(
         model_config, mii_config = support_legacy_api(*args, **kwargs)
 
     mii_config["deployment_name"] = deployment_name
-    mii_config["model_config"] = model_config
+    mii_config["model_conf"] = model_config
     mii_config = mii.config.MIIConfig(**mii_config)
 
-    if mii_config.model_config.enable_deepspeed:
+    if mii_config.model_conf.enable_deepspeed:
         logger.info(
             "************* MII is using DeepSpeed Optimizations to accelerate your model *************"
         )
@@ -100,9 +100,9 @@ def _deploy_aml(mii_config):
     mii.aml_related.utils.generate_aml_scripts(
         acr_name=acr_name,
         deployment_name=mii_config.deployment_name,
-        model_name=mii_config.model_config.model,
-        task_name=mii_config.model_config.task,
-        replica_num=mii_config.model_config.replica_num,
+        model_name=mii_config.model_conf.model,
+        task_name=mii_config.model_conf.task,
+        replica_num=mii_config.model_conf.replica_num,
         instance_type=mii_config.instance_type,
         version=mii_config.version,
     )
@@ -115,10 +115,10 @@ def _deploy_aml(mii_config):
 def _deploy_nonpersistent(mii_config):
     assert (
         int(os.getenv("WORLD_SIZE", "1"))
-        == mii_config.model_config.tensor_parallel
+        == mii_config.model_conf.tensor_parallel
     ), "World Size does not equal number of tensors. When using non-persistent deployment type, please launch with `deepspeed --num_gpus <tensor_parallel>`"
     deployment_name = mii_config.deployment_name
     mii.non_persistent_models[deployment_name] = (
-        load_models(mii_config.model_config),
-        mii_config.model_config.task,
+        load_models(mii_config.model_conf),
+        mii_config.model_conf.task,
     )
