@@ -1,6 +1,6 @@
 asyncio
 autodoc_pydantic>=2.0.0
-deepspeed>=0.13.0
+deepspeed>=0.15.0
 grpcio
 grpcio-tools
 sphinx==7.1.2
