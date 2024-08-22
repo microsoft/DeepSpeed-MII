@@ -19,7 +19,7 @@ def create_score_file(mii_config):
         score_src = fd.read()
 
     # update score file w. global config dict
-    config_dict = mii_config.dict()
+    config_dict = mii_config.model_dump()
     source_with_config = f"{score_src}\n"
     source_with_config += f"mii_config = {pprint.pformat(config_dict, indent=4)}"
 
