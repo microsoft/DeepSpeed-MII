@@ -8,27 +8,18 @@ from typing import List, Optional, Union, Dict, Any, Literal
 
 from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
 from deepspeed.inference import RaggedInferenceEngineConfig
+from deepspeed.runtime.config_utils import DeepSpeedConfigModel
+from pydantic import Field, model_validator, field_validator
 
 from mii.constants import DeploymentType, TaskType, ModelProvider
 from mii.errors import DeploymentNotFoundError
 from mii.modeling.tokenizers import MIITokenizerWrapper
-from mii.pydantic_v1 import BaseModel, Field, root_validator, validator, Extra
-from mii.utils import generate_deployment_name, get_default_task, import_score_file
+from mii.utils import generate_deployment_name, import_score_file
 
 DEVICE_MAP_DEFAULT = "auto"
 
 
-class MIIConfigModel(BaseModel):
-    class Config:
-        validate_all = True
-        validate_assignment = True
-        use_enum_values = True
-        allow_population_by_field_name = True
-        extra = "forbid"
-        arbitrary_types_allowed = True
-
-
-class GenerateParamsConfig(MIIConfigModel):
+class GenerateParamsConfig(DeepSpeedConfigModel):
     """
     Options for changing text-generation behavior.
     """
@@ -39,7 +30,7 @@ class GenerateParamsConfig(MIIConfigModel):
     max_length: int = 1024
     """ Maximum length of ``input_tokens`` + ``generated_tokens``. """
 
-    max_new_tokens: int = None
+    max_new_tokens: Optional[int] = None
     """ Maximum number of new tokens generated. ``max_length`` takes precedent. """
 
     min_new_tokens: int = 0
@@ -68,24 +59,25 @@ class GenerateParamsConfig(MIIConfigModel):
 
     stop: List[str] = []
     """ List of strings to stop generation at."""
-    @validator("stop", pre=True)
+    @field_validator("stop", mode="before")
+    @classmethod
     def make_stop_string_list(cls, field_value: Union[str, List[str]]) -> List[str]:
         if isinstance(field_value, str):
             return [field_value]
         return field_value
 
-    @validator("stop")
+    @field_validator("stop")
+    @classmethod
     def sort_stop_strings(cls, field_value: List[str]) -> List[str]:
         return sorted(field_value)
 
-    @root_validator
-    def check_prompt_length(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        prompt_length = values.get("prompt_length")
-        max_length = values.get("max_length")
-        assert max_length > prompt_length, f"max_length ({max_length}) must be greater than prompt_length ({prompt_length})"
-        return values
+    @model_validator(mode="after")
+    def check_prompt_length(self) -> "GenerateParamsConfig":
+        assert self.max_length > self.prompt_length, f"max_length ({self.max_length}) must be greater than prompt_length ({self.prompt_length})"
+        return self
 
-    @root_validator
+    @model_validator(mode="before")
+    @classmethod
     def set_max_new_tokens(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         max_length = values.get("max_length")
         max_new_tokens = values.get("max_new_tokens")
@@ -94,19 +86,16 @@ class GenerateParamsConfig(MIIConfigModel):
             values["max_new_tokens"] = max_length - prompt_length
         return values
 
-    class Config:
-        extra = Extra.forbid
 
-
-class ReplicaConfig(MIIConfigModel):
+class ReplicaConfig(DeepSpeedConfigModel):
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
-    torch_dist_port: int = None
+    torch_dist_port: Optional[int] = None
     gpu_indices: List[int] = []
-    zmq_port: int = None
+    zmq_port: Optional[int] = None
 
 
-class ModelConfig(MIIConfigModel):
+class ModelConfig(DeepSpeedConfigModel):
     model_name_or_path: str
     """
     Model name or path of the model to HuggingFace model to be deployed.
@@ -192,8 +181,9 @@ class ModelConfig(MIIConfigModel):
     def provider(self) -> ModelProvider:
         return ModelProvider.HUGGING_FACE
 
-    @validator("device_map", pre=True)
-    def make_device_map_dict(cls, v):
+    @field_validator("device_map", mode="before")
+    @classmethod
+    def make_device_map_dict(cls, v: Any) -> Dict:
         if isinstance(v, int):
             return {"localhost": [[v]]}
         if isinstance(v, list) and isinstance(v[0], int):
@@ -202,36 +192,36 @@ class ModelConfig(MIIConfigModel):
             return {"localhost": v}
         return v
 
-    @root_validator
+    @model_validator(mode="before")
+    @classmethod
     def auto_fill_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        assert values.get("model_name_or_path"), "model_name_or_path must be provided"
         if not values.get("tokenizer"):
             values["tokenizer"] = values.get("model_name_or_path")
-        if not values.get("task"):
-            values["task"] = get_default_task(values.get("model_name_or_path"))
+        #if not values.get("task"):
+        #    values["task"] = get_default_task(values.get("model_name_or_path"))
+        values["task"] = TaskType.TEXT_GENERATION
         return values
 
-    @root_validator
-    def propagate_tp_size(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        tensor_parallel = values.get("tensor_parallel")
-        values.get("inference_engine_config").tensor_parallel.tp_size = tensor_parallel
-        return values
+    @model_validator(mode="after")
+    def propagate_tp_size(self) -> "ModelConfig":
+        self.inference_engine_config.tensor_parallel.tp_size = self.tensor_parallel
+        return self
 
-    @root_validator
-    def propagate_quantization_mode(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        quantization_mode = values.get("quantization_mode")
-        values.get(
-            "inference_engine_config").quantization.quantization_mode = quantization_mode
-        return values
-
-    @root_validator
-    def check_replica_config(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        num_replica_config = len(values.get("replica_configs"))
+    @model_validator(mode="after")
+    def check_replica_config(self) -> "ModelConfig":
+        num_replica_config = len(self.replica_configs)
         if num_replica_config > 0:
-            assert num_replica_config == values.get("replica_num"), "Number of replica configs must match replica_num"
-        return values
+            assert num_replica_config == self.replica_num, "Number of replica configs must match replica_num"
+        return self
+
+    @model_validator(mode="after")
+    def propagate_quantization_mode(self) -> "ModelConfig":
+        self.inference_engine_config.quantization.quantization_mode = self.quantization_mode
+        return self
 
 
-class MIIConfig(MIIConfigModel):
+class MIIConfig(DeepSpeedConfigModel):
     deployment_name: str = ""
     """
     Name of the deployment. Used as an identifier for obtaining a inference
@@ -245,7 +235,7 @@ class MIIConfig(MIIConfigModel):
     * `AML` will generate the assets necessary to deploy on AML resources.
     """
 
-    model_config: ModelConfig
+    model_conf: ModelConfig = Field(alias="model_config")
     """
     Configuration for the deployed model(s).
     """
@@ -290,17 +280,18 @@ class MIIConfig(MIIConfigModel):
     """
     AML instance type to use when create AML deployment assets.
     """
-    @root_validator(skip_on_failure=True)
-    def AML_name_valid(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if values.get("deployment_type") == DeploymentType.AML:
+    @model_validator(mode="after")
+    def AML_name_valid(self) -> "MIIConfig":
+        if self.deployment_type == DeploymentType.AML:
             allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
                                 string.digits + "-")
             assert (
-                set(values.get("deployment_name")) <= allowed_chars
+                set(self.deployment_name) <= allowed_chars
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
-        return values
+        return self
 
-    @root_validator(skip_on_failure=True)
+    @model_validator(mode="before")
+    @classmethod
     def check_deployment_name(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         deployment_name = values.get("deployment_name")
         if not deployment_name:
@@ -311,14 +302,14 @@ class MIIConfig(MIIConfigModel):
         return values
 
     def generate_replica_configs(self) -> None:
-        if self.model_config.replica_configs:
+        if self.model_conf.replica_configs:
             return
-        torch_dist_port = self.model_config.torch_dist_port
-        tensor_parallel = self.model_config.tensor_parallel
+        torch_dist_port = self.model_conf.torch_dist_port
+        tensor_parallel = self.model_conf.tensor_parallel
         replica_pool = _allocate_devices(self.hostfile,
                                          tensor_parallel,
-                                         self.model_config.replica_num,
-                                         self.model_config.device_map)
+                                         self.model_conf.replica_num,
+                                         self.model_conf.device_map)
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
             # Reserver port for a LB proxy when replication is enabled
@@ -332,10 +323,10 @@ class MIIConfig(MIIConfigModel):
                     tensor_parallel_ports=tensor_parallel_ports,
                     torch_dist_port=replica_torch_dist_port,
                     gpu_indices=gpu_indices,
-                    zmq_port=self.model_config.zmq_port_number + i,
+                    zmq_port=self.model_conf.zmq_port_number + i,
                 ))
 
-        self.model_config.replica_configs = replica_configs
+        self.model_conf.replica_configs = replica_configs
 
 
 def _allocate_devices(hostfile_path: str,
