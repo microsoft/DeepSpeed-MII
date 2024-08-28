@@ -67,34 +67,37 @@ class ModelResponse(ServiceBase):
         prompts, kwargs = task_methods.unpack_request_from_proto(request)
         uids_put_order, uids_running, uids_complete_order, responses = [], [], [], []
 
-        # Put requests for all prompts into the pipeline
-        for p in prompts:
-            request_kwargs = kwargs.copy()
-            uid = self.inference_pipeline.put_request(p, request_kwargs)
-            uids_put_order.append(uid)
-            uids_running.append(uid)
+        try:
+            # Put requests for all prompts into the pipeline
+            for p in prompts:
+                request_kwargs = kwargs.copy()
+                uid = self.inference_pipeline.put_request(p, request_kwargs)
+                uids_put_order.append(uid)
+                uids_running.append(uid)
 
-        # Get responses from the pipeline as they are ready, flush finished uids
-        # so new requests can be processed
-        while uids_running:
-            uid, response = self.inference_pipeline.get_response()
-            # TODO: Ugly hack for multi-threading. Will be fixed when we refactor these methods
-            if uid == -1:
-                uid = uids_running[0]
-            responses.append(response)
-            self.inference_pipeline.flush_uid(uid)
-            uids_complete_order.append(uids_put_order.index(uid))
-            uids_running.remove(uid)
+            # Get responses from the pipeline as they are ready, flush finished uids
+            # so new requests can be processed
+            while uids_running:
+                uid, response = self.inference_pipeline.get_response()
+                # TODO: Ugly hack for multi-threading. Will be fixed when we refactor these methods
+                if uid == -1:
+                    uid = uids_running[0]
+                responses.append(response)
+                self.inference_pipeline.flush_uid(uid)
+                uids_complete_order.append(uids_put_order.index(uid))
+                uids_running.remove(uid)
 
-        # Sort responses in the order of prompts
-        responses = [
-            r for idx,
-            r in sorted(zip(uids_complete_order,
-                            responses),
-                        key=lambda pair: pair[0])
-        ]
+            # Sort responses in the order of prompts
+            responses = [
+                r for idx,
+                r in sorted(zip(uids_complete_order,
+                                responses),
+                            key=lambda pair: pair[0])
+            ]
 
-        return task_methods.pack_response_to_proto(responses)
+            return task_methods.pack_response_to_proto(responses)
+        finally:
+            [self.inference_pipeline.flush_uid(uid) for uid in uids_running]
 
     def GeneratorReplyStream(self, request, context):
         task_methods = self._get_task_methods("GeneratorReply")

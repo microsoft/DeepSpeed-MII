@@ -42,7 +42,7 @@ def _get_hf_models_by_type(model_type=None, task=None):
     if (model_data["cache_time"] + cache_expiration_seconds) < current_time:
         api = HfApi()
         model_data["model_list"] = [
-            SimpleNamespace(modelId=m.modelId,
+            SimpleNamespace(id=m.id,
                             pipeline_tag=m.pipeline_tag,
                             tags=m.tags) for m in api.list_models()
         ]
@@ -60,7 +60,7 @@ def _get_hf_models_by_type(model_type=None, task=None):
         models = [m for m in models if m.pipeline_tag == task]
 
     # Extract model IDs
-    model_ids = [m.modelId for m in models]
+    model_ids = [m.id for m in models]
 
     if task == TaskType.TEXT_GENERATION:
         # TODO: this is a temp solution to get around some HF models not having the correct tags
@@ -179,7 +179,7 @@ def extract_query_dict(task, request_dict):
 
 
 def get_num_gpus(mii_config):
-    num_gpus = mii_config.model_config.tensor_parallel
+    num_gpus = mii_config.model_conf.tensor_parallel
 
     assert (
         torch.cuda.device_count() >= num_gpus

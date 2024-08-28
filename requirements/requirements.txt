@@ -1,13 +1,13 @@
 accelerate
 asyncio
-deepspeed>=0.14.0
+deepspeed>=0.15.0
 deepspeed-kernels
 fastapi
 Flask-RESTful
 grpcio
 grpcio-tools
 Pillow
-pydantic==1.*
+pydantic>=2.0.0
 pyzmq
 safetensors
 torch

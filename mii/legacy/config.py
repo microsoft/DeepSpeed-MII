@@ -5,20 +5,21 @@
 import torch
 import os
 import string
+from pydantic import field_validator, model_validator, Field
 from typing import List, Optional, Dict, Any
-import mii.legacy as mii
-from .constants import DeploymentType, TaskType, ModelProvider, MII_MODEL_PATH_DEFAULT
-from .pydantic_v1 import validator, root_validator, Field
 
 from deepspeed.runtime.config_utils import DeepSpeedConfigModel
 from deepspeed.inference.config import DtypeEnum
 from deepspeed.launcher.runner import DLTS_HOSTFILE, fetch_hostfile
 
+import mii.legacy as mii
+from .constants import DeploymentType, TaskType, ModelProvider, MII_MODEL_PATH_DEFAULT
+
 
 class ReplicaConfig(DeepSpeedConfigModel):
     hostname: str = ""
     tensor_parallel_ports: List[int] = []
-    torch_dist_port: int = None
+    torch_dist_port: Optional[int] = None
     gpu_indices: List[int] = []
 
 
@@ -36,10 +37,10 @@ class ModelConfig(DeepSpeedConfigModel):
     Name of the machine learning task to be deployed.Currently MII supports the
     following list of tasks ``['text-generation', 'text-classification',
     'question-answering', 'fill-mask', 'token-classification',
-    'conversational', 'text-to-image']``
+    'text-to-image']``
     """
 
-    dtype: DtypeEnum = DtypeEnum.fp32
+    dtype: torch.dtype = torch.float32
     """
     Desired model data type, will convert model to this type.  Supported target
     types: `torch.half`, `torch.float`, `torch.int8` (for BLOOM models)
@@ -102,9 +103,12 @@ class ModelConfig(DeepSpeedConfigModel):
 
     hf_auth_token: Optional[str] = Field(
         None,
-        deprecated=True,
-        deprecated_msg=
-        "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation.",
+        json_schema_extra={
+            "deprecated":
+            True,
+            "deprecated_msg":
+            "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation."
+        },
     )
     """
     HuggingFace authentication token for accessing models. Will be propagated
@@ -113,9 +117,12 @@ class ModelConfig(DeepSpeedConfigModel):
 
     trust_remote_code: bool = Field(
         False,
-        deprecated=True,
-        deprecated_msg=
-        "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation.",
+        json_schema_extra={
+            "deprecated":
+            True,
+            "deprecated_msg":
+            "Parameter will be removed. Please use the `pipeline_kwargs` field to pass kwargs to the HuggingFace pipeline creation."
+        },
     )
     """
     HuggingFace `tranformer.pipeline` option for `trust_remote_code`.
@@ -168,15 +175,13 @@ class ModelConfig(DeepSpeedConfigModel):
     the input and output tokens. Please consider increasing it to the required
     token-length required for your use-case.
     """
-    class Config:
-        json_encoders = {torch.dtype: lambda x: str(x)}
-
     @property
     def provider(self):
         return mii.utils.get_provider(self.model, self.task)
 
-    @validator("checkpoint_dict")
-    def checkpoint_dict_valid(cls, field_value, values):
+    @field_validator("checkpoint_dict", mode="after")
+    @classmethod
+    def checkpoint_dict_valid(cls, field_value):
         if field_value is None:
             return field_value
         for k in ["checkpoints", "version", "type", "base_dir"]:
@@ -184,51 +189,56 @@ class ModelConfig(DeepSpeedConfigModel):
                 raise ValueError(f"Missing key={k} in checkpoint_dict")
         return field_value
 
-    @validator("deploy_rank", pre=True)
-    def deploy_rank_to_list(cls, field_value, values):
+    @field_validator("deploy_rank", mode="before")
+    @classmethod
+    def deploy_rank_to_list(cls, field_value):
         if field_value and not isinstance(field_value, list):
             field_value = [field_value]
         return field_value
 
-    @root_validator
-    def zero_or_meta(cls, values):
-        if values.get("enable_zero"):
-            assert not values.get(
-                "meta_tensor"
-            ), "ZeRO-Inference does not support meta tensors."
-        return values
+    @field_validator("dtype", mode="before")
+    def validate_dtype(cls, field_value, values):
+        if isinstance(field_value, str):
+            return DtypeEnum.from_str(field_value).value[0]
+        if isinstance(field_value, torch.dtype):
+            return field_value
+        raise TypeError(f"Invalid type for dtype: {type(field_value)}")
 
-    @root_validator
-    def bloom_model_valid(cls, values):
-        if "bigscience/bloom" in values.get("model"):
+    @model_validator(mode="after")
+    def zero_or_meta(self):
+        if self.enable_zero:
+            assert not self.meta_tensor, "ZeRO-Inference does not support meta tensors."
+        return self
+
+    @model_validator(mode="after")
+    def bloom_model_valid(self):
+        if "bigscience/bloom" in self.model:
             # TODO: SHould be albe to use DtypeEnum here
-            assert values.get("dtype") in [
+            assert self.dtype in [
                 torch.int8,
                 torch.float16,
             ], "Bloom models only support fp16/int8."
-            assert not values.get(
-                "enable_cuda_graph"
-            ), "Bloom models do not support CUDA Graph."
-        return values
+            assert not self.enable_cuda_graph, "Bloom models do not support CUDA Graph."
+        return self
 
-    @root_validator
-    def deploy_rank_valid(cls, values):
-        tensor_parallel = values.get("tensor_parallel")
-        deploy_rank = values.get("deploy_rank")
+    @model_validator(mode="after")
+    def deploy_rank_valid(self):
+        deploy_rank = self.deploy_rank
 
         # if deploy rank is not given, default to align with TP value
         if deploy_rank is None:
-            deploy_rank = list(range(tensor_parallel))
+            deploy_rank = list(range(self.tensor_parallel))
 
         # number of ranks provided must be equal to TP size, DP is handled outside MII currently
-        assert tensor_parallel == len(
+        assert self.tensor_parallel == len(
             deploy_rank
-        ), f"{len(deploy_rank)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {tensor_parallel}"
+        ), f"{len(deploy_rank)} rank(s) provided in 'deploy_rank' does not align with tensor_parallel size of {self.tensor_parallel}"
 
-        values["deploy_rank"] = deploy_rank
-        return values
+        self.__dict__["deploy_rank"] = deploy_rank
+        return self
 
-    @root_validator
+    @model_validator(mode="before")
+    @classmethod
     def set_model_path(cls, values):
         model_path = values.get("model_path")
         if not model_path:
@@ -249,54 +259,47 @@ class ModelConfig(DeepSpeedConfigModel):
         values["model_path"] = model_path
         return values
 
-    @root_validator
-    def validate_model_and_task(cls, values):
-        task = values.get("task")
-        model = values.get("model")
-        if not values.get("skip_model_check"):
-            mii.utils.check_if_task_and_model_is_valid(task, model)
-            if values.get("enable_deepspeed"):
-                mii.utils.check_if_task_and_model_is_supported(task, model)
-        # Skip any future checks
-        values["skip_model_check"] = True
-        return values
+    @model_validator(mode="after")
+    def validate_model_and_task(self):
+        if not self.skip_model_check:
+            mii.utils.check_if_task_and_model_is_valid(self.task, self.model)
+            mii.utils.check_if_task_and_model_is_supported(self.task, self.model)
+        return self
 
-    @root_validator
-    def meta_tensor_or_sys_mem(cls, values):
-        if values.get("meta_tensor") and values.get("load_with_sys_mem"):
+    @model_validator(mode="after")
+    def meta_tensor_or_sys_mem(self):
+        if self.meta_tensor and self.load_with_sys_mem:
             raise ValueError(
                 "`meta_tensor` and `load_with_sys_mem` cannot be active at the same time."
             )
-        return values
+        return self
 
-    @root_validator
-    def sys_mem_and_diffusers(cls, values):
-        if values.get("load_with_sys_mem"):
-            model = values.get("model")
-            task = values.get("task")
-            assert not (mii.utils.get_provider(model, task) == ModelProvider.DIFFUSERS), "`load_with_sys_mem` is not support with Stable Diffusion"
-        return values
+    @model_validator(mode="after")
+    def sys_mem_and_diffusers(self):
+        if self.load_with_sys_mem:
+            assert not (mii.utils.get_provider(self.model, self.task) == ModelProvider.DIFFUSERS), "`load_with_sys_mem` is not support with Stable Diffusion"
+        return self
 
-    @root_validator
-    def zero_dtype_valid(cls, values):
-        if values.get("enable_zero"):
-            if values.get("ds_config").get("fp16", {}).get("enabled", False):
+    @model_validator(mode="after")
+    def zero_dtype_valid(self):
+        if self.enable_zero:
+            if self.ds_config.get("fp16", {}).get("enabled", False):
                 # TODO: We should be able to use DtypeEnum instead of torch.float
                 assert (
-                    values.get("dtype") == torch.float16
+                    self.dtype == torch.float16
                 ), "ZeRO FP16 enabled, `dtype` must be set to `torch.float16`"
             else:
                 assert (
-                    values.get("dtype") == torch.float32
+                    self.dtype == torch.float32
                 ), "ZeRO FP16 disabled, `dtype` must be set to `torch.float32`"
-        return values
+        return self
 
-    @root_validator
-    def deepspeed_or_zero(cls, values):
+    @model_validator(mode="after")
+    def deepspeed_or_zero(self):
         assert not (
-            values.get("enable_deepspeed") and values.get("enable_zero")
+            self.enable_deepspeed and self.enable_zero
         ), "DeepSpeed and ZeRO cannot both be enabled, select only one"
-        return values
+        return self
 
 
 class MIIConfig(DeepSpeedConfigModel):
@@ -314,7 +317,7 @@ class MIIConfig(DeepSpeedConfigModel):
     * `AML` will generate the assets necessary to deploy on AML resources.
     """
 
-    model_config: ModelConfig
+    model_conf: ModelConfig
     """
     Configuration for the deployed model(s).
     """
@@ -349,23 +352,23 @@ class MIIConfig(DeepSpeedConfigModel):
     """
     AML instance type to use when create AML deployment assets.
     """
-    @root_validator(skip_on_failure=True)
-    def AML_name_valid(cls, values):
-        if values.get("deployment_type") == DeploymentType.AML:
+    @model_validator(mode="after")
+    def AML_name_valid(self):
+        if self.deployment_type == DeploymentType.AML:
             allowed_chars = set(string.ascii_lowercase + string.ascii_uppercase +
                                 string.digits + "-")
             assert (
-                set(values.get("deployment_name")) <= allowed_chars
+                set(self.deployment_name) <= allowed_chars
             ), "AML deployment names can only contain a-z, A-Z, 0-9, and '-'."
-        return values
+        return self
 
     def generate_replica_configs(self):
         # TODO: refactor this function
         hostfile = self.hostfile
         port_number = self.port_number
-        torch_dist_port = self.model_config.torch_dist_port
-        tensor_parallel = self.model_config.tensor_parallel
-        replica_num = self.model_config.replica_num
+        torch_dist_port = self.model_conf.torch_dist_port
+        tensor_parallel = self.model_conf.tensor_parallel
+        replica_num = self.model_conf.replica_num
         replica_pool = _allocate_processes(hostfile, tensor_parallel, replica_num)
         replica_configs = []
         for i, (hostname, gpu_indices) in enumerate(replica_pool):
@@ -382,7 +385,7 @@ class MIIConfig(DeepSpeedConfigModel):
                     gpu_indices=gpu_indices,
                 ))
 
-        self.model_config.replica_configs = replica_configs
+        self.model_conf.replica_configs = replica_configs
 
 
 def _allocate_processes(hostfile_path, tensor_parallel, replica_num):

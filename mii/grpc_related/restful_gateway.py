@@ -40,6 +40,10 @@ def createRestfulGatewayApp(deployment_name, server_thread):
         threading.Thread(target=shutdown, args=(server_thread, )).start()
         return "Shutting down RESTful API gateway server"
 
+    @app.route("/healthz", methods=["GET"])
+    def healthz():
+        return "ok"
+
     api = Api(app)
     path = "/{}/{}".format(RESTFUL_API_PATH, deployment_name)
     api.add_resource(RestfulGatewayService, path)
