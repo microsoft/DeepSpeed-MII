@@ -37,6 +37,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/huggingface/transformers
           cd transformers
+          git checkout v4.44.2
           git rev-parse --short HEAD
           python -m pip install .
       - name: Install deepspeed
