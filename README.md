@@ -85,18 +85,20 @@ Under-the-hood MII is powered by [DeepSpeed-Inference](https://github.com/micros
 
 # Supported Models
 
-MII currently supports over 20,000 models across eight popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
+MII currently supports over 37,000 models across eight popular model architectures. We plan to add additional models in the near term, if there are specific model architectures you would like supported please [file an issue](https://github.com/microsoft/DeepSpeed-MII/issues) and let us know. All current models leverage Hugging Face in our backend to provide both the model weights and the model's corresponding tokenizer. For our current release we support the following model architectures:
 
 model family | size range | ~model count
 ------ | ------ | ------
-[falcon](https://huggingface.co/models?other=falcon) | 7B - 180B | 300
-[llama](https://huggingface.co/models?other=llama) | 7B - 65B | 19,000
-[llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 900
-[mistral](https://huggingface.co/models?other=mistral) | 7B | 6,000
-[mixtral (MoE)](https://huggingface.co/models?other=mixtral) | 8x7B | 1,100
-[opt](https://huggingface.co/models?other=opt) | 0.1B - 66B | 1,300
-[phi-2](https://huggingface.co/models?other=phi) | 2.7B | 200
-[qwen](https://huggingface.co/models?other=qwen) | 7B - 72B | 200
+[Falcon](https://huggingface.co/models?other=falcon) | 7B - 180B | 600
+[Llama](https://huggingface.co/models?other=llama) | 7B - 65B | 57,000
+[Llama-2](https://huggingface.co/models?other=llama-2) | 7B - 70B | 1,200
+[Llama-3](https://huggingface.co/models?other=llama-3) | 8B - 405B | 1,600
+[Mistral](https://huggingface.co/models?other=mistral) | 7B | 23,000
+[Mixtral (MoE)](https://huggingface.co/models?other=mixtral) | 8x7B | 2,900
+[OPT](https://huggingface.co/models?other=opt) | 0.1B - 66B | 2,200
+[Phi-2](https://huggingface.co/models?other=phi) | 2.7B | 1,500
+[Qwen](https://huggingface.co/models?other=qwen) | 7B - 72B | 500
+[Qwen2](https://huggingface.co/models?other=qwen2) | 0.5B - 72B | 3700
 
 ## MII Legacy Model Support
 
