@@ -2,6 +2,8 @@ accelerate
 asyncio
 deepspeed>=0.15.0
 deepspeed-kernels
+fastapi
+fastchat
 Flask-RESTful
 grpcio
 grpcio-tools
@@ -9,6 +11,7 @@ Pillow
 pydantic>=2.0.0
 pyzmq
 safetensors
+shortuuid
 torch
 transformers
 ujson
