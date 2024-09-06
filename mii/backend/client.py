@@ -37,10 +37,12 @@ class MIIClient:
     """
     def __init__(self, mii_config: MIIConfig, host: str = "localhost") -> None:
         self.mii_config = mii_config
-        self.task = mii_config.model_config.task
+        self.task = mii_config.model_conf.task
         self.port = mii_config.port_number
         self.asyncio_loop = asyncio.get_event_loop()
         channel = create_channel(host, self.port)
+        # This stub allows interaction the client to send/receive messages with
+        # the load balancer process
         self.stub = modelresponse_pb2_grpc.ModelResponseStub(channel)
 
     def __call__(self, *args, **kwargs) -> List[Response]:
@@ -77,7 +79,7 @@ class MIIClient:
 
         :param prompts: The string or list of strings used as prompts for generation.
         :param streaming_fn: Streaming support is currently a WIP.
-        :param \**generate_kwargs: Generation keywords. A full list can be found here.
+        :param \\*\\*generate_kwargs: Generation keywords. A full list can be found here.
 
         :return: A list of :class:`Response` objects containing the generated
             text for all prompts.

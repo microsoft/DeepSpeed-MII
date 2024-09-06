@@ -37,7 +37,7 @@ def mii_query_handle(deployment_name):
         return MIINonPersistentClient(task, deployment_name)
 
     mii_config = _get_mii_config(deployment_name)
-    return MIIClient(mii_config.model_config.task,
+    return MIIClient(mii_config.model_conf.task,
                      "localhost", # TODO: This can probably be removed
                      mii_config.port_number)
 
@@ -123,10 +123,6 @@ class MIINonPersistentClient:
             assert key in request_dict, f"Task '{self.task}' requires '{key}' key"
         if self.task == TaskType.QUESTION_ANSWERING:
             args = (request_dict["question"], request_dict["context"])
-            kwargs = query_kwargs
-        elif self.task == TaskType.CONVERSATIONAL:
-            conv = task_methods.create_conversation(request_dict)
-            args = (conv, )
             kwargs = query_kwargs
         elif self.task == TaskType.ZERO_SHOT_IMAGE_CLASSIFICATION:
             args = (request_dict["image"], request_dict["candidate_labels"])

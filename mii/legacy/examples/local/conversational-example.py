@@ -11,4 +11,4 @@ name = "microsoft/DialoGPT-large"
 
 print(f"Deploying {name}...")
 
-mii.deploy(task='conversational', model=name, deployment_name=name + "_deployment")
+mii.deploy(task='text-generation', model=name, deployment_name=name + "_deployment")
