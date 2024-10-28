@@ -37,12 +37,12 @@ def support_legacy_api(
     }
     # TODO do this in a single for loop
     for key, val in mii_config.items():
-        if key not in MIIConfig.fields.keys():
+        if key not in MIIConfig.model_fields.keys():
             model_config[key] = val
     mii_config = {
         k: v
         for k,
-        v in mii_config.items() if k in MIIConfig.__dict__["__fields__"]
+        v in mii_config.items() if k in MIIConfig.model_fields.keys()
     }
     mii_config["version"] = version
     mii_config["deployment_type"] = deployment_type
