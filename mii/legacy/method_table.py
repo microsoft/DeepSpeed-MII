@@ -3,7 +3,6 @@
 
 # DeepSpeed Team
 import io
-import uuid
 
 from abc import ABC, abstractmethod
 from mii.legacy.constants import TaskType
