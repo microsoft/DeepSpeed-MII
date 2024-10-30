@@ -8,7 +8,7 @@ on:
     paths-ignore:
       - 'mii/legacy/**'
       - 'tests/legacy/**'
-      - '.github/workflows/nv-torch-latest-v100.yml'
+      - '.github/workflows/nv-v100-legacy.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
