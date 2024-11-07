@@ -19,11 +19,10 @@ def diffusers_provider(model_config: ModelConfig):
         kwargs["torch_dtype"] = torch.float16
         kwargs["revision"] = "fp16"
 
-    kwargs["device"] = torch.device(f"cuda:{local_rank}")
     pipeline = attempt_load(DiffusionPipeline.from_pretrained,
                             model_config.model,
                             model_config.model_path,
                             kwargs=kwargs)
-    #pipeline = pipeline.to(f"cuda:{local_rank}")
+    pipeline = pipeline.to(f"cuda:{local_rank}")
     pipeline.set_progress_bar_config(disable=True)
     return pipeline
