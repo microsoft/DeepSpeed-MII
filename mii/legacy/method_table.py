@@ -252,6 +252,10 @@ class ZeroShotImgClassificationMethods(TaskMethods):
 
     def run_inference(self, inference_pipeline, args, kwargs):
         image, candidate_labels = args
+        print({"image":image, "candidate_labels":candidate_labels, "kwargs":kwargs})
+        import torch
+        kwargs["torch_dtype"] = torch.float16
+        print({"image":image, "candidate_labels":candidate_labels, "kwargs":kwargs})
         return inference_pipeline(image, candidate_labels=candidate_labels, **kwargs)
 
 
