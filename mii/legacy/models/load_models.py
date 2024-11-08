@@ -75,7 +75,7 @@ def load_models(model_config):
         if model_config.profile_model_time:
             engine.profile_model_time()
         if hasattr(inference_pipeline, "model"):
-            inference_pipeline.model = engine
+            #inference_pipeline.model = engine
 
     elif model_config.enable_zero:
         ds_config = DeepSpeedConfig(model_config.ds_config)
