@@ -74,7 +74,7 @@ def load_models(model_config):
                                           config=inf_config)
         if model_config.profile_model_time:
             engine.profile_model_time()
-        if hasattr(inference_pipeline, "model"):
+        #if hasattr(inference_pipeline, "model"):
             #inference_pipeline.model = engine
 
     elif model_config.enable_zero:
