@@ -19,11 +19,11 @@ pip to install from source:
 
 .. code-block:: console
 
-   (.venv) $ pip install git+https://github.com/Microsoft/DeepSpeed-MII.git
+   (.venv) $ pip install git+https://github.com/deepspeedai/DeepSpeed-MII.git
 
 Or you can clone the repository and install:
 
 .. code-block:: console
 
-   (.venv) $ git clone https://github.com/Microsoft/DeepSpeed-MII.git
+   (.venv) $ git clone https://github.com/deepspeedai/DeepSpeed-MII.git
    (.venv) $ pip install ./DeepSpeed-MII

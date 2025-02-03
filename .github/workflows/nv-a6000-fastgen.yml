@@ -41,7 +41,7 @@ jobs:
           python -m pip install .
       - name: Install deepspeed
         run: |
-          git clone --depth=1 https://github.com/microsoft/DeepSpeed
+          git clone --depth=1 https://github.com/deepspeedai/DeepSpeed
           cd DeepSpeed
           python -m pip install .
           ds_report

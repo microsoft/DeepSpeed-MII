@@ -1,6 +1,6 @@
-<!-- [![Build Status](https://github.com/microsoft/deepspeed-mii/workflows/Build/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions) -->
-[![Formatting](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg)](https://github.com/microsoft/DeepSpeed-MII/actions/workflows/formatting.yml)
-[![License Apache 2.0](https://badgen.net/badge/license/apache2.0/blue)](https://github.com/Microsoft/DeepSpeed/blob/master/LICENSE)
+<!-- [![Build Status](https://github.com/deepspeedai/DeepSpeed-mii/workflows/Build/badge.svg)](https://github.com/deepspeedai/DeepSpeed-MII/actions) -->
+[![Formatting](https://github.com/deepspeedai/DeepSpeed-MII/actions/workflows/formatting.yml/badge.svg)](https://github.com/deepspeedai/DeepSpeed-MII/actions/workflows/formatting.yml)
+[![License Apache 2.0](https://badgen.net/badge/license/apache2.0/blue)](https://github.com/deepspeedai/DeepSpeed/blob/master/LICENSE)
 [![PyPI version](https://badge.fury.io/py/deepspeed-mii.svg)](https://pypi.org/project/deepspeed-mii/)
 <!-- [![Documentation Status](https://readthedocs.org/projects/deepspeed/badge/?version=latest)](https://deepspeed.readthedocs.io/en/latest/?badge=latest) -->
 
@@ -195,7 +195,7 @@ result = generator.query({"query": ["DeepSpeed is", "Seattle is"]}, do_sample=Tr
 
 ```
 
-You can find a complete example [here]("https://github.com/microsoft/DeepSpeed-MII/tree/main/examples/non_persistent")
+You can find a complete example [here]("https://github.com/deepspeedai/DeepSpeed-MII/tree/main/examples/non_persistent")
 
 Any HTTP client can be used to call the APIs. An example of using curl is:
 ```bash

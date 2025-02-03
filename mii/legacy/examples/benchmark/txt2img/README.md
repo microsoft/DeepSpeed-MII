@@ -5,7 +5,7 @@
  <img src="../../../docs/images/sd-hero-dark.png#gh-dark-mode-only">
 </div>
 
-In this tutorial you will learn how to deploy [Stable Diffusion](https://huggingface.co/CompVis/stable-diffusion-v1-4) with state-of-the-art performance optimizations from [DeepSpeed Inference](https://github.com/microsoft/deepspeed) and [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii). In addition to deploying we will perform several performance evaluations.
+In this tutorial you will learn how to deploy [Stable Diffusion](https://huggingface.co/CompVis/stable-diffusion-v1-4) with state-of-the-art performance optimizations from [DeepSpeed Inference](https://github.com/deepspeedai/DeepSpeed) and [DeepSpeed-MII](https://github.com/deepspeedai/DeepSpeed-mii). In addition to deploying we will perform several performance evaluations.
 
 The performance results above utilized NVIDIA GPUs from Azure: [ND96amsr\_A100\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) (NVIDIA A100-80GB) and [ND96asr\_v4](https://learn.microsoft.com/en-us/azure/virtual-machines/nda100-v4-series) (A100-40GB). We have also used MII-Public with NVIDIA RTX-A6000 GPUs and will include those results at a future date.
 
@@ -36,9 +36,9 @@ DeepSpeed-MII will automatically inject a wide range of optimizations from DeepS
 6. Partial UNet INT8 quantization via [ZeroQuant](https://arxiv.org/abs/2206.01861)
 7. Exploitation of coarse grained computation sparsity
 
-The first four optimizations are available via MII-Public, while the rest are available via MII-Azure ([see here to read more about MII-Public and MII-Azure](https://github.com/microsoft/deepspeed-mii#mii-public-and-mii-azure)). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure.
+The first four optimizations are available via MII-Public, while the rest are available via MII-Azure ([see here to read more about MII-Public and MII-Azure](https://github.com/deepspeedai/DeepSpeed-mii#mii-public-and-mii-azure)). In the rest of this tutorial, we will show how you can deploy Stable Diffusion with both MII-Public and MII-Azure.
 
-Keep an eye on the [DeepSpeed-MII](https://github.com/microsoft/deepspeed-mii) repo and this tutorial for further updates and a deeper dive into these and future performance optimizations.
+Keep an eye on the [DeepSpeed-MII](https://github.com/deepspeedai/DeepSpeed-mii) repo and this tutorial for further updates and a deeper dive into these and future performance optimizations.
 
 ## Environment and dependency setup
 
@@ -49,7 +49,7 @@ pip install deepspeed[sd] deepspeed-mii
 ```
 
 > **Note**
-> The DeepSpeed version used in the rest of this tutorial uses [this branch](https://github.com/microsoft/DeepSpeed/pull/2491) which will be merged into master and released as part of DeepSpeed v0.7.5 later this week.
+> The DeepSpeed version used in the rest of this tutorial uses [this branch](https://github.com/deepspeedai/DeepSpeed/pull/2491) which will be merged into master and released as part of DeepSpeed v0.7.5 later this week.
 
 In order to check your DeepSpeed install is setup correctly run `ds_report` from your command line. This will show what versions of DeepSpeed, PyTorch, and nvcc will be used at runtime. The bottom half of `ds_report` is show below for our setup:
 

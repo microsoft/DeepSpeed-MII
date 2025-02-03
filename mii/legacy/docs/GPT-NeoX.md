@@ -18,7 +18,7 @@ source ./MII-GPT-NeoX/bin/activate
 
 ## Install MII
 ```bash
-git clone https://github.com/microsoft/DeepSpeed-MII.git
+git clone https://github.com/deepspeedai/DeepSpeed-MII.git
 cd DeepSpeed-MII
 pip install .[local]
 pip install .
@@ -26,7 +26,7 @@ pip install .
 
 ## Install DeepSpeed-GPT-NeoX
 ```bash
-git clone -b ds-updates https://github.com/microsoft/deepspeed-gpt-neox.git
+git clone -b ds-updates https://github.com/deepspeedai/DeepSpeed-gpt-neox.git
 cd deepspeed-gpt-neox
 pip install -r requirements/requirements-inference.txt
 pip install .
