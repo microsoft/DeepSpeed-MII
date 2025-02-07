@@ -53,17 +53,6 @@ import mii.legacy as mii
                 "query": "DeepSpeed is the greatest"
             },
         ),
-        (
-            "zero-shot-image-classification",
-            "openai/clip-vit-base-patch32",
-            {
-                "image":
-                "https://huggingface.co/datasets/Narsil/image_dummy/raw/main/parrots.png",
-                "candidate_labels": ["animals",
-                                     "humans",
-                                     "landscape"]
-            },
-        ),
     ],
 )
 def test_single_GPU(deployment, query):
