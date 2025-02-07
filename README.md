@@ -321,13 +321,14 @@ Users can also control the generation characteristics for individual prompts (i.
 
 # Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+This project welcomes contributions and suggestions.
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+DeepSpeed-MII has adopted the [DCO](https://en.wikipedia.org/wiki/Developer_Certificate_of_Origin).  All deepspeedai repos require a DCO.
+(DeepSpeed previously used a CLA which is being replaced with DCO).
+
+DCO is provided by including a sign-off-by line in commit messages. Using the `-s` flag for `git commit` will automatically append this line.
+For example, running `git commit -s -m 'commit info.'` will produce a commit that has the message `commit info. Signed-off-by: My Name <my_email@my_company.com>.`
+The DCO bot will ensure commits are signed with an email address that matches the commit author before they are eligible to be merged.
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
