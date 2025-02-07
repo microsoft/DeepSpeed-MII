@@ -165,8 +165,8 @@ ENV PATH="/opt/miniconda/envs/amlenv/bin:$AML_APP_ROOT:$PATH" \
 RUN /opt/miniconda/envs/amlenv/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/cu113 && \
     /opt/miniconda/envs/amlenv/bin/pip install -r "$BUILD_DIR/requirements.txt" && \
     /opt/miniconda/envs/amlenv/bin/pip install azureml-inference-server-http && \
-    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed.git && \
-    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/microsoft/DeepSpeed-MII.git && \
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/deepspeedai/DeepSpeed.git && \
+    /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/deepspeedai/DeepSpeed-MII.git && \
     /opt/miniconda/envs/amlenv/bin/pip install git+https://github.com/huggingface/transformers.git
 
 
