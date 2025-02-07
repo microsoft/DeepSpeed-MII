@@ -8,7 +8,7 @@ The scripts in this folder provide a complete example of a multi-turn conversati
 Starting the server for your chat application requires nothing special.
 Just make sure that the model supports `text-generation` and is trained for conversations.
 
-The example script uses [AdamG012/chat-opt-1.3b-rlhf-actor-deepspeed](https://huggingface.co/AdamG012/chat-opt-1.3b-rlhf-actor-deepspeed), which was trained using [DeepSpeed-Chat](https://github.com/microsoft/DeepSpeedExamples/blob/master/applications/DeepSpeed-Chat/README.md).
+The example script uses [AdamG012/chat-opt-1.3b-rlhf-actor-deepspeed](https://huggingface.co/AdamG012/chat-opt-1.3b-rlhf-actor-deepspeed), which was trained using [DeepSpeed-Chat](https://github.com/deepspeedai/DeepSpeedExamples/blob/master/applications/DeepSpeed-Chat/README.md).
 
 ```python
 name = "AdamG012/chat-opt-1.3b-rlhf-actor-deepspeed"
