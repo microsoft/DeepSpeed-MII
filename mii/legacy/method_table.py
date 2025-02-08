@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # DeepSpeed Team
+import io
+
 from abc import ABC, abstractmethod
 from mii.legacy.constants import TaskType
 from mii.legacy.grpc_related.proto import legacymodelresponse_pb2 as modelresponse_pb2
@@ -274,11 +276,28 @@ class InpaintingMethods(Text2ImgMethods):
         negative_prompt = request_dict.get("negative_prompt", [""] * len(prompt))
         negative_prompt = negative_prompt if isinstance(negative_prompt,
                                                         list) else [negative_prompt]
-        image = request_dict["image"] if isinstance(request_dict["image"],
-                                                    list) else [request_dict["image"]]
-        mask_image = request_dict["mask_image"] if isinstance(
+        image_list = request_dict["image"] if isinstance(
+            request_dict["image"],
+            list) else [request_dict["image"]]
+        mask_image_list = request_dict["mask_image"] if isinstance(
             request_dict["mask_image"],
             list) else [request_dict["mask_image"]]
+        image = []
+        for img in image_list:
+            if isinstance(img, bytes):
+                image.append(img)
+            else:
+                imgByteArr = io.BytesIO()
+                img.save(imgByteArr, format=img.format)
+                image.append(imgByteArr.getvalue())
+        mask_image = []
+        for img in mask_image_list:
+            if isinstance(img, bytes):
+                mask_image.append(img)
+            else:
+                imgByteArr = io.BytesIO()
+                img.save(imgByteArr, format=img.format)
+                mask_image.append(imgByteArr.getvalue())
 
         return modelresponse_pb2.InpaintingRequest(
             prompt=prompt,

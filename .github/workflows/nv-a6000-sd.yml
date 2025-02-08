@@ -1,14 +1,13 @@
-name: nv-a6000-fastgen
+name: nv-a6000-sd
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
   pull_request:
-    paths-ignore:
+    paths:
       - 'mii/legacy/**'
       - 'tests/legacy/**'
-      - '.github/workflows/nv-v100-legacy.yml'
       - '.github/workflows/nv-a6000-sd.yml'
 
 concurrency:
@@ -42,7 +41,7 @@ jobs:
           python -m pip install .
       - name: Install deepspeed
         run: |
-          git clone --depth=1 https://github.com/deepspeedai/DeepSpeed
+          git clone --depth=1 https://github.com/microsoft/DeepSpeed
           cd DeepSpeed
           python -m pip install .
           ds_report
@@ -55,5 +54,5 @@ jobs:
       - name: Unit tests
         run: |
           unset TORCH_CUDA_ARCH_LIST # only jit compile for current arch
-          cd tests
-          python -m pytest --color=yes --durations=0 --verbose -rF ./
+          cd tests/legacy
+          python -m pytest --color=yes --durations=0 --verbose -rF -m "stable_diffusion" ./
