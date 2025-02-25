@@ -35,7 +35,7 @@ if [ $? != 0 ]; then
     exit 1
 fi
 
-MII_BUILD_STRING="" python setup.py bdist_wheel
+MII_BUILD_STRING="" python -m build --wheel
 WHL=deepspeed_mii-${version}-py3-none-any.whl
 
 if [ ! -f dist/${WHL} ]; then

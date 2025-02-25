@@ -22,7 +22,8 @@ jobs:
         python release/check_release_version.py --release_version ${{ env.RELEASE_VERSION }}
     - name: Build DeepSpeed-MII
       run: |
-        MII_BUILD_STRING=" " python setup.py bdist_wheel
+        pip install build
+        MII_BUILD_STRING=" " python -m build --wheel
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
